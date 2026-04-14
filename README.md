@@ -22,7 +22,7 @@ not define its own equivalent file.
 | `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1 adopted by reference. | ✅ |
 | `SECURITY.md` | How to privately report vulnerabilities; response commitments; safe-harbor terms. | ✅ |
 | `SUPPORT.md` | Where users should go for help (Discussions, Issues, Security). | ✅ |
-| `CONTRIBUTING.md` | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements. | ⏳ |
+| `CONTRIBUTING.md` | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements. | ✅ |
 
 ### Issue and PR forms
 
@@ -73,10 +73,9 @@ the one here.
 ## Contributing to this repo
 
 Changes to org-wide defaults affect every repository. PRs here require
-review from an organization maintainer. See `CONTRIBUTING.md` once
-shipped, and in the meantime follow the same conventions already
-listed on the
-[org profile](https://github.com/nyuchitech): Conventional Commits,
-signed commits, required CI checks.
+review from an organization maintainer and follow
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) like any other repo:
+Conventional Commits, signed commits, DCO sign-off, required CI
+checks.
 
 [chf]: https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file
