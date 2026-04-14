@@ -10,7 +10,7 @@
 
 **The development hub of the Nyuchi and Mukoko ecosystems.**
 
-[Website](https://nyuchi.com) · [Support](./SUPPORT.md) · [Security](./SECURITY.md) · [Contributing](./CONTRIBUTING.md)
+[Support](./SUPPORT.md) · [Security](./SECURITY.md) · [Contributing](./CONTRIBUTING.md)
 
 </div>
 
