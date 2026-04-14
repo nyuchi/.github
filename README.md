@@ -51,7 +51,14 @@ not define its own equivalent file.
 
 ### Reusable workflow templates
 
-Shown in every org repo under **Actions → New workflow**.
+Two ways to adopt org CI and policy workflows. Pick one per workflow per
+repo — not both.
+
+**Path A — starter templates** (copy-once, own-forever). Shown in
+every org repo under **Actions → New workflow**. Each `*.yml` ships
+with a matching `*.properties.json` that controls the display name,
+description, and file-pattern suggestions. Good when a repo wants
+to pin the CI behaviour and decide when to take upgrades.
 
 | Path | Purpose | Status |
 | --- | --- | :---: |
@@ -63,6 +70,23 @@ Shown in every org repo under **Actions → New workflow**.
 | `workflow-templates/dependency-review.yml` | Block PRs that introduce known-vulnerable dependencies (moderate+). | ✅ |
 | `workflow-templates/pr-title-lint.yml` | Enforce Conventional Commit format on PR titles. | ✅ |
 | `workflow-templates/stale.yml` | Close stale issues and PRs. | ✅ |
+
+**Path B — reusable workflows** (central logic, auto-upgrades). Referenced
+via `uses: nyuchitech/.github/.github/workflows/<name>.yml@main` from a
+caller workflow. Fixes propagate to every adopter automatically; the cost
+is coupling to this repo's `main`. Good when a repo wants to stay in
+lockstep with the org.
+
+| Path | Purpose | Status |
+| --- | --- | :---: |
+| `.github/workflows/reusable-ci-nextjs-monorepo.yml` | Turborepo + pnpm CI. Inputs: `tasks`, `node-version-file`. Secrets: `TURBO_TOKEN`, `TURBO_TEAM`. | ✅ |
+| `.github/workflows/reusable-ci-rust-monorepo.yml` | Cargo workspace CI. Input: `toolchain` (default `stable`). | ✅ |
+| `.github/workflows/reusable-ci-python-monorepo.yml` | uv workspace CI. Convention-based, no inputs. | ✅ |
+| `.github/workflows/reusable-ci-docs-mdx.yml` | Docs/MDX CI. Inputs: `build-command`, `node-version-file`, `files-glob`. | ✅ |
+| `.github/workflows/reusable-codeql.yml` | CodeQL. Required input: `languages` (JSON array of `{language, build-mode}`). | ✅ |
+| `.github/workflows/reusable-dependency-review.yml` | Dependency review. Inputs: `fail-on-severity`, `comment-summary-in-pr`. | ✅ |
+| `.github/workflows/reusable-pr-title-lint.yml` | Conventional-Commits PR title lint. Input: `require-scope`. | ✅ |
+| `.github/workflows/reusable-stale.yml` | Stale issues + PRs, fully parameterised. | ✅ |
 
 Legend: ✅ shipped · ⏳ planned
 
