@@ -1,0 +1,59 @@
+# Org-wide workflow template: Stale issues and PRs
+#
+# Marks inactive issues as stale after 60 days and closes them 14 days
+# later. PRs are marked stale after 30 days and closed 14 days later.
+#
+# Exempt labels keep issues/PRs alive even without activity. Apply
+# `pinned`, `security`, `roadmap`, `help wanted`, or `good first issue`
+# to anything you want to keep.
+
+name: Stale
+
+on:
+  schedule:
+    # 01:23 UTC daily — off-peak and offset from top of hour.
+    - cron: '23 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Budget per run — bumps safely on large repos.
+          operations-per-run: 100
+
+          # Issues
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          stale-issue-label: stale
+          exempt-issue-labels: 'pinned,security,roadmap,help wanted,good first issue'
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it
+            has had no activity for 60 days. It will be closed in 14 days
+            if no further activity occurs. If this is still relevant,
+            please leave a comment or add the `pinned` label.
+          close-issue-message: >
+            Closing due to inactivity. If you believe this is still a
+            real problem, please open a new issue and link to this one
+            for context.
+
+          # Pull requests
+          days-before-pr-stale: 30
+          days-before-pr-close: 14
+          stale-pr-label: stale
+          exempt-pr-labels: 'pinned,security,roadmap,work-in-progress'
+          stale-pr-message: >
+            This pull request has been automatically marked as stale
+            because it has had no activity for 30 days. It will be
+            closed in 14 days if no further activity occurs. If you
+            intend to finish this work, push a commit, rebase, or
+            leave a comment.
+          close-pr-message: >
+            Closing due to inactivity. Reopen or open a new PR when
+            you're ready to continue.

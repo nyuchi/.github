@@ -1,0 +1,6 @@
+{
+  "name": "Dependency review",
+  "description": "Block PRs that introduce dependencies with known moderate-or-higher vulnerabilities. Posts a summary comment on failure. License enforcement is left to per-repo overrides because the org uses a mix of MIT, Apache-2.0, and GPL.",
+  "categories": ["Security", "Automation", "Dependencies"],
+  "filePatterns": ["package\\.json$", "pnpm-lock\\.yaml$", "Cargo\\.toml$", "Cargo\\.lock$", "pyproject\\.toml$", "uv\\.lock$", "requirements.*\\.txt$", "go\\.mod$"]
+}

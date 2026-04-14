@@ -1,0 +1,67 @@
+# Org-wide workflow template: CodeQL static analysis
+#
+# Runs CodeQL's security-extended and security-and-quality query suites
+# over the repo's supported languages and uploads results to GitHub's
+# Code Scanning view.
+#
+# Rust note: CodeQL does not yet have stable Rust support. The Rust CI
+# template covers Rust analysis via clippy + cargo-audit.
+#
+# Before using this template, REMOVE any language entry from the matrix
+# that does not apply to your repo. Leaving a language enabled when
+# there is no matching source will cause CodeQL init to fail.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly on Monday at 06:27 UTC — offset from the hour to avoid
+    # contention with other scheduled scans.
+    - cron: '27 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+  packages: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Keep only the languages that actually appear in this repo.
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+          - language: c-cpp
+            build-mode: autobuild
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        if: matrix.build-mode == 'autobuild'
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

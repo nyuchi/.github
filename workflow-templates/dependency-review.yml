@@ -1,0 +1,40 @@
+# Org-wide workflow template: Dependency review
+#
+# Runs on every PR that changes a manifest file (package.json,
+# pnpm-lock.yaml, Cargo.toml, Cargo.lock, pyproject.toml, uv.lock,
+# requirements*.txt, etc.) and fails the PR if it introduces
+# dependencies with known vulnerabilities at or above the configured
+# severity threshold.
+#
+# License gating is intentionally NOT enforced at the org level — our
+# repos ship under a mix of MIT, Apache-2.0, and GPL. Repositories that
+# need strict license gating should override this template with their
+# own copy.
+
+name: Dependency review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Review dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail the PR on any moderate-or-higher vulnerability.
+          fail-on-severity: moderate
+          # Post a summary comment only when there is something to report.
+          comment-summary-in-pr: on-failure
+          # Keep the diff bounded so the action stays fast on large PRs.
+          fail-on-scopes: runtime, development
