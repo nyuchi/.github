@@ -40,6 +40,8 @@ not define its own equivalent file.
 | --- | --- | :---: |
 | `.github/dependabot.yml` | Dependabot config for *this* repo (github-actions ecosystem only). | ✅ |
 | `.github/dependabot.example.yml` | Full template other repos can copy — covers github-actions, npm, cargo, pip, and (commented) docker / gitsubmodule. | ✅ |
+| `.github/CODEOWNERS` | Code-review ownership for *this* repo. Pairs with `AGENTS.md` so a human is always requested when agents open PRs. | ✅ |
+| `CODEOWNERS.example` | Starter template other repos should copy to `.github/CODEOWNERS`, with paths for source, CI, docs, and security-sensitive files. | ✅ |
 
 ### Reusable workflow templates
 

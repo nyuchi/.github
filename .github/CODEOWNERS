@@ -1,0 +1,44 @@
+# CODEOWNERS for nyuchitech/.github
+#
+# Docs:
+#   https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Everything in this repo is org-wide infrastructure: changes here
+# affect every public repository under Nyuchi Web Services. Reviews
+# require the org maintainers team by default, with tighter ownership
+# on security-adjacent files.
+#
+# NOTE: The team handles below (@nyuchitech/maintainers,
+# @nyuchitech/security, @nyuchitech/platform) are the intended names.
+# If your org's actual teams are named differently, update this file
+# before enabling branch protection's "Require review from Code Owners"
+# setting.
+
+# --- Default owner -----------------------------------------------------------
+# Everything not matched below requires review from org maintainers.
+*                                       @nyuchitech/maintainers
+
+# --- Security and policy -----------------------------------------------------
+# Changes to the security policy, contribution rules, or agent policy
+# affect every repo in the org. Require security team review.
+/SECURITY.md                            @nyuchitech/maintainers @nyuchitech/security
+/CODE_OF_CONDUCT.md                     @nyuchitech/maintainers
+/CONTRIBUTING.md                        @nyuchitech/maintainers
+/AGENTS.md                              @nyuchitech/maintainers @nyuchitech/security
+/ORG_SETTINGS.md                        @nyuchitech/maintainers @nyuchitech/security
+
+# --- CI and automation -------------------------------------------------------
+# Workflow templates are copied into every org repo that adopts them.
+# Changes here need platform team review.
+/workflow-templates/                    @nyuchitech/maintainers @nyuchitech/platform
+/.github/dependabot.yml                 @nyuchitech/maintainers @nyuchitech/platform
+/.github/dependabot.example.yml         @nyuchitech/maintainers @nyuchitech/platform
+
+# --- Issue and PR forms ------------------------------------------------------
+/.github/ISSUE_TEMPLATE/                @nyuchitech/maintainers
+/.github/PULL_REQUEST_TEMPLATE.md       @nyuchitech/maintainers
+
+# --- Org profile -------------------------------------------------------------
+# The landing page at github.com/nyuchitech is public-facing; content
+# claims need marketing sign-off in addition to maintainer review.
+/profile/                               @nyuchitech/maintainers @nyuchitech/marketing
