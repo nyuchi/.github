@@ -1,0 +1,33 @@
+# Dependabot config for nyuchitech/.github.
+#
+# This repo ships templates and markdown, not application code, so
+# the only ecosystem Dependabot tracks here is `github-actions` —
+# keeping our reusable workflow templates (and any workflows we add
+# in the future) pinned to current, secure action versions.
+#
+# The broader template for other repos in the org lives alongside
+# this file as `.github/dependabot.example.yml`.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Africa/Harare"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    # Conventional Commits: our pr-title-lint workflow will reject
+    # Dependabot PRs unless their title is in this form.
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      # Bundle all action updates into one PR per run.
+      actions:
+        patterns:
+          - "*"

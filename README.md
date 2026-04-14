@@ -34,6 +34,13 @@ not define its own equivalent file.
 | `.github/ISSUE_TEMPLATE/config.yml` | Routes users from the "New issue" picker to Discussions / Security. | ✅ |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Default PR template — checklist tied to our contribution standards. | ✅ |
 
+### Automation config
+
+| Path | Purpose | Status |
+| --- | --- | :---: |
+| `.github/dependabot.yml` | Dependabot config for *this* repo (github-actions ecosystem only). | ✅ |
+| `.github/dependabot.example.yml` | Full template other repos can copy — covers github-actions, npm, cargo, pip, and (commented) docker / gitsubmodule. | ✅ |
+
 ### Reusable workflow templates
 
 Shown in every org repo under **Actions → New workflow**.
