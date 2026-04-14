@@ -1,0 +1,83 @@
+# Example CODEOWNERS for a Nyuchi Web Services repository.
+#
+# Copy this file to `.github/CODEOWNERS` (or `CODEOWNERS` at the
+# repo root) in your repo and adjust paths, team handles, and
+# individual owners to match the project. Then enable
+# "Require review from Code Owners" in the repo's branch
+# protection rules — see ORG_SETTINGS.md.
+#
+# Why this matters: when agents (Claude, Cursor, Copilot) open
+# PRs, CODEOWNERS is how GitHub guarantees a human reviewer is
+# automatically requested. Without CODEOWNERS, bot PRs can sit
+# unassigned.
+#
+# Docs:
+#   https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Syntax reminder:
+#   - Last matching rule wins (GitHub evaluates bottom-up after
+#     finding matches, but the most-specific path wins).
+#   - Use `/path/` to match a whole directory.
+#   - Use `*.ext` to match file extensions anywhere in the tree.
+#   - Prefix with `/` to anchor a pattern at the repo root.
+
+# ============================================================================
+# Default owner
+# ============================================================================
+# Everything not matched by a rule below falls through to this team.
+*                                       @nyuchitech/maintainers
+
+# ============================================================================
+# Source code
+# ============================================================================
+/src/                                   @nyuchitech/platform
+/packages/                              @nyuchitech/platform
+/apps/                                  @nyuchitech/platform
+/crates/                                @nyuchitech/platform
+/lib/                                   @nyuchitech/platform
+
+# ============================================================================
+# Infrastructure, CI, build tooling
+# ============================================================================
+# Anything under .github/ touches how PRs are reviewed, released,
+# or scanned. Platform team review required.
+/.github/                               @nyuchitech/platform
+/.github/workflows/                     @nyuchitech/platform @nyuchitech/security
+
+# Docker, Terraform, Kubernetes, shell scripts at the root.
+/Dockerfile                             @nyuchitech/platform
+/docker-compose*.yml                    @nyuchitech/platform
+/infra/                                 @nyuchitech/platform
+/terraform/                             @nyuchitech/platform
+/k8s/                                   @nyuchitech/platform
+/scripts/                               @nyuchitech/platform
+
+# Lockfiles — any unexpected change often means a supply-chain
+# surprise. Keep them behind platform-team review.
+/pnpm-lock.yaml                         @nyuchitech/platform
+/Cargo.lock                             @nyuchitech/platform
+/uv.lock                                @nyuchitech/platform
+/poetry.lock                            @nyuchitech/platform
+
+# ============================================================================
+# Documentation and content
+# ============================================================================
+/docs/                                  @nyuchitech/docs
+/README.md                              @nyuchitech/docs @nyuchitech/maintainers
+*.md                                    @nyuchitech/docs
+*.mdx                                   @nyuchitech/docs
+
+# ============================================================================
+# Security-sensitive files (always require the security team)
+# ============================================================================
+/SECURITY.md                            @nyuchitech/security
+/AGENTS.md                              @nyuchitech/security @nyuchitech/maintainers
+/CODEOWNERS                             @nyuchitech/maintainers
+/.github/CODEOWNERS                     @nyuchitech/maintainers
+/.github/dependabot.yml                 @nyuchitech/platform @nyuchitech/security
+
+# Anything referencing secrets or auth — adjust the paths to your
+# repo's conventions.
+/**/secrets/**                          @nyuchitech/security
+/**/auth/**                             @nyuchitech/security
+/**/crypto/**                           @nyuchitech/security
