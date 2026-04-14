@@ -30,6 +30,7 @@ not define its own equivalent file.
 | `SUPPORT.md` | Where users should go for help (Discussions, Issues, Security). | ✅ |
 | `CONTRIBUTING.md` | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements. | ✅ |
 | `AGENTS.md` | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex). | ✅ |
+| `.github/copilot-instructions.md` | GitHub Copilot–specific pointer to `AGENTS.md` with the rules Copilot most often gets wrong. | ✅ |
 
 ### Issue and PR forms
 
