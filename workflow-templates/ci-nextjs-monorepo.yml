@@ -1,0 +1,64 @@
+# Org-wide CI template: Next.js monorepo (Turborepo + pnpm)
+#
+# Assumptions about the target repo:
+#   - Root package.json with "packageManager": "pnpm@..." and a pnpm-workspace.yaml
+#   - Turborepo configured via turbo.json
+#   - Tasks named `lint`, `typecheck`, `test`, `build` defined in turbo.json
+#
+# To enable Turborepo remote caching, add repo (or org) secrets:
+#   - TURBO_TOKEN
+#   - TURBO_TEAM
+
+name: CI (Next.js monorepo)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+  # Compare against the PR base SHA, or the previous commit on push.
+  TURBO_FILTER: >-
+    ${{ github.event_name == 'pull_request'
+        && format('...[{0}]', github.event.pull_request.base.sha)
+        || '...[HEAD^1]' }}
+
+jobs:
+  ci:
+    name: ${{ matrix.task }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [lint, typecheck, test, build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Turbo needs history to diff against the base SHA.
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: turbo run ${{ matrix.task }}
+        run: pnpm turbo run ${{ matrix.task }} --filter="${TURBO_FILTER}"
