@@ -9,6 +9,12 @@ not define its own equivalent file.
 
 ## What's in this repo
 
+### Repo basics
+
+| Path | Purpose | Status |
+| --- | --- | :---: |
+| `LICENSE` | MIT. Declares the terms every other file in this repo ships under, so downstream consumers copying a workflow template or CODEOWNERS example know their obligations. | ✅ |
+
 ### Org profile
 
 | Path | Purpose | Status |
