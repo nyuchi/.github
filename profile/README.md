@@ -12,8 +12,13 @@
 for Africa's unique economies.**
 
 *Ubuntu — I am because we are.*
+*Ndiri nekuti tiri.*
 
-[services.nyuchi.com](https://services.nyuchi.com) · [Support](./SUPPORT.md) · [Security](./SECURITY.md) · [Contributing](./CONTRIBUTING.md)
+[services.nyuchi.com](https://services.nyuchi.com) ·
+[mukoko.com](https://mukoko.com) ·
+[design.nyuchi.com](https://design.nyuchi.com)
+
+[Support](./SUPPORT.md) · [Security](./SECURITY.md) · [Contributing](./CONTRIBUTING.md)
 
 </div>
 
@@ -26,6 +31,8 @@ together; our platforms provide access. We design for the realities,
 costs, and opportunities of Africa's unique economies — and we do it
 in the open.
 
+**Three pillars:**
+
 - **Web2 → Web3 → quantum.** Open-source infrastructure that spans
   today's web, the decentralized web, and the quantum era.
 - **On-device, local-first, edge.** Compute and storage that work
@@ -35,20 +42,36 @@ in the open.
   philosophy: collaboration, transparency, and shared ownership over
   extraction.
 
-## Ecosystems
+## Where that shows up in code
 
-### 🐝 Nyuchi
+### Frontier infrastructure
 
-Developer infrastructure, platforms, and services under the Nyuchi
-brand — including **Nyuchi Learning** (digital education),
-**MailSense** (email management), the **Workspace Tools** suite, and
-the `@nyuchi/*` component packages (`@nyuchi/ui`, `@nyuchi/theme`,
-`@nyuchi/ubuntu`).
+- **[`ntl`](https://github.com/nyuchitech/ntl)** — signal-based data
+  transfer layer for decentralized networks. Rust, Apache 2.0.
+- **[`siafudb`](https://github.com/nyuchitech/siafudb)** — embedded
+  property graph database *for device, edge, and Web3*. C++,
+  Apache 2.0. This is the on-device/local-first/edge tier, literally.
 
-### 🌿 Mukoko
+### Platforms that bring people together
 
-A privacy-first social ecosystem, including **Mukoko News** — a
-pan-African news aggregation service.
+- **[Mukoko](https://mukoko.com)** — a privacy-first social
+  ecosystem. *"Your data stays yours, your identity is sovereign,
+  and the algorithm works for you."* Family of apps includes Mukoko
+  News, Mukoko Lingo, Mukoko Weather, and Nhimbe (events).
+- **[`learning`](https://github.com/nyuchitech/learning)** —
+  digital learning experiences for Africa, built around African
+  knowledge systems.
+- **[`shamwari-ai`](https://github.com/nyuchitech/shamwari-ai)** —
+  a localized AI model and platform purpose-built for the African
+  continent.
+
+### Design, in the open
+
+Our design system lives at
+**[design.nyuchi.com](https://design.nyuchi.com)** — shadcn-compatible
+components, the *Five African Minerals* palette, and APCA Lc 90+
+contrast targets. The source is
+[`design-portal`](https://github.com/nyuchitech/design-portal).
 
 ## How we work
 
@@ -73,6 +96,6 @@ Read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a PR.
 
 ## License
 
-Unless stated otherwise in a specific repository, our open-source
-projects are released under the license declared in each repo's
-`LICENSE` file.
+Our projects use a mix of **MIT**, **Apache 2.0**, and occasionally
+**GPL**, depending on the component. Always check the `LICENSE` file
+in the specific repository you're working with.
