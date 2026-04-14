@@ -13,6 +13,9 @@ If you are reading this for the first time, also read:
   other.
 - [`SECURITY.md`](./SECURITY.md) — how to report vulnerabilities.
 - [`SUPPORT.md`](./SUPPORT.md) — where to get help.
+- [`AGENTS.md`](./AGENTS.md) — rules for AI-assisted contributions.
+  Everything in this file still applies; `AGENTS.md` adds
+  agent-specific behaviour on top.
 
 ---
 

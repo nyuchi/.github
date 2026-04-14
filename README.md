@@ -23,6 +23,7 @@ not define its own equivalent file.
 | `SECURITY.md` | How to privately report vulnerabilities; response commitments; safe-harbor terms. | ✅ |
 | `SUPPORT.md` | Where users should go for help (Discussions, Issues, Security). | ✅ |
 | `CONTRIBUTING.md` | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements. | ✅ |
+| `AGENTS.md` | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex). | ✅ |
 
 ### Issue and PR forms
 
