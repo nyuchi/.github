@@ -42,10 +42,11 @@ Shown in every org repo under **Actions → New workflow**.
 | `workflow-templates/ci-nextjs-monorepo.yml` | Turborepo + pnpm CI — lint/typecheck/test/build with affected-only filtering. | ✅ |
 | `workflow-templates/ci-rust-monorepo.yml` | Cargo workspace CI — fmt, clippy, nextest, build, doc with path-filter gate. | ✅ |
 | `workflow-templates/ci-python-monorepo.yml` | uv workspace CI — ruff, mypy, per-package pytest matrix. | ✅ |
-| `workflow-templates/codeql.yml` | CodeQL static analysis. | ⏳ |
-| `workflow-templates/dependency-review.yml` | Block PRs that introduce known-vulnerable dependencies. | ⏳ |
-| `workflow-templates/pr-title-lint.yml` | Enforce Conventional Commit format on PR titles. | ⏳ |
-| `workflow-templates/stale.yml` | Close stale issues and PRs. | ⏳ |
+| `workflow-templates/ci-docs-mdx.yml` | Docs/MDX CI — cspell spellcheck, lychee link check, site build. | ✅ |
+| `workflow-templates/codeql.yml` | CodeQL static analysis — JS/TS, Python, C/C++ with security-extended queries. | ✅ |
+| `workflow-templates/dependency-review.yml` | Block PRs that introduce known-vulnerable dependencies (moderate+). | ✅ |
+| `workflow-templates/pr-title-lint.yml` | Enforce Conventional Commit format on PR titles. | ✅ |
+| `workflow-templates/stale.yml` | Close stale issues and PRs. | ✅ |
 
 Legend: ✅ shipped · ⏳ planned
 
