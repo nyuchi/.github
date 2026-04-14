@@ -43,6 +43,12 @@ not define its own equivalent file.
 | `.github/CODEOWNERS` | Code-review ownership for *this* repo. Pairs with `AGENTS.md` so a human is always requested when agents open PRs. | ✅ |
 | `CODEOWNERS.example` | Starter template other repos should copy to `.github/CODEOWNERS`, with paths for source, CI, docs, and security-sensitive files. | ✅ |
 
+### Operational docs
+
+| Path | Purpose | Status |
+| --- | --- | :---: |
+| `ORG_SETTINGS.md` | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning, ruleset migration). Audit quarterly. | ✅ |
+
 ### Reusable workflow templates
 
 Shown in every org repo under **Actions → New workflow**.
