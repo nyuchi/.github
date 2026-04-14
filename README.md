@@ -28,10 +28,10 @@ not define its own equivalent file.
 
 | Path | Purpose | Status |
 | --- | --- | :---: |
-| `.github/ISSUE_TEMPLATE/bug_report.yml` | Default bug report form. | ⏳ |
-| `.github/ISSUE_TEMPLATE/feature_request.yml` | Default feature request form. | ⏳ |
-| `.github/ISSUE_TEMPLATE/config.yml` | Routes users from the "New issue" picker to Discussions / Security. | ⏳ |
-| `.github/PULL_REQUEST_TEMPLATE.md` | Default PR template — checklist tied to our contribution standards. | ⏳ |
+| `.github/ISSUE_TEMPLATE/bug_report.yml` | Default bug report form. | ✅ |
+| `.github/ISSUE_TEMPLATE/feature_request.yml` | Default feature request form. | ✅ |
+| `.github/ISSUE_TEMPLATE/config.yml` | Routes users from the "New issue" picker to Discussions / Security. | ✅ |
+| `.github/PULL_REQUEST_TEMPLATE.md` | Default PR template — checklist tied to our contribution standards. | ✅ |
 
 ### Reusable workflow templates
 
