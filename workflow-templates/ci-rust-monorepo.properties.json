@@ -1,6 +1,0 @@
-{
-  "name": "CI \u2014 Rust monorepo (Cargo workspace)",
-  "description": "fmt, clippy, nextest, build, and doc checks for a Cargo workspace. Gates on file-path changes and uses Swatinem/rust-cache to keep full-workspace runs fast.",
-  "categories": ["Rust"],
-  "filePatterns": ["Cargo\\.toml$", "Cargo\\.lock$"]
-}

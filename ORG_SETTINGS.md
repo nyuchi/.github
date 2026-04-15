@@ -138,30 +138,35 @@ Branches → Branch protection rules** (legacy):
 
 #### Required status checks
 
-The exact check names depend on which workflow templates a repo
-adopts. For any repo that uses them, the following should be
-**required**:
+Every adopter calls the org's reusable workflows. Status check
+names take the form `<caller-job-name> / <reusable-job-name>`. By
+convention, every repo names its caller job after the workflow
+purpose so the contexts read sensibly.
 
-**Lint — required on every repo, no exceptions.** From
-`reusable-lint.yml` (or the equivalent local copy):
+**Lint — required on every repo, no exceptions.** From a caller
+named `lint:` calling `reusable-lint.yml`:
 
-- `actionlint`
-- `JSON validity`
-- `prettier`
-- `markdownlint`
-- `yamllint`
+- `lint / actionlint`
+- `lint / JSON validity`
+- `lint / prettier`
+- `lint / markdownlint`
+- `lint / yamllint`
 
 These five run on every PR to every repo and are blocking. CI
 does not auto-fix; the developer fixes locally and pushes.
 
-**Per-repo CI — required where applicable:**
+**Per-repo CI — required where applicable** (caller-job names
+shown are conventions; the second segment is the reusable-job
+name and is fixed):
 
-- `Conventional Commits` — from `pr-title-lint.yml`
-- `Review dependencies` — from `dependency-review.yml`
-- `Analyze (*)` — from `codeql.yml`, per enabled language
+- `pr-title / Conventional Commits` — from `reusable-pr-title-lint.yml`
+- `dep-review / Review dependencies` — from `reusable-dependency-review.yml`
+- `codeql / Analyze (*)` — from `reusable-codeql.yml`, per enabled language
 - The primary CI job(s) — from whichever of
-  `ci-nextjs-monorepo.yml`, `ci-rust-monorepo.yml`,
-  `ci-python-monorepo.yml`, `ci-docs-mdx.yml` the repo uses.
+  `reusable-ci-nextjs-monorepo.yml`,
+  `reusable-ci-rust-monorepo.yml`,
+  `reusable-ci-python-monorepo.yml`, or
+  `reusable-ci-docs-mdx.yml` the repo uses.
 
 ### Tag protection
 

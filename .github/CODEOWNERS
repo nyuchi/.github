@@ -28,9 +28,10 @@
 /ORG_SETTINGS.md                        @nyuchitech/maintainers @nyuchitech/security
 
 # --- CI and automation -------------------------------------------------------
-# Workflow templates are copied into every org repo that adopts them.
-# Changes here need platform team review.
-/workflow-templates/                    @nyuchitech/maintainers @nyuchitech/platform
+# Reusable workflows are referenced live by every consuming repo
+# via `uses:`, so a change here propagates immediately on the next
+# CI run in every adopter. Platform team review required.
+/.github/workflows/                     @nyuchitech/maintainers @nyuchitech/platform
 /.github/dependabot.yml                 @nyuchitech/maintainers @nyuchitech/platform
 /.github/dependabot.example.yml         @nyuchitech/maintainers @nyuchitech/platform
 

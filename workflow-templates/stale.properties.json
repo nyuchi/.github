@@ -1,6 +1,0 @@
-{
-  "name": "Stale \u2014 Close inactive issues and PRs",
-  "description": "Auto-mark issues stale after 60 days and close after a further 14. Auto-mark PRs stale after 30 days and close after a further 14. Exempt labels: pinned, security, roadmap, help wanted, good first issue (issues); pinned, security, roadmap, work-in-progress (PRs).",
-  "categories": ["Automation", "Maintenance"],
-  "filePatterns": []
-}

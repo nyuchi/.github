@@ -1,6 +1,0 @@
-{
-  "name": "CI \u2014 Python monorepo (uv workspace)",
-  "description": "ruff, mypy, and pytest for a uv workspace. Detects affected packages under packages/* and runs pytest as a matrix over only those packages.",
-  "categories": ["Python"],
-  "filePatterns": ["uv\\.lock$", "pyproject\\.toml$"]
-}
