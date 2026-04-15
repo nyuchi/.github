@@ -80,3 +80,19 @@ jobs:
             fi
           done < <(find . -name '*.json' -not -path './node_modules/*' -print0)
           exit "$status"
+
+  prettier:
+    name: prettier --check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Prettier
+        run: npm install --global prettier@3.3.3
+
+      - name: Check formatting
+        run: prettier --check "**/*.{md,mdx,json,jsonc}"

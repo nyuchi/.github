@@ -3,7 +3,7 @@
 **Intended state of GitHub settings for Nyuchi Web Services.**
 
 Most of what's in this repo (community-health files, workflow
-templates, issue forms, Dependabot config) works at the *content*
+templates, issue forms, Dependabot config) works at the _content_
 level — it ships code and markdown that GitHub applies as defaults.
 
 But a significant part of our security and review posture lives
@@ -28,7 +28,7 @@ files (see [`CODEOWNERS`](./.github/CODEOWNERS)).
 
 ### Member privileges
 
-- **Base repository permission:** *Read* for all org members.
+- **Base repository permission:** _Read_ for all org members.
   Write / Admin is granted via team membership, not via base
   permission.
 - **Repository creation:** Restricted to org owners and the
@@ -43,35 +43,35 @@ files (see [`CODEOWNERS`](./.github/CODEOWNERS)).
 Enable at **Settings → Code security and analysis** for the org,
 and let the settings propagate to new repos as defaults:
 
-| Feature                                          | State       |
-| ------------------------------------------------ | ----------- |
-| Dependency graph                                 | **Enabled** |
-| Dependabot alerts                                | **Enabled** |
-| Dependabot security updates                      | **Enabled** |
-| Dependabot version updates                       | Opt-in per-repo via `.github/dependabot.yml` |
-| Secret scanning                                  | **Enabled** |
-| Secret scanning — push protection                | **Enabled** |
-| Secret scanning — validity checks                | **Enabled** |
-| Secret scanning — non-provider patterns          | Enabled for public repos |
-| Private vulnerability reporting                  | **Enabled** |
-| CodeQL default setup                             | Enabled per-repo (see below) |
+| Feature                                 | State                                        |
+| --------------------------------------- | -------------------------------------------- |
+| Dependency graph                        | **Enabled**                                  |
+| Dependabot alerts                       | **Enabled**                                  |
+| Dependabot security updates             | **Enabled**                                  |
+| Dependabot version updates              | Opt-in per-repo via `.github/dependabot.yml` |
+| Secret scanning                         | **Enabled**                                  |
+| Secret scanning — push protection       | **Enabled**                                  |
+| Secret scanning — validity checks       | **Enabled**                                  |
+| Secret scanning — non-provider patterns | Enabled for public repos                     |
+| Private vulnerability reporting         | **Enabled**                                  |
+| CodeQL default setup                    | Enabled per-repo (see below)                 |
 
 ### Actions permissions
 
 At **Settings → Actions → General**:
 
-- **Allowed actions:** *Allow select actions and reusable
-  workflows* — do not allow all actions unrestricted.
+- **Allowed actions:** _Allow select actions and reusable
+  workflows_ — do not allow all actions unrestricted.
 - **Allow actions created by GitHub:** **Yes.**
 - **Allow actions by Marketplace verified creators:** **Yes.**
 - **Allow specified actions and reusable workflows:** an allow-list
   covering the actions we actually use across the org — e.g.
   `actions/*, github/codeql-action/*, pnpm/action-setup@*,
-  Swatinem/rust-cache@*, astral-sh/setup-uv@*,
-  amannn/action-semantic-pull-request@*,
-  streetsidesoftware/cspell-action@*, lycheeverse/lychee-action@*`.
-- **Workflow permissions default:** *Read repository contents
-  and packages permissions*. Individual workflows opt into more
+Swatinem/rust-cache@*, astral-sh/setup-uv@*,
+amannn/action-semantic-pull-request@*,
+streetsidesoftware/cspell-action@*, lycheeverse/lychee-action@*`.
+- **Workflow permissions default:** _Read repository contents
+  and packages permissions_. Individual workflows opt into more
   via their own `permissions:` block.
 - **Allow GitHub Actions to create and approve pull requests:**
   **Disabled.** Prevents a malicious action from self-approving.
@@ -92,49 +92,49 @@ These should hold for **every public repo** under
 
 ### General
 
-| Setting                             | Value                                  |
-| ----------------------------------- | -------------------------------------- |
-| Default branch                      | `main`                                 |
-| Template repository                 | *Disabled* (unless the repo IS a template) |
-| Require contributors to sign off    | **Enabled** (DCO via `Signed-off-by`)  |
-| Issues                              | Enabled                                |
-| Discussions                         | Enabled on primary ecosystem repos     |
-| Wiki                                | **Disabled** — we keep docs in repos   |
-| Projects                            | Enabled                                |
-| Preserve this repository            | Enabled on public repos                |
+| Setting                          | Value                                      |
+| -------------------------------- | ------------------------------------------ |
+| Default branch                   | `main`                                     |
+| Template repository              | _Disabled_ (unless the repo IS a template) |
+| Require contributors to sign off | **Enabled** (DCO via `Signed-off-by`)      |
+| Issues                           | Enabled                                    |
+| Discussions                      | Enabled on primary ecosystem repos         |
+| Wiki                             | **Disabled** — we keep docs in repos       |
+| Projects                         | Enabled                                    |
+| Preserve this repository         | Enabled on public repos                    |
 
 ### Pull requests and merge settings
 
-| Setting                                         | Value    |
-| ----------------------------------------------- | -------- |
-| Allow merge commits                             | **Disabled** |
-| Allow squash merging                            | **Enabled** (default) |
-| Allow rebase merging                            | Disabled (enable per-repo for release-train workflows only) |
-| Default commit message for squash               | *Pull request title and description* |
-| Always suggest updating PR branches             | **Enabled** |
-| Allow auto-merge                                | **Enabled** |
-| Automatically delete head branches              | **Enabled** |
+| Setting                             | Value                                                       |
+| ----------------------------------- | ----------------------------------------------------------- |
+| Allow merge commits                 | **Disabled**                                                |
+| Allow squash merging                | **Enabled** (default)                                       |
+| Allow rebase merging                | Disabled (enable per-repo for release-train workflows only) |
+| Default commit message for squash   | _Pull request title and description_                        |
+| Always suggest updating PR branches | **Enabled**                                                 |
+| Allow auto-merge                    | **Enabled**                                                 |
+| Automatically delete head branches  | **Enabled**                                                 |
 
 ### Branch protection for `main`
 
 At **Settings → Rules → Rulesets** (preferred) or **Settings →
 Branches → Branch protection rules** (legacy):
 
-| Rule                                                | Value    |
-| --------------------------------------------------- | -------- |
-| Restrict deletions                                  | **Enabled** |
-| Require linear history                              | **Enabled** |
-| Require signed commits                              | **Enabled** |
-| Require a pull request before merging              | **Enabled** |
-| Required approving reviews                          | **1** (2 on `.github`, security, and infra repos) |
-| Dismiss stale pull request approvals when new commits are pushed | **Enabled** |
-| Require review from Code Owners                     | **Enabled** (once `CODEOWNERS` is in place) |
-| Require approval of the most recent reviewable push | **Enabled** |
-| Require conversation resolution before merging      | **Enabled** |
-| Require status checks to pass                       | **Enabled** |
-| Require branches to be up to date before merging    | **Enabled** |
-| Block force pushes                                  | **Enabled** |
-| Do not allow bypass                                 | **Applied to admins too** |
+| Rule                                                             | Value                                             |
+| ---------------------------------------------------------------- | ------------------------------------------------- |
+| Restrict deletions                                               | **Enabled**                                       |
+| Require linear history                                           | **Enabled**                                       |
+| Require signed commits                                           | **Enabled**                                       |
+| Require a pull request before merging                            | **Enabled**                                       |
+| Required approving reviews                                       | **1** (2 on `.github`, security, and infra repos) |
+| Dismiss stale pull request approvals when new commits are pushed | **Enabled**                                       |
+| Require review from Code Owners                                  | **Enabled** (once `CODEOWNERS` is in place)       |
+| Require approval of the most recent reviewable push              | **Enabled**                                       |
+| Require conversation resolution before merging                   | **Enabled**                                       |
+| Require status checks to pass                                    | **Enabled**                                       |
+| Require branches to be up to date before merging                 | **Enabled**                                       |
+| Block force pushes                                               | **Enabled**                                       |
+| Do not allow bypass                                              | **Applied to admins too**                         |
 
 #### Required status checks
 
@@ -161,10 +161,10 @@ adopts. For any repo that uses them, the following should be
 
 ### Org secrets (available to all repos by default)
 
-| Name              | Used by                          | Source                     |
-| ----------------- | -------------------------------- | -------------------------- |
-| `TURBO_TOKEN`     | `ci-nextjs-monorepo.yml`         | Vercel Remote Cache        |
-| `TURBO_TEAM`     | `ci-nextjs-monorepo.yml`         | Vercel Remote Cache        |
+| Name          | Used by                  | Source              |
+| ------------- | ------------------------ | ------------------- |
+| `TURBO_TOKEN` | `ci-nextjs-monorepo.yml` | Vercel Remote Cache |
+| `TURBO_TEAM`  | `ci-nextjs-monorepo.yml` | Vercel Remote Cache |
 
 **No long-lived cloud credentials** (AWS keys, GCP service-account
 JSON, Cloudflare API tokens) should be stored as org or repo
@@ -185,7 +185,7 @@ tokens.
 - **Today:** settings are applied manually via GitHub's UI, and
   this document is their source-of-truth.
 - **Near-term:** migrate to **repository rulesets** applied at the
-  org level with *targets* rather than per-repo branch-protection
+  org level with _targets_ rather than per-repo branch-protection
   rules. Rulesets are the direction GitHub is moving and are
   easier to audit.
 - **Longer-term:** manage org and repo configuration via

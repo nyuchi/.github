@@ -1,6 +1,18 @@
 {
   "name": "CodeQL \u2014 Static analysis",
   "description": "Run CodeQL (security-extended + security-and-quality) on JS/TS, Python, and C/C++ code on every PR, push to main, and weekly. Results appear in the Code Scanning tab. Remove matrix entries for languages your repo does not use.",
-  "categories": ["Security", "Code Quality", "JavaScript", "TypeScript", "Python", "C++"],
-  "filePatterns": ["package\\.json$", "pyproject\\.toml$", "CMakeLists\\.txt$", "Makefile$"]
+  "categories": [
+    "Security",
+    "Code Quality",
+    "JavaScript",
+    "TypeScript",
+    "Python",
+    "C++"
+  ],
+  "filePatterns": [
+    "package\\.json$",
+    "pyproject\\.toml$",
+    "CMakeLists\\.txt$",
+    "Makefile$"
+  ]
 }

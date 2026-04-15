@@ -11,53 +11,55 @@ not define its own equivalent file.
 
 ### Repo basics
 
-| Path | Purpose | Status |
-| --- | --- | :---: |
-| `LICENSE` | MIT. Declares the terms every other file in this repo ships under, so downstream consumers copying a workflow template or CODEOWNERS example know their obligations. | ✅ |
-| `.github/workflows/lint.yml` | Lint CI for *this* repo: actionlint on every workflow file (including `workflow-templates/`), yamllint, markdownlint, and JSON validity. Should be a required status check on `main`. | ✅ |
-| `.yamllint.yaml` | yamllint config, relaxed for GitHub Actions (`on:` truthy disabled, line-length warns at 120). | ✅ |
-| `.markdownlint.jsonc` | markdownlint-cli2 config, relaxed for inline HTML and long prose lines. | ✅ |
+| Path                         | Purpose                                                                                                                                                                               | Status |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `LICENSE`                    | MIT. Declares the terms every other file in this repo ships under, so downstream consumers copying a workflow template or CODEOWNERS example know their obligations.                  |   ✅   |
+| `.github/workflows/lint.yml` | Lint CI for _this_ repo: actionlint on every workflow file (including `workflow-templates/`), yamllint, markdownlint, and JSON validity. Should be a required status check on `main`. |   ✅   |
+| `.yamllint.yaml`             | yamllint config, relaxed for GitHub Actions (`on:` truthy disabled, line-length warns at 120).                                                                                        |   ✅   |
+| `.markdownlint.jsonc`        | markdownlint-cli2 config, relaxed for inline HTML and long prose lines.                                                                                                               |   ✅   |
+| `.prettierrc`                | Prettier config: `printWidth: 80`, `proseWrap: preserve`, LF endings. Ensures auto-formatting is deterministic across contributors.                                                   |   ✅   |
+| `.prettierignore`            | Excludes YAML (handled by yamllint/actionlint), `LICENSE`, and CODEOWNERS files (which have their own structural meaning Prettier would harm).                                        |   ✅   |
 
 ### Org profile
 
-| Path | Purpose | Status |
-| --- | --- | :---: |
-| `profile/README.md` | Landing page shown at <https://github.com/nyuchitech>. | ✅ |
+| Path                | Purpose                                                | Status |
+| ------------------- | ------------------------------------------------------ | :----: |
+| `profile/README.md` | Landing page shown at <https://github.com/nyuchitech>. |   ✅   |
 
 ### Community health files (org-wide defaults)
 
-| Path | Purpose | Status |
-| --- | --- | :---: |
-| `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1 adopted by reference. | ✅ |
-| `SECURITY.md` | How to privately report vulnerabilities; response commitments; safe-harbor terms. | ✅ |
-| `SUPPORT.md` | Where users should go for help (Discussions, Issues, Security). | ✅ |
-| `CONTRIBUTING.md` | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements. | ✅ |
-| `AGENTS.md` | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex). | ✅ |
-| `.github/copilot-instructions.md` | GitHub Copilot–specific pointer to `AGENTS.md` with the rules Copilot most often gets wrong. | ✅ |
+| Path                              | Purpose                                                                                       | Status |
+| --------------------------------- | --------------------------------------------------------------------------------------------- | :----: |
+| `CODE_OF_CONDUCT.md`              | Contributor Covenant 2.1 adopted by reference.                                                |   ✅   |
+| `SECURITY.md`                     | How to privately report vulnerabilities; response commitments; safe-harbor terms.             |   ✅   |
+| `SUPPORT.md`                      | Where users should go for help (Discussions, Issues, Security).                               |   ✅   |
+| `CONTRIBUTING.md`                 | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements. |   ✅   |
+| `AGENTS.md`                       | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex).           |   ✅   |
+| `.github/copilot-instructions.md` | GitHub Copilot–specific pointer to `AGENTS.md` with the rules Copilot most often gets wrong.  |   ✅   |
 
 ### Issue and PR forms
 
-| Path | Purpose | Status |
-| --- | --- | :---: |
-| `.github/ISSUE_TEMPLATE/bug_report.yml` | Default bug report form. | ✅ |
-| `.github/ISSUE_TEMPLATE/feature_request.yml` | Default feature request form. | ✅ |
-| `.github/ISSUE_TEMPLATE/config.yml` | Routes users from the "New issue" picker to Discussions / Security. | ✅ |
-| `.github/PULL_REQUEST_TEMPLATE.md` | Default PR template — checklist tied to our contribution standards. | ✅ |
+| Path                                         | Purpose                                                             | Status |
+| -------------------------------------------- | ------------------------------------------------------------------- | :----: |
+| `.github/ISSUE_TEMPLATE/bug_report.yml`      | Default bug report form.                                            |   ✅   |
+| `.github/ISSUE_TEMPLATE/feature_request.yml` | Default feature request form.                                       |   ✅   |
+| `.github/ISSUE_TEMPLATE/config.yml`          | Routes users from the "New issue" picker to Discussions / Security. |   ✅   |
+| `.github/PULL_REQUEST_TEMPLATE.md`           | Default PR template — checklist tied to our contribution standards. |   ✅   |
 
 ### Automation config
 
-| Path | Purpose | Status |
-| --- | --- | :---: |
-| `.github/dependabot.yml` | Dependabot config for *this* repo (github-actions ecosystem only). | ✅ |
-| `.github/dependabot.example.yml` | Full template other repos can copy — covers github-actions, npm, cargo, pip, and (commented) docker / gitsubmodule. | ✅ |
-| `.github/CODEOWNERS` | Code-review ownership for *this* repo. Pairs with `AGENTS.md` so a human is always requested when agents open PRs. | ✅ |
-| `CODEOWNERS.example` | Starter template other repos should copy to `.github/CODEOWNERS`, with paths for source, CI, docs, and security-sensitive files. | ✅ |
+| Path                             | Purpose                                                                                                                          | Status |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `.github/dependabot.yml`         | Dependabot config for _this_ repo (github-actions ecosystem only).                                                               |   ✅   |
+| `.github/dependabot.example.yml` | Full template other repos can copy — covers github-actions, npm, cargo, pip, and (commented) docker / gitsubmodule.              |   ✅   |
+| `.github/CODEOWNERS`             | Code-review ownership for _this_ repo. Pairs with `AGENTS.md` so a human is always requested when agents open PRs.               |   ✅   |
+| `CODEOWNERS.example`             | Starter template other repos should copy to `.github/CODEOWNERS`, with paths for source, CI, docs, and security-sensitive files. |   ✅   |
 
 ### Operational docs
 
-| Path | Purpose | Status |
-| --- | --- | :---: |
-| `ORG_SETTINGS.md` | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning, ruleset migration). Audit quarterly. | ✅ |
+| Path              | Purpose                                                                                                                                                | Status |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | :----: |
+| `ORG_SETTINGS.md` | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning, ruleset migration). Audit quarterly. |   ✅   |
 
 ### Reusable workflow templates
 
@@ -70,16 +72,16 @@ with a matching `*.properties.json` that controls the display name,
 description, and file-pattern suggestions. Good when a repo wants
 to pin the CI behaviour and decide when to take upgrades.
 
-| Path | Purpose | Status |
-| --- | --- | :---: |
-| `workflow-templates/ci-nextjs-monorepo.yml` | Turborepo + pnpm CI — lint/typecheck/test/build with affected-only filtering. | ✅ |
-| `workflow-templates/ci-rust-monorepo.yml` | Cargo workspace CI — fmt, clippy, nextest, build, doc with path-filter gate. | ✅ |
-| `workflow-templates/ci-python-monorepo.yml` | uv workspace CI — ruff, mypy, per-package pytest matrix. | ✅ |
-| `workflow-templates/ci-docs-mdx.yml` | Docs/MDX CI — cspell spellcheck, lychee link check, site build. | ✅ |
-| `workflow-templates/codeql.yml` | CodeQL static analysis — JS/TS, Python, C/C++ with security-extended queries. | ✅ |
-| `workflow-templates/dependency-review.yml` | Block PRs that introduce known-vulnerable dependencies (moderate+). | ✅ |
-| `workflow-templates/pr-title-lint.yml` | Enforce Conventional Commit format on PR titles. | ✅ |
-| `workflow-templates/stale.yml` | Close stale issues and PRs. | ✅ |
+| Path                                        | Purpose                                                                       | Status |
+| ------------------------------------------- | ----------------------------------------------------------------------------- | :----: |
+| `workflow-templates/ci-nextjs-monorepo.yml` | Turborepo + pnpm CI — lint/typecheck/test/build with affected-only filtering. |   ✅   |
+| `workflow-templates/ci-rust-monorepo.yml`   | Cargo workspace CI — fmt, clippy, nextest, build, doc with path-filter gate.  |   ✅   |
+| `workflow-templates/ci-python-monorepo.yml` | uv workspace CI — ruff, mypy, per-package pytest matrix.                      |   ✅   |
+| `workflow-templates/ci-docs-mdx.yml`        | Docs/MDX CI — cspell spellcheck, lychee link check, site build.               |   ✅   |
+| `workflow-templates/codeql.yml`             | CodeQL static analysis — JS/TS, Python, C/C++ with security-extended queries. |   ✅   |
+| `workflow-templates/dependency-review.yml`  | Block PRs that introduce known-vulnerable dependencies (moderate+).           |   ✅   |
+| `workflow-templates/pr-title-lint.yml`      | Enforce Conventional Commit format on PR titles.                              |   ✅   |
+| `workflow-templates/stale.yml`              | Close stale issues and PRs.                                                   |   ✅   |
 
 **Path B — reusable workflows** (central logic, auto-upgrades). Referenced
 via `uses: nyuchitech/.github/.github/workflows/<name>.yml@main` from a
@@ -87,16 +89,16 @@ caller workflow. Fixes propagate to every adopter automatically; the cost
 is coupling to this repo's `main`. Good when a repo wants to stay in
 lockstep with the org.
 
-| Path | Purpose | Status |
-| --- | --- | :---: |
-| `.github/workflows/reusable-ci-nextjs-monorepo.yml` | Turborepo + pnpm CI. Inputs: `tasks`, `node-version-file`. Secrets: `TURBO_TOKEN`, `TURBO_TEAM`. | ✅ |
-| `.github/workflows/reusable-ci-rust-monorepo.yml` | Cargo workspace CI. Input: `toolchain` (default `stable`). | ✅ |
-| `.github/workflows/reusable-ci-python-monorepo.yml` | uv workspace CI. Convention-based, no inputs. | ✅ |
-| `.github/workflows/reusable-ci-docs-mdx.yml` | Docs/MDX CI. Inputs: `build-command`, `node-version-file`, `files-glob`. | ✅ |
-| `.github/workflows/reusable-codeql.yml` | CodeQL. Required input: `languages` (JSON array of `{language, build-mode}`). | ✅ |
-| `.github/workflows/reusable-dependency-review.yml` | Dependency review. Inputs: `fail-on-severity`, `comment-summary-in-pr`. | ✅ |
-| `.github/workflows/reusable-pr-title-lint.yml` | Conventional-Commits PR title lint. Input: `require-scope`. | ✅ |
-| `.github/workflows/reusable-stale.yml` | Stale issues + PRs, fully parameterised. | ✅ |
+| Path                                                | Purpose                                                                                          | Status |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ | :----: |
+| `.github/workflows/reusable-ci-nextjs-monorepo.yml` | Turborepo + pnpm CI. Inputs: `tasks`, `node-version-file`. Secrets: `TURBO_TOKEN`, `TURBO_TEAM`. |   ✅   |
+| `.github/workflows/reusable-ci-rust-monorepo.yml`   | Cargo workspace CI. Input: `toolchain` (default `stable`).                                       |   ✅   |
+| `.github/workflows/reusable-ci-python-monorepo.yml` | uv workspace CI. Convention-based, no inputs.                                                    |   ✅   |
+| `.github/workflows/reusable-ci-docs-mdx.yml`        | Docs/MDX CI. Inputs: `build-command`, `node-version-file`, `files-glob`.                         |   ✅   |
+| `.github/workflows/reusable-codeql.yml`             | CodeQL. Required input: `languages` (JSON array of `{language, build-mode}`).                    |   ✅   |
+| `.github/workflows/reusable-dependency-review.yml`  | Dependency review. Inputs: `fail-on-severity`, `comment-summary-in-pr`.                          |   ✅   |
+| `.github/workflows/reusable-pr-title-lint.yml`      | Conventional-Commits PR title lint. Input: `require-scope`.                                      |   ✅   |
+| `.github/workflows/reusable-stale.yml`              | Stale issues + PRs, fully parameterised.                                                         |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 
@@ -132,7 +134,7 @@ different files.
 ### Read by AI agents in this repo only
 
 - **`AGENTS.md`** and **`.github/copilot-instructions.md`** are
-  read by agents operating inside *this* repository. They do NOT
+  read by agents operating inside _this_ repository. They do NOT
   auto-propagate. Repos that want these rules applied to their own
   agent sessions should copy the files into their own repo.
 

@@ -11,8 +11,8 @@
 **An infrastructure company building frontier technology
 for Africa's unique economies.**
 
-*Ubuntu — I am because we are.*
-*Ndiri nekuti tiri.*
+_Ubuntu — I am because we are._
+_Ndiri nekuti tiri._
 
 [services.nyuchi.com](https://services.nyuchi.com) ·
 [mukoko.com](https://mukoko.com) ·
@@ -49,14 +49,14 @@ in the open.
 - **[`ntl`](https://github.com/nyuchitech/ntl)** — signal-based data
   transfer layer for decentralized networks. Rust, Apache 2.0.
 - **[`siafudb`](https://github.com/nyuchitech/siafudb)** — embedded
-  property graph database *for device, edge, and Web3*. C++,
+  property graph database _for device, edge, and Web3_. C++,
   Apache 2.0. This is the on-device/local-first/edge tier, literally.
 
 ### Platforms that bring people together
 
 - **[Mukoko](https://mukoko.com)** — a privacy-first social
-  ecosystem. *"Your data stays yours, your identity is sovereign,
-  and the algorithm works for you."* Family of apps includes Mukoko
+  ecosystem. _"Your data stays yours, your identity is sovereign,
+  and the algorithm works for you."_ Family of apps includes Mukoko
   News, Mukoko Lingo, Mukoko Weather, and Nhimbe (events).
 - **[`learning`](https://github.com/nyuchitech/learning)** —
   digital learning experiences for Africa, built around African
@@ -69,7 +69,7 @@ in the open.
 
 Our design system lives at
 **[design.nyuchi.com](https://design.nyuchi.com)** — shadcn-compatible
-components, the *Five African Minerals* palette, and APCA Lc 90+
+components, the _Five African Minerals_ palette, and APCA Lc 90+
 contrast targets. The source is
 [`design-portal`](https://github.com/nyuchitech/design-portal).
 
