@@ -16,7 +16,7 @@ prefer.
 
 ### 1. Email (preferred for first contact from outside GitHub)
 
-Send a report to **security@nyuchi.com**.
+Send a report to **<security@nyuchi.com>**.
 
 If you want to encrypt your report, say so in your first message and we
 will respond with a PGP public key.
@@ -30,8 +30,9 @@ Open a private report on the affected repository:
 3. Fill in the form. Only the repository's security maintainers will
    see the report.
 
-GitHub's own documentation for this flow is
-[here][privately-reporting].
+GitHub's documentation for the [private vulnerability reporting
+flow][privately-reporting] walks through the same steps with
+screenshots.
 
 ## What to Include
 
@@ -62,7 +63,7 @@ When you report a vulnerability in good faith, we commit to:
 
 ## Scope
 
-**In scope**
+### In scope
 
 - Any repository owned by [@nyuchitech](https://github.com/nyuchitech)
   unless explicitly marked as archived, experimental, or out of scope
@@ -72,7 +73,7 @@ When you report a vulnerability in good faith, we commit to:
 - Build and release infrastructure controlled by the organization
   (GitHub Actions workflows, release artifacts).
 
-**Out of scope**
+### Out of scope
 
 - Vulnerabilities in third-party dependencies — please report those to
   the upstream project. If a dependency issue has a concrete impact on
