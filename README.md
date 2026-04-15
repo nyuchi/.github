@@ -99,17 +99,54 @@ Legend: ✅ shipped · ⏳ planned
 
 ## How GitHub uses this repo
 
+Different artefacts propagate to other repos in different ways.
+This matters — "org-wide default" means different things for
+different files.
+
+### Auto-propagated by GitHub (no action needed by consuming repos)
+
 - **Community health files** (`CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`,
   `SECURITY.md`, `SUPPORT.md`) at the root of this repository are
   applied as defaults to any **public** repo in the org that doesn't
   have its own copy. See
   [GitHub docs — default community health files][chf].
-- **Issue and PR templates** under `.github/` are used by any repo in
-  the org that doesn't define its own.
+- **Issue and PR templates** under `.github/` (`ISSUE_TEMPLATE/`,
+  `PULL_REQUEST_TEMPLATE.md`) are used by any repo in the org that
+  doesn't define its own.
 - **Workflow templates** under `workflow-templates/` appear in every
   repo in the org when a maintainer clicks **Actions → New workflow**.
   Each `*.yml` ships with a matching `*.properties.json` that controls
   the display name, description, and file-pattern suggestions.
+
+### Referenced at runtime (consuming repo opts in via `uses:`)
+
+- **Reusable workflows** under `.github/workflows/reusable-*.yml`
+  are called by other repos via
+  `uses: nyuchitech/.github/.github/workflows/<name>.yml@main`.
+  Changes here propagate on the next workflow run in every
+  consuming repo.
+
+### Read by AI agents in this repo only
+
+- **`AGENTS.md`** and **`.github/copilot-instructions.md`** are
+  read by agents operating inside *this* repository. They do NOT
+  auto-propagate. Repos that want these rules applied to their own
+  agent sessions should copy the files into their own repo.
+
+### Per-repo configuration (starter templates here, each repo copies)
+
+- **`.github/dependabot.example.yml`** and **`CODEOWNERS.example`**
+  are starter templates. Dependabot and CODEOWNERS configuration
+  are both per-repo — they do not propagate from `.github`. Each
+  repo copies the example to `.github/dependabot.yml` and
+  `.github/CODEOWNERS` and adjusts for its stack and teams.
+
+### Operational (applied manually in GitHub's UI)
+
+- **`ORG_SETTINGS.md`** is a source-of-truth document for settings
+  that live in GitHub's web UI: org-wide security features, Actions
+  permissions, branch protection, required status checks. It is
+  audited quarterly; it is not enforced by any file.
 
 ## Overriding the defaults
 
