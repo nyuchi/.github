@@ -61,33 +61,30 @@ not define its own equivalent file.
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | :----: |
 | `ORG_SETTINGS.md` | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning, ruleset migration). Audit quarterly. |   ✅   |
 
-### Reusable workflow templates
+### Reusable workflows
 
-Two ways to adopt org CI and policy workflows. Pick one per workflow per
-repo — not both.
+The org's CI and policy workflows live here as **reusable workflows
+only**. There are no starter templates: every consuming repo writes
+a thin caller workflow that references the reusable via
+`uses: nyuchitech/.github/.github/workflows/<name>.yml@main`. Fixes
+propagate to every adopter on the next CI run.
 
-**Path A — starter templates** (copy-once, own-forever). Shown in
-every org repo under **Actions → New workflow**. Each `*.yml` ships
-with a matching `*.properties.json` that controls the display name,
-description, and file-pattern suggestions. Good when a repo wants
-to pin the CI behaviour and decide when to take upgrades.
+Adopter pattern (paste into `.github/workflows/<name>.yml` in your
+repo):
 
-| Path                                        | Purpose                                                                       | Status |
-| ------------------------------------------- | ----------------------------------------------------------------------------- | :----: |
-| `workflow-templates/ci-nextjs-monorepo.yml` | Turborepo + pnpm CI — lint/typecheck/test/build with affected-only filtering. |   ✅   |
-| `workflow-templates/ci-rust-monorepo.yml`   | Cargo workspace CI — fmt, clippy, nextest, build, doc with path-filter gate.  |   ✅   |
-| `workflow-templates/ci-python-monorepo.yml` | uv workspace CI — ruff, mypy, per-package pytest matrix.                      |   ✅   |
-| `workflow-templates/ci-docs-mdx.yml`        | Docs/MDX CI — cspell spellcheck, lychee link check, site build.               |   ✅   |
-| `workflow-templates/codeql.yml`             | CodeQL static analysis — JS/TS, Python, C/C++ with security-extended queries. |   ✅   |
-| `workflow-templates/dependency-review.yml`  | Block PRs that introduce known-vulnerable dependencies (moderate+).           |   ✅   |
-| `workflow-templates/pr-title-lint.yml`      | Enforce Conventional Commit format on PR titles.                              |   ✅   |
-| `workflow-templates/stale.yml`              | Close stale issues and PRs.                                                   |   ✅   |
+```yaml
+name: Lint
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  lint:
+    uses: nyuchitech/.github/.github/workflows/reusable-lint.yml@main
+```
 
-**Path B — reusable workflows** (central logic, auto-upgrades). Referenced
-via `uses: nyuchitech/.github/.github/workflows/<name>.yml@main` from a
-caller workflow. Fixes propagate to every adopter automatically; the cost
-is coupling to this repo's `main`. Good when a repo wants to stay in
-lockstep with the org.
+Repos with stricter supply-chain requirements should reference the
+reusable by commit SHA rather than `@main`.
 
 | Path                                                | Purpose                                                                                                                                              | Status |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
@@ -119,10 +116,6 @@ different files.
 - **Issue and PR templates** under `.github/` (`ISSUE_TEMPLATE/`,
   `PULL_REQUEST_TEMPLATE.md`) are used by any repo in the org that
   doesn't define its own.
-- **Workflow templates** under `workflow-templates/` appear in every
-  repo in the org when a maintainer clicks **Actions → New workflow**.
-  Each `*.yml` ships with a matching `*.properties.json` that controls
-  the display name, description, and file-pattern suggestions.
 
 ### Referenced at runtime (consuming repo opts in via `uses:`)
 

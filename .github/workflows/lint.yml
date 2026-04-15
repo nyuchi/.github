@@ -1,12 +1,13 @@
-# Strict lint CI for nyuchitech/.github.
+# Lint CI for nyuchitech/.github.
 #
-# Every job in this workflow is a BLOCKING required status check on
-# main. Failures stop merges. CI does not auto-fix anything; the
-# developer fixes locally (`prettier --write`, `markdownlint --fix`,
-# `yamllint`-driven manual fix) and pushes the corrected commit.
+# This is a thin caller of the org's reusable lint workflow. The
+# org's lint policy lives in ONE place — reusable-lint.yml in this
+# same repo — and every consuming repo references it the same way.
+# This file proves the reusable works by using it on its own repo.
 #
-# This same policy applies to every other repo in the org via the
-# reusable workflow at .github/workflows/reusable-lint.yml.
+# All five jobs (actionlint, JSON validity, prettier, markdownlint,
+# yamllint) are blocking. CI never auto-fixes; the developer fixes
+# locally and pushes.
 
 name: Lint
 
@@ -24,79 +25,5 @@ permissions:
   contents: read
 
 jobs:
-  actionlint:
-    name: actionlint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download actionlint
-        id: get_actionlint
-        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/v1.7.4/scripts/download-actionlint.bash) 1.7.4
-        shell: bash
-
-      - name: Lint workflows and starter templates
-        run: |
-          ${{ steps.get_actionlint.outputs.executable }} -color \
-            .github/workflows/*.yml \
-            workflow-templates/*.yml
-        shell: bash
-
-  jsonlint:
-    name: JSON validity
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate every *.json file
-        run: |
-          set -euo pipefail
-          status=0
-          while IFS= read -r -d '' file; do
-            if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$file"; then
-              echo "::error file=$file::invalid JSON"
-              status=1
-            fi
-          done < <(find . -name '*.json' -not -path './node_modules/*' -print0)
-          exit "$status"
-
-  prettier:
-    name: prettier
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Prettier
-        run: npm install --global prettier@3.3.3
-
-      - name: prettier --check
-        run: prettier --check "**/*.{md,mdx,json,jsonc}"
-
-  markdownlint:
-    name: markdownlint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: markdownlint (no auto-fix)
-        uses: DavidAnson/markdownlint-cli2-action@v18
-        with:
-          globs: |
-            **/*.md
-            !**/node_modules/**
-
-  yamllint:
-    name: yamllint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install yamllint
-        run: pip install "yamllint==1.35.1"
-
-      - name: yamllint (strict)
-        run: yamllint -s -f github .
+  lint:
+    uses: ./.github/workflows/reusable-lint.yml

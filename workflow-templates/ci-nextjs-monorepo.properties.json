@@ -1,6 +1,0 @@
-{
-  "name": "CI \u2014 Next.js monorepo (Turborepo + pnpm)",
-  "description": "Lint, typecheck, test, and build a Turborepo + pnpm workspace. Uses turbo's affected-package filtering so only changed packages run on each PR.",
-  "categories": ["JavaScript", "TypeScript", "Next.js"],
-  "filePatterns": ["turbo\\.json$", "pnpm-workspace\\.yaml$"]
-}
