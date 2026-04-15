@@ -14,6 +14,9 @@ not define its own equivalent file.
 | Path | Purpose | Status |
 | --- | --- | :---: |
 | `LICENSE` | MIT. Declares the terms every other file in this repo ships under, so downstream consumers copying a workflow template or CODEOWNERS example know their obligations. | ✅ |
+| `.github/workflows/lint.yml` | Lint CI for *this* repo: actionlint on every workflow file (including `workflow-templates/`), yamllint, markdownlint, and JSON validity. Should be a required status check on `main`. | ✅ |
+| `.yamllint.yaml` | yamllint config, relaxed for GitHub Actions (`on:` truthy disabled, line-length warns at 120). | ✅ |
+| `.markdownlint.jsonc` | markdownlint-cli2 config, relaxed for inline HTML and long prose lines. | ✅ |
 
 ### Org profile
 

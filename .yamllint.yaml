@@ -1,0 +1,46 @@
+# yamllint config for nyuchitech/.github.
+#
+# Relaxed defaults that accommodate:
+#   - GitHub Actions workflows (which use `on:` — a YAML 1.1 boolean)
+#   - Long lines in shell heredocs and comment blocks inside workflows
+#   - Files without `---` document-start markers
+#
+# See https://yamllint.readthedocs.io/en/stable/configuration.html
+
+extends: default
+
+ignore: |
+  node_modules/
+
+rules:
+  # Warn on long lines, don't fail. Workflow files have legitimately
+  # long shell commands and comment blocks.
+  line-length:
+    max: 120
+    level: warning
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+
+  # GitHub Actions uses `on:` as a key, which YAML 1.1 treats as a
+  # boolean. Disable the truthy check on keys to stop yamllint from
+  # rejecting every workflow.
+  truthy:
+    check-keys: false
+    level: error
+
+  # We don't prefix YAML files with `---`.
+  document-start: disable
+
+  # Be lenient about how many spaces follow `#` in comments.
+  comments:
+    min-spaces-from-content: 1
+
+  # GitHub issue forms have deeply nested lists and mappings.
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+
+  # Stops a warning on the trailing-empty-line check for files that
+  # end cleanly with a single newline.
+  empty-lines:
+    max-end: 1
