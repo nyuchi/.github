@@ -2,5 +2,10 @@
   "name": "CI \u2014 Docs / MDX site",
   "description": "Spellcheck (cspell), link check (lychee), and build for documentation repositories authored in Markdown or MDX. Assumes a Node-based static site generator (Astro, Starlight, Next.js, Docusaurus, \u2026) with `pnpm build`.",
   "categories": ["Documentation", "Markdown", "MDX"],
-  "filePatterns": [".*\\.mdx?$", "astro\\.config\\..+$", "starlight\\..+$", "docusaurus\\.config\\..+$"]
+  "filePatterns": [
+    ".*\\.mdx?$",
+    "astro\\.config\\..+$",
+    "starlight\\..+$",
+    "docusaurus\\.config\\..+$"
+  ]
 }

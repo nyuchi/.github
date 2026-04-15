@@ -7,7 +7,7 @@ GitHub Copilot Workspace, Aider, Devin, Codex CLI, and anything
 similar — are expected to behave when making changes in any repo
 under [`nyuchitech`](https://github.com/nyuchitech).
 
-This file is *advisory for humans* and *authoritative for agents*.
+This file is _advisory for humans_ and _authoritative for agents_.
 If you are a human reviewing an agent's PR, use this as the checklist
 for what the agent should have done.
 
@@ -44,7 +44,7 @@ contributions without exception. In particular:
 - **Signed commits** on every commit that will land on `main`
   (GPG or SSH, verified by GitHub).
 - **DCO sign-off** on every commit via `git commit -s`. The agent
-  must use the *human operator's* identity for the sign-off — the
+  must use the _human operator's_ identity for the sign-off — the
   human is the legal contributor of record. Agents must **not**
   invent or use fake `Signed-off-by` trailers.
 
@@ -53,15 +53,15 @@ contributions without exception. In particular:
 Use the prefix that matches the agent, so reviewers can see at a
 glance what opened the PR:
 
-| Prefix    | Agent                                     |
-| --------- | ----------------------------------------- |
-| `claude/` | Claude Code (Anthropic)                   |
-| `cursor/` | Cursor background agent                   |
-| `copilot/`| GitHub Copilot Workspace / Copilot coding |
-| `aider/`  | Aider                                     |
-| `devin/`  | Devin                                     |
-| `codex/`  | OpenAI Codex CLI                          |
-| `agent/`  | Any other agent not listed above          |
+| Prefix     | Agent                                     |
+| ---------- | ----------------------------------------- |
+| `claude/`  | Claude Code (Anthropic)                   |
+| `cursor/`  | Cursor background agent                   |
+| `copilot/` | GitHub Copilot Workspace / Copilot coding |
+| `aider/`   | Aider                                     |
+| `devin/`   | Devin                                     |
+| `codex/`   | OpenAI Codex CLI                          |
+| `agent/`   | Any other agent not listed above          |
 
 Everything else in [`CONTRIBUTING.md` § Branch naming](./CONTRIBUTING.md#branch-naming)
 still applies (lowercase, kebab-case, under 50 characters).
@@ -101,12 +101,12 @@ explicitly. Humans reviewing an agent's PR should check each.
 
 - **Don't disable checks silently.** `eslint-disable`, `# type: ignore`,
   `#[allow(...)]`, `// @ts-expect-error`, and friends require a
-  same-line comment explaining *why*.
+  same-line comment explaining _why_.
 - **Don't weaken tests to make them pass.** If a test fails, fix
   the code, change the test's behaviour deliberately, or escalate.
 - **Don't delete tests in a refactor.** Port them.
 - **Don't trust your own tests alone.** When you write a test,
-  verify it *fails* first on the bug, then passes with the fix.
+  verify it _fails_ first on the bug, then passes with the fix.
 - **Coverage is not correctness.** An agent that writes a test which
   asserts `assert True` has gamed the gate, not passed it.
 
@@ -131,7 +131,7 @@ explicitly. Humans reviewing an agent's PR should check each.
 ### Data and blast radius
 
 - **Confirm before destructive actions.** `rm -rf`, `git reset
-  --hard`, dropping database tables, killing processes, deleting
+--hard`, dropping database tables, killing processes, deleting
   branches, force-pushing, overwriting uncommitted changes. Ask a
   human first.
 - **Do not push to shared branches without approval.** Even on
@@ -164,12 +164,12 @@ Stop and ask the human operator when:
 Repos declare their own local check commands — honour what's there
 before guessing. Common patterns across the org:
 
-| Stack                 | Install           | Check                                                    |
-| --------------------- | ----------------- | -------------------------------------------------------- |
-| TypeScript / Next.js  | `pnpm install`    | `pnpm lint && pnpm typecheck && pnpm test && pnpm build` |
-| Rust                  | (cargo vendored)  | `cargo fmt --check && cargo clippy -- -D warnings && cargo nextest run` |
-| Python (uv)           | `uv sync`         | `uv run ruff check && uv run mypy . && uv run pytest`    |
-| MDX / docs            | `pnpm install`    | `pnpm cspell && pnpm build`                              |
+| Stack                | Install          | Check                                                                   |
+| -------------------- | ---------------- | ----------------------------------------------------------------------- |
+| TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build`                |
+| Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy -- -D warnings && cargo nextest run` |
+| Python (uv)          | `uv sync`        | `uv run ruff check && uv run mypy . && uv run pytest`                   |
+| MDX / docs           | `pnpm install`   | `pnpm cspell && pnpm build`                                             |
 
 If a repo disagrees with this table, the repo wins.
 
@@ -188,4 +188,4 @@ these org rules are your ground truth.
 
 ---
 
-*Last reviewed by a human: every PR that changes this file.*
+_Last reviewed by a human: every PR that changes this file._

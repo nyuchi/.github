@@ -7,15 +7,15 @@ users.
 
 ## Quick routing
 
-| I want to... | Go here |
-| --- | --- |
-| Ask a question or share an idea | The repository's **Discussions** tab (if enabled), otherwise open an issue with the *Question* or *Feature request* template. |
-| Report a bug | The repository's **Issues** tab → *Bug report* template. |
-| Request a feature | The repository's **Issues** tab → *Feature request* template. |
-| Report a security vulnerability | **Do not open a public issue.** See [`SECURITY.md`](./SECURITY.md). |
-| Report a Code of Conduct concern | See the reporting section of [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md). |
-| Contribute code or docs | See [`CONTRIBUTING.md`](./CONTRIBUTING.md). |
-| Ask something not tied to a specific repo | Open a discussion on [nyuchitech/.github][this-repo] or the relevant umbrella repo. |
+| I want to...                              | Go here                                                                                                                       |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Ask a question or share an idea           | The repository's **Discussions** tab (if enabled), otherwise open an issue with the _Question_ or _Feature request_ template. |
+| Report a bug                              | The repository's **Issues** tab → _Bug report_ template.                                                                      |
+| Request a feature                         | The repository's **Issues** tab → _Feature request_ template.                                                                 |
+| Report a security vulnerability           | **Do not open a public issue.** See [`SECURITY.md`](./SECURITY.md).                                                           |
+| Report a Code of Conduct concern          | See the reporting section of [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).                                                    |
+| Contribute code or docs                   | See [`CONTRIBUTING.md`](./CONTRIBUTING.md).                                                                                   |
+| Ask something not tied to a specific repo | Open a discussion on [nyuchitech/.github][this-repo] or the relevant umbrella repo.                                           |
 
 ## Before you open an issue
 
@@ -48,7 +48,7 @@ A few minutes of prep makes a big difference:
   your private code.
 - Issues in third-party dependencies — please report those to the
   upstream project. If a dependency issue has a concrete impact on
-  one of our projects, we do want to hear about *that* impact.
+  one of our projects, we do want to hear about _that_ impact.
 - Questions about archived or experimental repositories.
 
 ## Response expectations

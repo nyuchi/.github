@@ -77,7 +77,7 @@ When you report a vulnerability in good faith, we commit to:
 
 - Vulnerabilities in third-party dependencies — please report those to
   the upstream project. If a dependency issue has a concrete impact on
-  one of our projects, we do want to hear about *that* impact.
+  one of our projects, we do want to hear about _that_ impact.
 - Issues on github.com itself or on hosting providers — report those
   directly to the relevant vendor
   (e.g., [GitHub's bug bounty][gh-bugbounty]).

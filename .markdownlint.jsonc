@@ -32,11 +32,8 @@
   // Unordered list indentation — 2 spaces, matching our house style.
   "MD007": { "indent": 2 },
 
-  // Table-column-style — disabled. Cosmetic rule that fails the moment a
-  // single cell length changes, requiring all sibling rows to be
-  // re-padded by hand. This is the kind of thing auto-fixed by prettier
-  // or mdformat; without one of those formatters wired up, requiring it
-  // by hand is high-friction for zero rendered-output difference. If we
-  // add a markdown formatter to CI later, re-enable this rule.
-  "MD060": false
+  // Table-column-style — re-enabled now that Prettier is in CI and
+  // auto-formats tables. Prettier's table output should satisfy
+  // MD060's "aligned" style.
+  "MD060": true,
 }

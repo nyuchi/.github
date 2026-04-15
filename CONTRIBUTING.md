@@ -44,19 +44,19 @@ Every commit and every PR title on every repo in the org must follow
 
 ### Allowed types
 
-| Type       | Use for                                               |
-| ---------- | ----------------------------------------------------- |
-| `feat`     | A user-visible new feature.                           |
-| `fix`      | A user-visible bug fix.                               |
-| `perf`     | A change that improves performance.                   |
-| `refactor` | A code change that is neither a fix nor a feature.    |
-| `docs`     | Documentation only.                                   |
-| `test`     | Adding or correcting tests.                           |
-| `build`    | Build system, packaging, bundlers, dependencies.      |
-| `ci`       | CI configuration, workflows, GitHub Actions.          |
-| `chore`    | Maintenance that doesn't fit above.                   |
-| `revert`   | Reverting a previous commit.                          |
-| `style`    | Formatting only; no logic change.                     |
+| Type       | Use for                                            |
+| ---------- | -------------------------------------------------- |
+| `feat`     | A user-visible new feature.                        |
+| `fix`      | A user-visible bug fix.                            |
+| `perf`     | A change that improves performance.                |
+| `refactor` | A code change that is neither a fix nor a feature. |
+| `docs`     | Documentation only.                                |
+| `test`     | Adding or correcting tests.                        |
+| `build`    | Build system, packaging, bundlers, dependencies.   |
+| `ci`       | CI configuration, workflows, GitHub Actions.       |
+| `chore`    | Maintenance that doesn't fit above.                |
+| `revert`   | Reverting a previous commit.                       |
+| `style`    | Formatting only; no logic change.                  |
 
 ### Breaking changes
 
@@ -169,7 +169,7 @@ No personal names, no ticket-number-only branches.
 - Rebase onto the latest default branch; do not merge the default
   branch into your feature branch.
 - Run the repo's local checks (`pnpm test`, `cargo test`, `uv run
-  pytest`, etc.) and make sure they pass.
+pytest`, etc.) and make sure they pass.
 - If your change is user-visible, update the relevant docs in the
   same PR.
 
@@ -177,7 +177,7 @@ No personal names, no ticket-number-only branches.
 
 - **Title**: Conventional Commits format. The PR title is what
   becomes the commit message on `main` for squash-merges.
-- **Description**: explain the *why*, not just the *what*. Link to
+- **Description**: explain the _why_, not just the _what_. Link to
   the issue it resolves (`Closes #123`) or to any related discussion.
 - **Checklist**: the repo's PR template will prompt you through it —
   fill it honestly.
@@ -215,7 +215,7 @@ style rules here — the config files in each repo are the source of
 truth.
 
 - **Do not disable checks** (`eslint-disable`, `# type: ignore`,
-  `#[allow(...)]`) without a comment explaining *why* on the same
+  `#[allow(...)]`) without a comment explaining _why_ on the same
   line.
 - **Do not commit generated or secret files.** `.env`, build
   artifacts, lockfiles for libraries, etc.
@@ -274,7 +274,7 @@ When you contribute:
 - **Who reviews PRs?** → The CODEOWNERS file in each repo.
 
 Thanks for contributing. The Ubuntu philosophy we build around —
-*I am because we are* — applies to the code too. Everyone's work
+_I am because we are_ — applies to the code too. Everyone's work
 here is possible because someone else contributed first.
 
 [org]: https://github.com/nyuchitech
