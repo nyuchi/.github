@@ -1,12 +1,15 @@
 # Dependabot config for nyuchitech/.github.
 #
-# This repo ships templates and markdown, not application code, so
-# the only ecosystem Dependabot tracks here is `github-actions` —
-# keeping our reusable workflow templates (and any workflows we add
-# in the future) pinned to current, secure action versions.
+# Org policy (also baked into `.github/dependabot.example.yml`):
+#   - Run **once a week**, every Monday at 06:00 Africa/Harare.
+#   - Produce **one PR per ecosystem** with every available update
+#     bundled. No per-package PR sprawl, no per-update-type splits.
+#   - `build:` Conventional Commits prefix so pr-title-lint accepts
+#     Dependabot's PRs without manual edits.
 #
-# The broader template for other repos in the org lives alongside
-# this file as `.github/dependabot.example.yml`.
+# This repo ships markdown, configs, and reusable workflows. Only
+# the `github-actions` ecosystem applies — Dependabot tracks the
+# action versions referenced in our reusable workflows.
 
 version: 2
 updates:
@@ -17,17 +20,14 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Africa/Harare"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
       - "github-actions"
-    # Conventional Commits: our pr-title-lint workflow will reject
-    # Dependabot PRs unless their title is in this form.
     commit-message:
       prefix: "build"
       include: "scope"
     groups:
-      # Bundle all action updates into one PR per run.
-      actions:
-        patterns:
-          - "*"
+      all:
+        patterns: ["*"]
+        update-types: ["major", "minor", "patch"]

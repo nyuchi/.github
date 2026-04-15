@@ -48,12 +48,12 @@ not define its own equivalent file.
 
 ### Automation config
 
-| Path                             | Purpose                                                                                                                          | Status |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | :----: |
-| `.github/dependabot.yml`         | Dependabot config for _this_ repo (github-actions ecosystem only).                                                               |   ✅   |
-| `.github/dependabot.example.yml` | Full template other repos can copy — covers github-actions, npm, cargo, pip, and (commented) docker / gitsubmodule.              |   ✅   |
-| `.github/CODEOWNERS`             | Code-review ownership for _this_ repo. Pairs with `AGENTS.md` so a human is always requested when agents open PRs.               |   ✅   |
-| `CODEOWNERS.example`             | Starter template other repos should copy to `.github/CODEOWNERS`, with paths for source, CI, docs, and security-sensitive files. |   ✅   |
+| Path                             | Purpose                                                                                                                                                                                                                  | Status |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :----: |
+| `.github/dependabot.yml`         | Dependabot config for _this_ repo (github-actions ecosystem only). Weekly Monday, one grouped PR.                                                                                                                        |   ✅   |
+| `.github/dependabot.example.yml` | Full template other repos can copy. Org policy: weekly Monday, one PR per ecosystem with every update bundled — no per-package PR sprawl. Covers github-actions, npm, cargo, pip, and (commented) docker / gitsubmodule. |   ✅   |
+| `.github/CODEOWNERS`             | Code-review ownership for _this_ repo. Pairs with `AGENTS.md` so a human is always requested when agents open PRs.                                                                                                       |   ✅   |
+| `CODEOWNERS.example`             | Starter template other repos should copy to `.github/CODEOWNERS`, with paths for source, CI, docs, and security-sensitive files.                                                                                         |   ✅   |
 
 ### Operational docs
 
