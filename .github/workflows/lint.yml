@@ -1,0 +1,82 @@
+# CI for nyuchitech/.github itself.
+#
+# Lints every workflow file (including starter templates in
+# workflow-templates/), every other YAML file, and every Markdown
+# document. These jobs are expected to be required status checks on
+# the main branch.
+
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download actionlint
+        id: get_actionlint
+        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/v1.7.4/scripts/download-actionlint.bash) 1.7.4
+        shell: bash
+
+      - name: Lint workflows and starter templates
+        run: |
+          ${{ steps.get_actionlint.outputs.executable }} -color \
+            .github/workflows/*.yml \
+            workflow-templates/*.yml
+        shell: bash
+
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pip install "yamllint==1.35.1"
+
+      - name: Run yamllint
+        run: yamllint .
+
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+
+  jsonlint:
+    name: JSON validity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate every *.json file
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$file"; then
+              echo "::error file=$file::invalid JSON"
+              status=1
+            fi
+          done < <(find . -name '*.json' -not -path './node_modules/*' -print0)
+          exit "$status"
