@@ -1,16 +1,12 @@
-# CI for nyuchitech/.github itself.
+# Strict lint CI for nyuchitech/.github.
 #
-# Two tiers:
+# Every job in this workflow is a BLOCKING required status check on
+# main. Failures stop merges. CI does not auto-fix anything; the
+# developer fixes locally (`prettier --write`, `markdownlint --fix`,
+# `yamllint`-driven manual fix) and pushes the corrected commit.
 #
-#   BLOCKING: actionlint and JSON validity. These catch real bugs
-#   (broken workflow syntax, unparseable JSON) that would ship to
-#   every consuming repo. They must pass before merge.
-#
-#   ADVISORY: prettier, markdownlint, yamllint. Style and formatting
-#   concerns. They post inline PR review suggestions but do NOT fail
-#   the build. Developers decide which suggestions to apply.
-#
-# Only the BLOCKING job names belong in required-status-checks.
+# This same policy applies to every other repo in the org via the
+# reusable workflow at .github/workflows/reusable-lint.yml.
 
 name: Lint
 
@@ -28,8 +24,6 @@ permissions:
   contents: read
 
 jobs:
-  # ---- BLOCKING ----------------------------------------------------------
-
   actionlint:
     name: actionlint
     runs-on: ubuntu-latest
@@ -66,23 +60,11 @@ jobs:
           done < <(find . -name '*.json' -not -path './node_modules/*' -print0)
           exit "$status"
 
-  # ---- ADVISORY ----------------------------------------------------------
-  # The three jobs below run their tools in --fix / --write mode, then
-  # reviewdog/action-suggester picks up the resulting diff and posts it
-  # as inline PR review suggestions that the developer can click to
-  # apply or dismiss. fail_on_error: false ensures the job never blocks
-  # the merge.
-
   prettier:
-    name: prettier (advisory)
+    name: prettier
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -91,60 +73,30 @@ jobs:
       - name: Install Prettier
         run: npm install --global prettier@3.3.3
 
-      - name: Run prettier --write
-        run: prettier --write "**/*.{md,mdx,json,jsonc}" || true
-
-      - name: Post suggestions on PR
-        if: github.event_name == 'pull_request'
-        uses: reviewdog/action-suggester@v1
-        with:
-          tool_name: prettier
-          level: warning
-          fail_on_error: false
+      - name: prettier --check
+        run: prettier --check "**/*.{md,mdx,json,jsonc}"
 
   markdownlint:
-    name: markdownlint (advisory)
+    name: markdownlint
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Run markdownlint with --fix
+      - name: markdownlint (no auto-fix)
         uses: DavidAnson/markdownlint-cli2-action@v18
         with:
           globs: |
             **/*.md
             !**/node_modules/**
-          fix: true
-        continue-on-error: true
-
-      - name: Post suggestions on PR
-        if: github.event_name == 'pull_request'
-        uses: reviewdog/action-suggester@v1
-        with:
-          tool_name: markdownlint
-          level: warning
-          fail_on_error: false
 
   yamllint:
-    name: yamllint (advisory)
+    name: yamllint
     runs-on: ubuntu-latest
-    continue-on-error: true
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
 
       - name: Install yamllint
         run: pip install "yamllint==1.35.1"
 
-      - name: Run yamllint (annotations only)
-        # `-f github` emits warnings as GitHub Actions workflow
-        # annotations, which appear inline in the PR Files tab and in
-        # the check summary. Combined with continue-on-error: true at
-        # the job level, this surfaces issues without blocking.
-        run: yamllint -f github .
+      - name: yamllint (strict)
+        run: yamllint -s -f github .

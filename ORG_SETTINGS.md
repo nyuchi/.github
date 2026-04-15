@@ -142,6 +142,20 @@ The exact check names depend on which workflow templates a repo
 adopts. For any repo that uses them, the following should be
 **required**:
 
+**Lint — required on every repo, no exceptions.** From
+`reusable-lint.yml` (or the equivalent local copy):
+
+- `actionlint`
+- `JSON validity`
+- `prettier`
+- `markdownlint`
+- `yamllint`
+
+These five run on every PR to every repo and are blocking. CI
+does not auto-fix; the developer fixes locally and pushes.
+
+**Per-repo CI — required where applicable:**
+
 - `Conventional Commits` — from `pr-title-lint.yml`
 - `Review dependencies` — from `dependency-review.yml`
 - `Analyze (*)` — from `codeql.yml`, per enabled language
