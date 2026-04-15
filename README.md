@@ -11,14 +11,14 @@ not define its own equivalent file.
 
 ### Repo basics
 
-| Path                         | Purpose                                                                                                                                                                               | Status |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
-| `LICENSE`                    | MIT. Declares the terms every other file in this repo ships under, so downstream consumers copying a workflow template or CODEOWNERS example know their obligations.                  |   ✅   |
-| `.github/workflows/lint.yml` | Lint CI for _this_ repo. **Blocking** jobs (real bugs): `actionlint`, `JSON validity`. **Advisory** jobs (post inline PR suggestions, never fail): `prettier (advisory)`, `markdownlint (advisory)`, `yamllint (advisory)`. Only the blocking job names belong in required status checks. |   ✅   |
-| `.yamllint.yaml`             | yamllint config, relaxed for GitHub Actions (`on:` truthy disabled, line-length warns at 120).                                                                                                                                                                                            |   ✅   |
-| `.markdownlint.jsonc`        | markdownlint-cli2 config, relaxed for inline HTML and long prose lines.                                                                                                                                                                                                                   |   ✅   |
-| `.prettierrc`                | Prettier config: `printWidth: 80`, `proseWrap: preserve`, LF endings.                                                                                                                                                                                                                     |   ✅   |
-| `.prettierignore`            | Excludes YAML (handled by yamllint/actionlint), `LICENSE`, and CODEOWNERS files.                                                                                                                                                                                                          |   ✅   |
+| Path                         | Purpose                                                                                                                                                                                                                                   | Status |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `LICENSE`                    | MIT. Declares the terms every other file in this repo ships under, so downstream consumers copying a workflow template or CODEOWNERS example know their obligations.                                                                      |   ✅   |
+| `.github/workflows/lint.yml` | Strict lint CI for _this_ repo. Five **blocking** jobs: `actionlint`, `JSON validity`, `prettier`, `markdownlint`, `yamllint`. CI does not auto-fix; the developer fixes locally and pushes. All five names go in required status checks. |   ✅   |
+| `.yamllint.yaml`             | yamllint config, relaxed for GitHub Actions (`on:` truthy disabled, line-length warns at 120).                                                                                                                                            |   ✅   |
+| `.markdownlint.jsonc`        | markdownlint-cli2 config, relaxed for inline HTML and long prose lines.                                                                                                                                                                   |   ✅   |
+| `.prettierrc`                | Prettier config: `printWidth: 80`, `proseWrap: preserve`, LF endings.                                                                                                                                                                     |   ✅   |
+| `.prettierignore`            | Excludes YAML (handled by yamllint/actionlint), `LICENSE`, and CODEOWNERS files.                                                                                                                                                          |   ✅   |
 
 ### Org profile
 
@@ -89,16 +89,17 @@ caller workflow. Fixes propagate to every adopter automatically; the cost
 is coupling to this repo's `main`. Good when a repo wants to stay in
 lockstep with the org.
 
-| Path                                                | Purpose                                                                                          | Status |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ | :----: |
-| `.github/workflows/reusable-ci-nextjs-monorepo.yml` | Turborepo + pnpm CI. Inputs: `tasks`, `node-version-file`. Secrets: `TURBO_TOKEN`, `TURBO_TEAM`. |   ✅   |
-| `.github/workflows/reusable-ci-rust-monorepo.yml`   | Cargo workspace CI. Input: `toolchain` (default `stable`).                                       |   ✅   |
-| `.github/workflows/reusable-ci-python-monorepo.yml` | uv workspace CI. Convention-based, no inputs.                                                    |   ✅   |
-| `.github/workflows/reusable-ci-docs-mdx.yml`        | Docs/MDX CI. Inputs: `build-command`, `node-version-file`, `files-glob`.                         |   ✅   |
-| `.github/workflows/reusable-codeql.yml`             | CodeQL. Required input: `languages` (JSON array of `{language, build-mode}`).                    |   ✅   |
-| `.github/workflows/reusable-dependency-review.yml`  | Dependency review. Inputs: `fail-on-severity`, `comment-summary-in-pr`.                          |   ✅   |
-| `.github/workflows/reusable-pr-title-lint.yml`      | Conventional-Commits PR title lint. Input: `require-scope`.                                      |   ✅   |
-| `.github/workflows/reusable-stale.yml`              | Stale issues + PRs, fully parameterised.                                                         |   ✅   |
+| Path                                                | Purpose                                                                                                                                              | Status |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `.github/workflows/reusable-ci-nextjs-monorepo.yml` | Turborepo + pnpm CI. Inputs: `tasks`, `node-version-file`. Secrets: `TURBO_TOKEN`, `TURBO_TEAM`.                                                     |   ✅   |
+| `.github/workflows/reusable-ci-rust-monorepo.yml`   | Cargo workspace CI. Input: `toolchain` (default `stable`).                                                                                           |   ✅   |
+| `.github/workflows/reusable-ci-python-monorepo.yml` | uv workspace CI. Convention-based, no inputs.                                                                                                        |   ✅   |
+| `.github/workflows/reusable-ci-docs-mdx.yml`        | Docs/MDX CI. Inputs: `build-command`, `node-version-file`, `files-glob`.                                                                             |   ✅   |
+| `.github/workflows/reusable-codeql.yml`             | CodeQL. Required input: `languages` (JSON array of `{language, build-mode}`).                                                                        |   ✅   |
+| `.github/workflows/reusable-dependency-review.yml`  | Dependency review. Inputs: `fail-on-severity`, `comment-summary-in-pr`.                                                                              |   ✅   |
+| `.github/workflows/reusable-pr-title-lint.yml`      | Conventional-Commits PR title lint. Input: `require-scope`.                                                                                          |   ✅   |
+| `.github/workflows/reusable-stale.yml`              | Stale issues + PRs, fully parameterised.                                                                                                             |   ✅   |
+| `.github/workflows/reusable-lint.yml`               | **Strict org-wide lint.** Five blocking jobs: actionlint, JSON validity, prettier, markdownlint, yamllint. No auto-fix. Every repo should call this. |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 
