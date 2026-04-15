@@ -1,9 +1,16 @@
 # CI for nyuchitech/.github itself.
 #
-# Lints every workflow file (including starter templates in
-# workflow-templates/), every other YAML file, and every Markdown
-# document. These jobs are expected to be required status checks on
-# the main branch.
+# Two tiers:
+#
+#   BLOCKING: actionlint and JSON validity. These catch real bugs
+#   (broken workflow syntax, unparseable JSON) that would ship to
+#   every consuming repo. They must pass before merge.
+#
+#   ADVISORY: prettier, markdownlint, yamllint. Style and formatting
+#   concerns. They post inline PR review suggestions but do NOT fail
+#   the build. Developers decide which suggestions to apply.
+#
+# Only the BLOCKING job names belong in required-status-checks.
 
 name: Lint
 
@@ -21,6 +28,8 @@ permissions:
   contents: read
 
 jobs:
+  # ---- BLOCKING ----------------------------------------------------------
+
   actionlint:
     name: actionlint
     runs-on: ubuntu-latest
@@ -38,30 +47,6 @@ jobs:
             .github/workflows/*.yml \
             workflow-templates/*.yml
         shell: bash
-
-  yamllint:
-    name: yamllint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install yamllint
-        run: pip install "yamllint==1.35.1"
-
-      - name: Run yamllint
-        run: yamllint .
-
-  markdownlint:
-    name: markdownlint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: DavidAnson/markdownlint-cli2-action@v18
-        with:
-          globs: |
-            **/*.md
-            !**/node_modules/**
 
   jsonlint:
     name: JSON validity
@@ -81,11 +66,23 @@ jobs:
           done < <(find . -name '*.json' -not -path './node_modules/*' -print0)
           exit "$status"
 
+  # ---- ADVISORY ----------------------------------------------------------
+  # The three jobs below run their tools in --fix / --write mode, then
+  # reviewdog/action-suggester picks up the resulting diff and posts it
+  # as inline PR review suggestions that the developer can click to
+  # apply or dismiss. fail_on_error: false ensures the job never blocks
+  # the merge.
+
   prettier:
-    name: prettier --check
+    name: prettier (advisory)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -94,5 +91,60 @@ jobs:
       - name: Install Prettier
         run: npm install --global prettier@3.3.3
 
-      - name: Check formatting
-        run: prettier --check "**/*.{md,mdx,json,jsonc}"
+      - name: Run prettier --write
+        run: prettier --write "**/*.{md,mdx,json,jsonc}" || true
+
+      - name: Post suggestions on PR
+        if: github.event_name == 'pull_request'
+        uses: reviewdog/action-suggester@v1
+        with:
+          tool_name: prettier
+          level: warning
+          fail_on_error: false
+
+  markdownlint:
+    name: markdownlint (advisory)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run markdownlint with --fix
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+          fix: true
+        continue-on-error: true
+
+      - name: Post suggestions on PR
+        if: github.event_name == 'pull_request'
+        uses: reviewdog/action-suggester@v1
+        with:
+          tool_name: markdownlint
+          level: warning
+          fail_on_error: false
+
+  yamllint:
+    name: yamllint (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pip install "yamllint==1.35.1"
+
+      - name: Run yamllint (annotations only)
+        # `-f github` emits warnings as GitHub Actions workflow
+        # annotations, which appear inline in the PR Files tab and in
+        # the check summary. Combined with continue-on-error: true at
+        # the job level, this surfaces issues without blocking.
+        run: yamllint -f github .
