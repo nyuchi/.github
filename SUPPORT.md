@@ -34,7 +34,7 @@ A few minutes of prep makes a big difference:
 
 ## What we can and cannot help with
 
-**We can help with**
+### We can help with
 
 - Bugs and unexpected behavior in code we maintain.
 - Documentation that is unclear, incorrect, or missing.
@@ -42,7 +42,7 @@ A few minutes of prep makes a big difference:
 - Security vulnerabilities (via the private channels in
   [`SECURITY.md`](./SECURITY.md)).
 
-**We generally cannot help with**
+### We generally cannot help with
 
 - One-on-one consulting, custom integrations, or bespoke debugging of
   your private code.
