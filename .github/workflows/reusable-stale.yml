@@ -1,0 +1,86 @@
+# Reusable workflow: Stale issues and PRs.
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   on:
+#     schedule:
+#       - cron: '23 1 * * *'
+#     workflow_dispatch:
+#
+#   jobs:
+#     stale:
+#       uses: nyuchi/.github/.github/workflows/reusable-stale.yml@main
+#
+# The caller must grant:
+#   issues: write
+#   pull-requests: write
+
+name: Reusable / Stale
+
+on:
+  workflow_call:
+    inputs:
+      days-before-issue-stale:
+        type: number
+        default: 60
+      days-before-issue-close:
+        type: number
+        default: 14
+      days-before-pr-stale:
+        type: number
+        default: 30
+      days-before-pr-close:
+        type: number
+        default: 14
+      exempt-issue-labels:
+        type: string
+        default: "pinned,security,roadmap,help wanted,good first issue"
+      exempt-pr-labels:
+        type: string
+        default: "pinned,security,roadmap,work-in-progress"
+      operations-per-run:
+        type: number
+        default: 100
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          operations-per-run: ${{ inputs.operations-per-run }}
+
+          days-before-issue-stale: ${{ inputs.days-before-issue-stale }}
+          days-before-issue-close: ${{ inputs.days-before-issue-close }}
+          stale-issue-label: stale
+          exempt-issue-labels: ${{ inputs.exempt-issue-labels }}
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it
+            has had no activity for ${{ inputs.days-before-issue-stale }}
+            days. It will be closed in
+            ${{ inputs.days-before-issue-close }} days if no further
+            activity occurs. If this is still relevant, please leave a
+            comment or add the `pinned` label.
+          close-issue-message: >
+            Closing due to inactivity. If you believe this is still a
+            real problem, please open a new issue and link to this one
+            for context.
+
+          days-before-pr-stale: ${{ inputs.days-before-pr-stale }}
+          days-before-pr-close: ${{ inputs.days-before-pr-close }}
+          stale-pr-label: stale
+          exempt-pr-labels: ${{ inputs.exempt-pr-labels }}
+          stale-pr-message: >
+            This pull request has been automatically marked as stale
+            because it has had no activity for
+            ${{ inputs.days-before-pr-stale }} days. It will be closed
+            in ${{ inputs.days-before-pr-close }} days if no further
+            activity occurs. If you intend to finish this work, push a
+            commit, rebase, or leave a comment.
+          close-pr-message: >
+            Closing due to inactivity. Reopen or open a new PR when
+            you're ready to continue.

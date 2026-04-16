@@ -1,0 +1,62 @@
+# Reusable workflow: PR title lint (Conventional Commits).
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   on:
+#     pull_request_target:
+#       types: [opened, edited, reopened, synchronize]
+#
+#   jobs:
+#     lint:
+#       uses: nyuchi/.github/.github/workflows/reusable-pr-title-lint.yml@main
+#
+# The caller must grant:
+#   pull-requests: read
+#   statuses: write
+#
+# The allowed types below track CONTRIBUTING.md § Allowed types. When that
+# list changes, change it here too (and the starter template).
+
+name: Reusable / PR title lint
+
+on:
+  workflow_call:
+    inputs:
+      require-scope:
+        description: If true, a scope like `feat(auth):` is required on every PR.
+        type: boolean
+        default: false
+
+permissions:
+  pull-requests: read
+  statuses: write
+
+jobs:
+  lint:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            test
+            build
+            ci
+            chore
+            revert
+            style
+          requireScope: ${{ inputs.require-scope }}
+          subjectPattern: ^(?![A-Z])[^.]+[^. ]$
+          subjectPatternError: |
+            The subject "{subject}" in the PR title "{title}" doesn't
+            match our subject rule. Start the subject with a lowercase
+            letter, write an imperative verb ("add", not "Added" or
+            "Adds"), and do not end with a period.
+          wip: true
