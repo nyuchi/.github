@@ -4,7 +4,7 @@
 #
 #   jobs:
 #     ci:
-#       uses: nyuchitech/.github/.github/workflows/reusable-ci-python-monorepo.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-python-monorepo.yml@main
 #
 # The caller must grant `contents: read`.
 #

@@ -1,4 +1,4 @@
-# Lint CI for nyuchitech/.github.
+# Lint CI for nyuchi/.github.
 #
 # This is a thin caller of the org's reusable lint workflow. The
 # org's lint policy lives in ONE place — reusable-lint.yml in this

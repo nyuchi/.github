@@ -1,6 +1,6 @@
 # Reusable workflow: strict lint (the org's standard lint policy).
 #
-# Call from a caller workflow in any repo under nyuchitech:
+# Call from a caller workflow in any repo under nyuchi:
 #
 #   name: Lint
 #   on:
@@ -9,7 +9,7 @@
 #       branches: [main]
 #   jobs:
 #     lint:
-#       uses: nyuchitech/.github/.github/workflows/reusable-lint.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-lint.yml@main
 #
 # Every job is BLOCKING. The required-status-checks list in your
 # repo's main-branch ruleset should include all five job names:
@@ -22,7 +22,7 @@
 #
 # Each consuming repo should ship its own .prettierrc,
 # .prettierignore, .yamllint.yaml, and .markdownlint.jsonc -
-# copy them from nyuchitech/.github as a starting point.
+# copy them from nyuchi/.github as a starting point.
 # These tools all auto-discover their config from the repo root.
 #
 # The caller must grant `contents: read` (the workflow default).

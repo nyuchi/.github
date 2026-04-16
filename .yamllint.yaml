@@ -1,4 +1,4 @@
-# yamllint config for nyuchitech/.github.
+# yamllint config for nyuchi/.github.
 #
 # Relaxed defaults that accommodate:
 #   - GitHub Actions workflows (which use `on:` — a YAML 1.1 boolean)

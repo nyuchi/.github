@@ -14,7 +14,7 @@ body:
         - For **security vulnerabilities**, do *not* open a public issue.
           Follow [`SECURITY.md`](../../blob/main/SECURITY.md) instead.
         - For **usage questions**, use
-          [Discussions](https://github.com/orgs/nyuchitech/discussions), not
+          [Discussions](https://github.com/orgs/nyuchi/discussions), not
           Issues.
 
   - type: checkboxes

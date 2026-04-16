@@ -277,7 +277,7 @@ Thanks for contributing. The Ubuntu philosophy we build around —
 _I am because we are_ — applies to the code too. Everyone's work
 here is possible because someone else contributed first.
 
-[org]: https://github.com/nyuchitech
+[org]: https://github.com/nyuchi
 [cc]: https://www.conventionalcommits.org/en/v1.0.0/
 [gpg]: https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits
 [ssh]: https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key

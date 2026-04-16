@@ -4,7 +4,7 @@
 #
 #   jobs:
 #     ci:
-#       uses: nyuchitech/.github/.github/workflows/reusable-ci-docs-mdx.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-docs-mdx.yml@main
 #       with:
 #         build-command: "pnpm build"
 #

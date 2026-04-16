@@ -1,7 +1,7 @@
 # Code of Conduct
 
 All projects under the Nyuchi Web Services GitHub organization
-([@nyuchitech](https://github.com/nyuchitech)) adopt the
+([@nyuchi](https://github.com/nyuchi)) adopt the
 **[Contributor Covenant, version 2.1][cc]** as our code of conduct.
 
 The full text — including our standards, scope, enforcement
@@ -16,7 +16,7 @@ A plain-text copy is available at
 
 This Code of Conduct applies within all community spaces owned or
 operated by the organization, including every repository under
-[@nyuchitech](https://github.com/orgs/nyuchitech/repositories), issue
+[@nyuchi](https://github.com/orgs/nyuchi/repositories), issue
 trackers, pull requests, discussions, and any official communication
 channel. It also applies when an individual is officially representing
 the organization in public spaces.

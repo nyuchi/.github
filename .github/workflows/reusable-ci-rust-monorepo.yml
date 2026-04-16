@@ -4,7 +4,7 @@
 #
 #   jobs:
 #     ci:
-#       uses: nyuchitech/.github/.github/workflows/reusable-ci-rust-monorepo.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-rust-monorepo.yml@main
 #       with:
 #         toolchain: stable
 #

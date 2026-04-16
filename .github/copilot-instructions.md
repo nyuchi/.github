@@ -2,7 +2,7 @@
 
 GitHub Copilot (chat, code completion, Copilot Workspace, and the
 Copilot coding agent) automatically reads this file when operating
-in a repository under [`nyuchitech`](https://github.com/nyuchitech).
+in a repository under [`nyuchi`](https://github.com/nyuchi).
 
 **The canonical rules live in [`AGENTS.md`](../AGENTS.md).** This
 file is a short, Copilot-specific pointer to those rules plus the
