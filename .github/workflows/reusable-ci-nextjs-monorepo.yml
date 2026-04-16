@@ -1,0 +1,78 @@
+# Reusable workflow: Next.js monorepo CI (Turborepo + pnpm).
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   jobs:
+#     ci:
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-nextjs-monorepo.yml@main
+#       with:
+#         tasks: "lint typecheck test build"
+#       secrets:
+#         TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+#         TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+#
+# The caller must grant `contents: read`.
+
+name: Reusable / CI / Next.js monorepo
+
+on:
+  workflow_call:
+    inputs:
+      tasks:
+        description: Space-separated list of turbo tasks to run (matrixed one job per task).
+        type: string
+        default: "lint typecheck test build"
+      node-version-file:
+        description: Path to the file pinning the Node version.
+        type: string
+        default: .nvmrc
+    secrets:
+      TURBO_TOKEN:
+        description: Turborepo Remote Cache token. Optional.
+        required: false
+      TURBO_TEAM:
+        description: Turborepo Remote Cache team slug. Optional.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    name: resolve matrix
+    runs-on: ubuntu-latest
+    outputs:
+      tasks: ${{ steps.split.outputs.tasks }}
+    steps:
+      - id: split
+        run: |
+          json=$(printf '%s\n' ${{ inputs.tasks }} | jq -R . | jq -c -s .)
+          echo "tasks=$json" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: ${{ matrix.task }}
+    needs: matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: ${{ fromJSON(needs.matrix.outputs.tasks) }}
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      TURBO_FILTER: >-
+        ${{ github.event_name == 'pull_request'
+            && format('...[{0}]', github.event.pull_request.base.sha)
+            || '...[HEAD^1]' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: turbo run ${{ matrix.task }}
+        run: pnpm turbo run ${{ matrix.task }} --filter="${TURBO_FILTER}"

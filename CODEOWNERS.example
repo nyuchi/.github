@@ -1,0 +1,83 @@
+# Example CODEOWNERS for a Nyuchi Web Services repository.
+#
+# Copy this file to `.github/CODEOWNERS` (or `CODEOWNERS` at the
+# repo root) in your repo and adjust paths, team handles, and
+# individual owners to match the project. Then enable
+# "Require review from Code Owners" in the repo's branch
+# protection rules — see ORG_SETTINGS.md.
+#
+# Why this matters: when agents (Claude, Cursor, Copilot) open
+# PRs, CODEOWNERS is how GitHub guarantees a human reviewer is
+# automatically requested. Without CODEOWNERS, bot PRs can sit
+# unassigned.
+#
+# Docs:
+#   https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Syntax reminder:
+#   - Last matching rule wins (GitHub evaluates bottom-up after
+#     finding matches, but the most-specific path wins).
+#   - Use `/path/` to match a whole directory.
+#   - Use `*.ext` to match file extensions anywhere in the tree.
+#   - Prefix with `/` to anchor a pattern at the repo root.
+
+# ============================================================================
+# Default owner
+# ============================================================================
+# Everything not matched by a rule below falls through to this team.
+*                                       @nyuchi/maintainers
+
+# ============================================================================
+# Source code
+# ============================================================================
+/src/                                   @nyuchi/platform
+/packages/                              @nyuchi/platform
+/apps/                                  @nyuchi/platform
+/crates/                                @nyuchi/platform
+/lib/                                   @nyuchi/platform
+
+# ============================================================================
+# Infrastructure, CI, build tooling
+# ============================================================================
+# Anything under .github/ touches how PRs are reviewed, released,
+# or scanned. Platform team review required.
+/.github/                               @nyuchi/platform
+/.github/workflows/                     @nyuchi/platform @nyuchi/security
+
+# Docker, Terraform, Kubernetes, shell scripts at the root.
+/Dockerfile                             @nyuchi/platform
+/docker-compose*.yml                    @nyuchi/platform
+/infra/                                 @nyuchi/platform
+/terraform/                             @nyuchi/platform
+/k8s/                                   @nyuchi/platform
+/scripts/                               @nyuchi/platform
+
+# Lockfiles — any unexpected change often means a supply-chain
+# surprise. Keep them behind platform-team review.
+/pnpm-lock.yaml                         @nyuchi/platform
+/Cargo.lock                             @nyuchi/platform
+/uv.lock                                @nyuchi/platform
+/poetry.lock                            @nyuchi/platform
+
+# ============================================================================
+# Documentation and content
+# ============================================================================
+/docs/                                  @nyuchi/docs
+/README.md                              @nyuchi/docs @nyuchi/maintainers
+*.md                                    @nyuchi/docs
+*.mdx                                   @nyuchi/docs
+
+# ============================================================================
+# Security-sensitive files (always require the security team)
+# ============================================================================
+/SECURITY.md                            @nyuchi/security
+/AGENTS.md                              @nyuchi/security @nyuchi/maintainers
+/CODEOWNERS                             @nyuchi/maintainers
+/.github/CODEOWNERS                     @nyuchi/maintainers
+/.github/dependabot.yml                 @nyuchi/platform @nyuchi/security
+
+# Anything referencing secrets or auth — adjust the paths to your
+# repo's conventions.
+/**/secrets/**                          @nyuchi/security
+/**/auth/**                             @nyuchi/security
+/**/crypto/**                           @nyuchi/security

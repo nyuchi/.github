@@ -1,0 +1,33 @@
+# Dependabot config for nyuchi/.github.
+#
+# Org policy (also baked into `.github/dependabot.example.yml`):
+#   - Run **once a week**, every Monday at 06:00 Africa/Harare.
+#   - Produce **one PR per ecosystem** with every available update
+#     bundled. No per-package PR sprawl, no per-update-type splits.
+#   - `build:` Conventional Commits prefix so pr-title-lint accepts
+#     Dependabot's PRs without manual edits.
+#
+# This repo ships markdown, configs, and reusable workflows. Only
+# the `github-actions` ecosystem applies — Dependabot tracks the
+# action versions referenced in our reusable workflows.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Africa/Harare"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      all:
+        patterns: ["*"]
+        update-types: ["major", "minor", "patch"]

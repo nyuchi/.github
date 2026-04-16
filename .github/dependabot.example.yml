@@ -1,0 +1,155 @@
+# Example Dependabot config for a Nyuchi Web Services repository.
+#
+# Copy this file to `.github/dependabot.yml` in your repo and
+# **delete the ecosystems you don't use**. Dependabot will skip
+# ecosystems whose manifests it can't find, but leaving unused
+# entries here makes the config noisier than it needs to be.
+#
+# Org policy
+# ----------
+#   - Run **once a week**, every Monday at 06:00 Africa/Harare.
+#   - Produce **one PR per ecosystem** with every available update
+#     bundled in. No per-package PR sprawl, no separate PRs for
+#     production vs dev, no separate PRs for major vs minor.
+#   - Use the `build:` Conventional Commits prefix so the PR title
+#     passes our pr-title-lint workflow without manual edits.
+#
+# A repo that uses npm + cargo + pip + docker + github-actions
+# therefore receives at most **5 Dependabot PRs per week** — one
+# per ecosystem — landing together every Monday morning.
+
+version: 2
+updates:
+  # -------------------------------------------------------------------
+  # GitHub Actions — applies to every repo that uses Actions.
+  # -------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Africa/Harare"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      all:
+        patterns: ["*"]
+        update-types: ["major", "minor", "patch"]
+
+  # -------------------------------------------------------------------
+  # npm / pnpm — TypeScript, Next.js, Astro, component packages.
+  # -------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Africa/Harare"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "javascript"]
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      all:
+        patterns: ["*"]
+        update-types: ["major", "minor", "patch"]
+    ignore:
+      # Frameworks where major-version upgrades need a deliberate
+      # migration plan, not a Dependabot PR. Minor and patch updates
+      # still flow through the `all` group above.
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  # -------------------------------------------------------------------
+  # Cargo — Rust workspaces (e.g. ntl).
+  # -------------------------------------------------------------------
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Africa/Harare"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "rust"]
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      all:
+        patterns: ["*"]
+        update-types: ["major", "minor", "patch"]
+
+  # -------------------------------------------------------------------
+  # pip / uv — Python projects (e.g. shamwari-ai).
+  # Dependabot's `pip` ecosystem covers pyproject.toml, setup.py,
+  # and requirements*.txt. uv's lockfile is not yet supported
+  # natively, so uv.lock needs regenerating after Dependabot bumps
+  # pyproject.toml. The Python CI handles that automatically.
+  # -------------------------------------------------------------------
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Africa/Harare"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "python"]
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      all:
+        patterns: ["*"]
+        update-types: ["major", "minor", "patch"]
+
+  # -------------------------------------------------------------------
+  # Docker — projects with Dockerfiles at the repo root or in /infra.
+  # Uncomment and adjust the directory if your repo ships containers.
+  # -------------------------------------------------------------------
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "06:00"
+  #     timezone: "Africa/Harare"
+  #   open-pull-requests-limit: 1
+  #   labels: ["dependencies", "docker"]
+  #   commit-message:
+  #     prefix: "build"
+  #     include: "scope"
+  #   groups:
+  #     all:
+  #       patterns: ["*"]
+  #       update-types: ["major", "minor", "patch"]
+
+  # -------------------------------------------------------------------
+  # Gitsubmodules — only if your repo uses them.
+  # -------------------------------------------------------------------
+  # - package-ecosystem: "gitsubmodule"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "06:00"
+  #     timezone: "Africa/Harare"
+  #   open-pull-requests-limit: 1
+  #   commit-message:
+  #     prefix: "build"
+  #     include: "scope"
+  #   groups:
+  #     all:
+  #       patterns: ["*"]
+  #       update-types: ["major", "minor", "patch"]

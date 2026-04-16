@@ -1,0 +1,43 @@
+# Reusable workflow: Dependency review.
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   jobs:
+#     review:
+#       uses: nyuchi/.github/.github/workflows/reusable-dependency-review.yml@main
+#       with:
+#         fail-on-severity: moderate
+#
+# The caller must grant:
+#   contents: read
+#   pull-requests: write
+
+name: Reusable / Dependency review
+
+on:
+  workflow_call:
+    inputs:
+      fail-on-severity:
+        description: Lowest severity that fails the PR (low, moderate, high, critical).
+        type: string
+        default: moderate
+      comment-summary-in-pr:
+        description: When to post the summary comment (never, always, on-failure).
+        type: string
+        default: on-failure
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Review dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: ${{ inputs.fail-on-severity }}
+          comment-summary-in-pr: ${{ inputs.comment-summary-in-pr }}
+          fail-on-scopes: runtime, development

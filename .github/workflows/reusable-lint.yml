@@ -1,0 +1,123 @@
+# Reusable workflow: strict lint (the org's standard lint policy).
+#
+# Call from a caller workflow in any repo under nyuchi:
+#
+#   name: Lint
+#   on:
+#     pull_request:
+#     push:
+#       branches: [main]
+#   jobs:
+#     lint:
+#       uses: nyuchi/.github/.github/workflows/reusable-lint.yml@main
+#
+# Every job is BLOCKING. The required-status-checks list in your
+# repo's main-branch ruleset should include all five job names:
+#   actionlint, JSON validity, prettier, markdownlint, yamllint
+#
+# The reusable does NOT auto-fix anything. When a check fails,
+# the developer fixes locally (`prettier --write`,
+# `markdownlint-cli2 --fix`, manual yamllint fix) and pushes
+# the corrected commit.
+#
+# Each consuming repo should ship its own .prettierrc,
+# .prettierignore, .yamllint.yaml, and .markdownlint.jsonc -
+# copy them from nyuchi/.github as a starting point.
+# These tools all auto-discover their config from the repo root.
+#
+# The caller must grant `contents: read` (the workflow default).
+
+name: Reusable / Lint
+
+on:
+  workflow_call:
+    inputs:
+      prettier-glob:
+        description: Glob passed to `prettier --check`.
+        type: string
+        default: "**/*.{md,mdx,json,jsonc}"
+      markdownlint-globs:
+        description: Newline-separated globs for markdownlint-cli2.
+        type: string
+        default: |
+          **/*.md
+          !**/node_modules/**
+      yamllint-target:
+        description: Path passed to `yamllint`.
+        type: string
+        default: "."
+      actionlint-paths:
+        description: Space-separated globs for actionlint.
+        type: string
+        default: ".github/workflows/*.yml"
+      prettier-version:
+        type: string
+        default: "3.3.3"
+      yamllint-version:
+        type: string
+        default: "1.35.1"
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download actionlint
+        id: get_actionlint
+        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/v1.7.4/scripts/download-actionlint.bash) 1.7.4
+        shell: bash
+      - name: actionlint
+        # shellcheck disable=SC2086
+        run: ${{ steps.get_actionlint.outputs.executable }} -color ${{ inputs.actionlint-paths }}
+        shell: bash
+
+  jsonlint:
+    name: JSON validity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate every *.json file
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$file"; then
+              echo "::error file=$file::invalid JSON"
+              status=1
+            fi
+          done < <(find . -name '*.json' -not -path './node_modules/*' -print0)
+          exit "$status"
+
+  prettier:
+    name: prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --global prettier@${{ inputs.prettier-version }}
+      - name: prettier --check
+        run: prettier --check "${{ inputs.prettier-glob }}"
+
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: ${{ inputs.markdownlint-globs }}
+
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install "yamllint==${{ inputs.yamllint-version }}"
+      - name: yamllint (strict)
+        run: yamllint -s -f github ${{ inputs.yamllint-target }}
