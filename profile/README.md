@@ -1,6 +1,6 @@
 <!--
   This file is rendered as the public landing page for the Nyuchi Web
-  Services GitHub organization at https://github.com/nyuchitech.
+  Services GitHub organization at https://github.com/nyuchi.
   Keep it short, scannable, and link-heavy.
 -->
 
@@ -46,9 +46,9 @@ in the open.
 
 ### Frontier infrastructure
 
-- **[`ntl`](https://github.com/nyuchitech/ntl)** — signal-based data
+- **[`ntl`](https://github.com/nyuchi/ntl)** — signal-based data
   transfer layer for decentralized networks. Rust, Apache 2.0.
-- **[`siafudb`](https://github.com/nyuchitech/siafudb)** — embedded
+- **[`siafudb`](https://github.com/nyuchi/siafudb)** — embedded
   property graph database _for device, edge, and Web3_. C++,
   Apache 2.0. This is the on-device/local-first/edge tier, literally.
 
@@ -58,10 +58,10 @@ in the open.
   ecosystem. _"Your data stays yours, your identity is sovereign,
   and the algorithm works for you."_ Family of apps includes Mukoko
   News, Mukoko Lingo, Mukoko Weather, and Nhimbe (events).
-- **[`learning`](https://github.com/nyuchitech/learning)** —
+- **[`learning`](https://github.com/nyuchi/learning)** —
   digital learning experiences for Africa, built around African
   knowledge systems.
-- **[`shamwari-ai`](https://github.com/nyuchitech/shamwari-ai)** —
+- **[`shamwari-ai`](https://github.com/nyuchi/shamwari-ai)** —
   a localized AI model and platform purpose-built for the African
   continent.
 
@@ -71,7 +71,7 @@ Our design system lives at
 **[design.nyuchi.com](https://design.nyuchi.com)** — shadcn-compatible
 components, the _Five African Minerals_ palette, and APCA Lc 90+
 contrast targets. The source is
-[`design-portal`](https://github.com/nyuchitech/design-portal).
+[`design-portal`](https://github.com/nyuchi/design-portal).
 
 ## How we work
 
@@ -88,7 +88,7 @@ Read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a PR.
 ## Get involved
 
 - Browse our
-  [repositories](https://github.com/orgs/nyuchitech/repositories).
+  [repositories](https://github.com/orgs/nyuchi/repositories).
 - Full product catalog at
   [services.nyuchi.com](https://services.nyuchi.com).
 - Report security issues privately via [`SECURITY.md`](./SECURITY.md).

@@ -1,7 +1,7 @@
-# nyuchitech/.github
+# nyuchi/.github
 
 This repository holds **organization-wide defaults** for every repo
-under [Nyuchi Web Services](https://github.com/nyuchitech) — the
+under [Nyuchi Web Services](https://github.com/nyuchi) — the
 development hub of the Nyuchi and Mukoko ecosystems.
 
 Anything here is inherited by every repository in the org that does
@@ -22,9 +22,9 @@ not define its own equivalent file.
 
 ### Org profile
 
-| Path                | Purpose                                                | Status |
-| ------------------- | ------------------------------------------------------ | :----: |
-| `profile/README.md` | Landing page shown at <https://github.com/nyuchitech>. |   ✅   |
+| Path                | Purpose                                            | Status |
+| ------------------- | -------------------------------------------------- | :----: |
+| `profile/README.md` | Landing page shown at <https://github.com/nyuchi>. |   ✅   |
 
 ### Community health files (org-wide defaults)
 
@@ -66,7 +66,7 @@ not define its own equivalent file.
 The org's CI and policy workflows live here as **reusable workflows
 only**. There are no starter templates: every consuming repo writes
 a thin caller workflow that references the reusable via
-`uses: nyuchitech/.github/.github/workflows/<name>.yml@main`. Fixes
+`uses: nyuchi/.github/.github/workflows/<name>.yml@main`. Fixes
 propagate to every adopter on the next CI run.
 
 Adopter pattern (paste into `.github/workflows/<name>.yml` in your
@@ -80,7 +80,7 @@ on:
     branches: [main]
 jobs:
   lint:
-    uses: nyuchitech/.github/.github/workflows/reusable-lint.yml@main
+    uses: nyuchi/.github/.github/workflows/reusable-lint.yml@main
 ```
 
 Repos with stricter supply-chain requirements should reference the
@@ -121,7 +121,7 @@ different files.
 
 - **Reusable workflows** under `.github/workflows/reusable-*.yml`
   are called by other repos via
-  `uses: nyuchitech/.github/.github/workflows/<name>.yml@main`.
+  `uses: nyuchi/.github/.github/workflows/<name>.yml@main`.
   Changes here propagate on the next workflow run in every
   consuming repo.
 

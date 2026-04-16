@@ -4,7 +4,7 @@
 #
 #   jobs:
 #     review:
-#       uses: nyuchitech/.github/.github/workflows/reusable-dependency-review.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-dependency-review.yml@main
 #       with:
 #         fail-on-severity: moderate
 #

@@ -9,7 +9,7 @@
 #
 #   jobs:
 #     stale:
-#       uses: nyuchitech/.github/.github/workflows/reusable-stale.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-stale.yml@main
 #
 # The caller must grant:
 #   issues: write

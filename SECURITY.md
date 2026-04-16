@@ -2,7 +2,7 @@
 
 We take the security of Nyuchi Web Services projects seriously. This
 policy applies to every repository under the
-[@nyuchitech](https://github.com/nyuchitech) GitHub organization unless
+[@nyuchi](https://github.com/nyuchi) GitHub organization unless
 that repository ships its own `SECURITY.md` with different terms.
 
 ## Reporting a Vulnerability
@@ -65,7 +65,7 @@ When you report a vulnerability in good faith, we commit to:
 
 ### In scope
 
-- Any repository owned by [@nyuchitech](https://github.com/nyuchitech)
+- Any repository owned by [@nyuchi](https://github.com/nyuchi)
   unless explicitly marked as archived, experimental, or out of scope
   in its README.
 - Published packages, container images, and releases produced by those

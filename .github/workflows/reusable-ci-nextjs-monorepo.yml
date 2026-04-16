@@ -4,7 +4,7 @@
 #
 #   jobs:
 #     ci:
-#       uses: nyuchitech/.github/.github/workflows/reusable-ci-nextjs-monorepo.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-nextjs-monorepo.yml@main
 #       with:
 #         tasks: "lint typecheck test build"
 #       secrets:

@@ -1,4 +1,4 @@
-// markdownlint-cli2 config for nyuchitech/.github.
+// markdownlint-cli2 config for nyuchi/.github.
 //
 // Relaxed defaults that accommodate:
 //   - Long prose lines in docs (we format for readability, not width)

@@ -15,7 +15,7 @@ users.
 | Report a security vulnerability           | **Do not open a public issue.** See [`SECURITY.md`](./SECURITY.md).                                                           |
 | Report a Code of Conduct concern          | See the reporting section of [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).                                                    |
 | Contribute code or docs                   | See [`CONTRIBUTING.md`](./CONTRIBUTING.md).                                                                                   |
-| Ask something not tied to a specific repo | Open a discussion on [nyuchitech/.github][this-repo] or the relevant umbrella repo.                                           |
+| Ask something not tied to a specific repo | Open a discussion on [nyuchi/.github][this-repo] or the relevant umbrella repo.                                               |
 
 ## Before you open an issue
 
@@ -25,7 +25,7 @@ A few minutes of prep makes a big difference:
    existing [issues][search-issues], discussions, or the project's
    README.
 2. **Use the right repo.** File the issue on the repository that owns
-   the code in question, not on [nyuchitech/.github][this-repo].
+   the code in question, not on [nyuchi/.github][this-repo].
 3. **Use a template.** Most repos provide bug/feature templates — they
    ask for the information we need to help you efficiently.
 4. **Include enough detail.** At minimum: what you did, what you
@@ -64,5 +64,5 @@ follow-up comment is fine — please avoid bumping multiple times.
 
 There is no commercial support offering at this time.
 
-[this-repo]: https://github.com/nyuchitech/.github
-[search-issues]: https://github.com/search?type=issues&q=org%3Anyuchitech
+[this-repo]: https://github.com/nyuchi/.github
+[search-issues]: https://github.com/search?type=issues&q=org%3Anyuchi

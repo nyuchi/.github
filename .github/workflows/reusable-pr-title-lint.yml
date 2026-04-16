@@ -8,7 +8,7 @@
 #
 #   jobs:
 #     lint:
-#       uses: nyuchitech/.github/.github/workflows/reusable-pr-title-lint.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-pr-title-lint.yml@main
 #
 # The caller must grant:
 #   pull-requests: read

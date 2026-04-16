@@ -1,7 +1,7 @@
 <!--
   Thanks for contributing! Please make sure you've read CONTRIBUTING.md
   before opening this PR:
-  https://github.com/nyuchitech/.github/blob/main/CONTRIBUTING.md
+  https://github.com/nyuchi/.github/blob/main/CONTRIBUTING.md
 
   Your PR title MUST follow Conventional Commits, e.g.:
     feat(ui): add dark-mode toggle to settings
@@ -55,11 +55,11 @@ Closes #
 - [ ] My PR **title** follows [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 - [ ] All of my commits are **signed** and show "Verified" on GitHub
       (GPG or SSH). See
-      [CONTRIBUTING.md § Signed commits](https://github.com/nyuchitech/.github/blob/main/CONTRIBUTING.md#signed-commits-required).
+      [CONTRIBUTING.md § Signed commits](https://github.com/nyuchi/.github/blob/main/CONTRIBUTING.md#signed-commits-required).
 - [ ] All of my commits have a **DCO sign-off** (`Signed-off-by:` trailer,
       added by `git commit -s`).
 - [ ] My branch name follows `<type>/<short-kebab-description>` (see
-      [CONTRIBUTING.md § Branch naming](https://github.com/nyuchitech/.github/blob/main/CONTRIBUTING.md#branch-naming)).
+      [CONTRIBUTING.md § Branch naming](https://github.com/nyuchi/.github/blob/main/CONTRIBUTING.md#branch-naming)).
 - [ ] I have **rebased** onto the latest default branch; no merge commits
       from the base branch in this PR.
 - [ ] I have added or updated **tests** covering the change (or explained

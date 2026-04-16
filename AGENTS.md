@@ -5,7 +5,7 @@
 This file describes how AI coding agents — Claude Code, Cursor,
 GitHub Copilot Workspace, Aider, Devin, Codex CLI, and anything
 similar — are expected to behave when making changes in any repo
-under [`nyuchitech`](https://github.com/nyuchitech).
+under [`nyuchi`](https://github.com/nyuchi).
 
 This file is _advisory for humans_ and _authoritative for agents_.
 If you are a human reviewing an agent's PR, use this as the checklist

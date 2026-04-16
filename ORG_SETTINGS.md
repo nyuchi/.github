@@ -32,7 +32,7 @@ files (see [`CODEOWNERS`](./.github/CODEOWNERS)).
   Write / Admin is granted via team membership, not via base
   permission.
 - **Repository creation:** Restricted to org owners and the
-  `@nyuchitech/maintainers` team. Prevents ad-hoc repo sprawl.
+  `@nyuchi/maintainers` team. Prevents ad-hoc repo sprawl.
 - **Repository forking:** Allowed within the org; disallowed
   externally for private repos.
 - **Pages creation:** Restricted to org owners.
@@ -88,7 +88,7 @@ streetsidesoftware/cspell-action@*, lycheeverse/lychee-action@*`.
 ## Repository-level defaults
 
 These should hold for **every public repo** under
-`nyuchitech`, including any new repo created going forward.
+`nyuchi`, including any new repo created going forward.
 
 ### General
 
@@ -171,7 +171,7 @@ name and is fixed):
 ### Tag protection
 
 - Tags matching `v*` require **admin** or
-  `@nyuchitech/maintainers` team approval to create, move, or
+  `@nyuchi/maintainers` team approval to create, move, or
   delete. Prevents accidental release-tag rewrites.
 
 ---
