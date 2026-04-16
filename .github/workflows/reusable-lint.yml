@@ -65,7 +65,7 @@ jobs:
     name: actionlint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Download actionlint
         id: get_actionlint
         run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/v1.7.4/scripts/download-actionlint.bash) 1.7.4
@@ -79,7 +79,7 @@ jobs:
     name: JSON validity
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Validate every *.json file
         run: |
           set -euo pipefail
@@ -96,8 +96,8 @@ jobs:
     name: prettier
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
       - run: npm install --global prettier@${{ inputs.prettier-version }}
@@ -108,8 +108,8 @@ jobs:
     name: markdownlint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: DavidAnson/markdownlint-cli2-action@v18
+      - uses: actions/checkout@v6
+      - uses: DavidAnson/markdownlint-cli2-action@v23
         with:
           globs: ${{ inputs.markdownlint-globs }}
 
@@ -117,7 +117,7 @@ jobs:
     name: yamllint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: pip install "yamllint==${{ inputs.yamllint-version }}"
       - name: yamllint (strict)
         run: yamllint -s -f github ${{ inputs.yamllint-target }}

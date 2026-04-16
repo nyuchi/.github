@@ -32,12 +32,12 @@ jobs:
       root_changed: ${{ steps.filter.outputs.root_changed }}
       packages: ${{ steps.packages.outputs.packages }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             any_python:
@@ -89,8 +89,8 @@ jobs:
     if: needs.changes.outputs.any_python == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --all-packages --frozen
@@ -102,8 +102,8 @@ jobs:
     if: needs.changes.outputs.any_python == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --all-packages --frozen
@@ -115,8 +115,8 @@ jobs:
     if: needs.changes.outputs.any_python == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --all-packages --frozen
@@ -132,8 +132,8 @@ jobs:
       matrix:
         package: ${{ fromJSON(needs.changes.outputs.packages) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --all-packages --frozen
