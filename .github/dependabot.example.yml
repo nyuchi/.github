@@ -1,4 +1,4 @@
-# Example Dependabot config for a Nyuchi Web Services repository.
+# Example Dependabot config for a Nyuchi Africa repository.
 #
 # Copy this file to `.github/dependabot.yml` in your repo and
 # **delete the ecosystems you don't use**. Dependabot will skip
@@ -31,6 +31,8 @@ updates:
       time: "06:00"
       timezone: "Africa/Harare"
     open-pull-requests-limit: 1
+    reviewers:
+      - "bryanfawcett"
     labels: ["dependencies", "github-actions"]
     commit-message:
       prefix: "build"
@@ -51,6 +53,8 @@ updates:
       time: "06:00"
       timezone: "Africa/Harare"
     open-pull-requests-limit: 1
+    reviewers:
+      - "bryanfawcett"
     labels: ["dependencies", "javascript"]
     commit-message:
       prefix: "build"
@@ -81,6 +85,8 @@ updates:
       time: "06:00"
       timezone: "Africa/Harare"
     open-pull-requests-limit: 1
+    reviewers:
+      - "bryanfawcett"
     labels: ["dependencies", "rust"]
     commit-message:
       prefix: "build"
@@ -105,6 +111,8 @@ updates:
       time: "06:00"
       timezone: "Africa/Harare"
     open-pull-requests-limit: 1
+    reviewers:
+      - "bryanfawcett"
     labels: ["dependencies", "python"]
     commit-message:
       prefix: "build"

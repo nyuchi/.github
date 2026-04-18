@@ -64,12 +64,37 @@ At **Settings → Actions → General**:
   workflows_ — do not allow all actions unrestricted.
 - **Allow actions created by GitHub:** **Yes.**
 - **Allow actions by Marketplace verified creators:** **Yes.**
-- **Allow specified actions and reusable workflows:** an allow-list
-  covering the actions we actually use across the org — e.g.
-  `actions/*, github/codeql-action/*, pnpm/action-setup@*,
-Swatinem/rust-cache@*, astral-sh/setup-uv@*,
-amannn/action-semantic-pull-request@*,
-streetsidesoftware/cspell-action@*, lycheeverse/lychee-action@*`.
+- **Allow specified actions and reusable workflows:** the
+  allow-list below is the source of truth — every action used in
+  [`.github/workflows/reusable-*.yml`](./.github/workflows/)
+  must appear here. When adding a new action to any reusable
+  workflow, update this list in the same PR.
+
+  ```text
+  actions/*,
+  github/codeql-action/*,
+  anchore/sbom-action@*,
+  softprops/action-gh-release@*,
+  DavidAnson/markdownlint-cli2-action@*,
+  amannn/action-semantic-pull-request@*,
+  streetsidesoftware/cspell-action@*,
+  lycheeverse/lychee-action@*,
+  dorny/paths-filter@*,
+  pnpm/action-setup@*,
+  Swatinem/rust-cache@*,
+  dtolnay/rust-toolchain@*,
+  taiki-e/install-action@*,
+  astral-sh/setup-uv@*
+  ```
+
+  To audit drift against what's actually referenced in the
+  reusables:
+
+  ```sh
+  grep -rhoE 'uses: [^@[:space:]]+' .github/workflows/ \
+    | sort -u
+  ```
+
 - **Workflow permissions default:** _Read repository contents
   and packages permissions_. Individual workflows opt into more
   via their own `permissions:` block.
@@ -79,8 +104,9 @@ streetsidesoftware/cspell-action@*, lycheeverse/lychee-action@*`.
 
 ### Domain verification
 
-- **Verified domains:** `nyuchi.com`, `mukoko.com`.
-  Email notifications for commits go only to addresses on these
+- **Verified domains:** `nyuchi.com`, `mukoko.com`, `siafudb.org`,
+  `travel-info.co.zw`, `barstool.co.zw`.
+  Email notifications for commits go only to addresses on verified
   domains, which makes commit impersonation harder.
 
 ---
@@ -120,21 +146,33 @@ These should hold for **every public repo** under
 At **Settings → Rules → Rulesets** (preferred) or **Settings →
 Branches → Branch protection rules** (legacy):
 
-| Rule                                                             | Value                                             |
-| ---------------------------------------------------------------- | ------------------------------------------------- |
-| Restrict deletions                                               | **Enabled**                                       |
-| Require linear history                                           | **Enabled**                                       |
-| Require signed commits                                           | **Enabled**                                       |
-| Require a pull request before merging                            | **Enabled**                                       |
-| Required approving reviews                                       | **1** (2 on `.github`, security, and infra repos) |
-| Dismiss stale pull request approvals when new commits are pushed | **Enabled**                                       |
-| Require review from Code Owners                                  | **Enabled** (once `CODEOWNERS` is in place)       |
-| Require approval of the most recent reviewable push              | **Enabled**                                       |
-| Require conversation resolution before merging                   | **Enabled**                                       |
-| Require status checks to pass                                    | **Enabled**                                       |
-| Require branches to be up to date before merging                 | **Enabled**                                       |
-| Block force pushes                                               | **Enabled**                                       |
-| Do not allow bypass                                              | **Applied to admins too**                         |
+| Rule                                                             | Value                                            |
+| ---------------------------------------------------------------- | ------------------------------------------------ |
+| Restrict deletions                                               | **Enabled**                                      |
+| Require linear history                                           | **Enabled**                                      |
+| Require signed commits                                           | **Enabled**                                      |
+| Require a pull request before merging                            | **Enabled**                                      |
+| Required approving reviews                                       | **0** (pre-scale solo-developer phase)           |
+| Dismiss stale pull request approvals when new commits are pushed | **Enabled**                                      |
+| Require review from Code Owners                                  | _Deferred_ until ≥ 2 engineers with merge rights |
+| Require approval of the most recent reviewable push              | _Deferred_ until ≥ 2 engineers with merge rights |
+| Require conversation resolution before merging                   | **Enabled**                                      |
+| Require status checks to pass                                    | **Enabled**                                      |
+| Require branches to be up to date before merging                 | **Enabled**                                      |
+| Block force pushes                                               | **Enabled**                                      |
+| Do not allow bypass                                              | **Applied to admins too**                        |
+
+> **Pre-scale reviewer posture.** The reviewer count is **0**
+> during the solo-developer phase, per NA-01 Article 4.2 (flat
+> structure, pre-scale reality). Every PR still goes through the
+> pull-request flow, CI gates, signed commits, DCO sign-off, and
+> conversation-resolution gates — just without an external
+> reviewer because there isn't one yet. As soon as a second
+> engineer with merge rights joins the org, the ruleset flips
+> back to `required_approving_review_count: 1`, with `.github`,
+> security, and infra repositories rising to `2` per the original
+> design. The trigger is documented in NA-01 Article 10.1 (the
+> transition to formal divisional structure).
 
 #### Required status checks
 
@@ -201,17 +239,32 @@ tokens.
 
 ## Enforcement and audit
 
-- **Today:** settings are applied manually via GitHub's UI, and
-  this document is their source-of-truth.
-- **Near-term:** migrate to **repository rulesets** applied at the
-  org level with _targets_ rather than per-repo branch-protection
-  rules. Rulesets are the direction GitHub is moving and are
-  easier to audit.
-- **Longer-term:** manage org and repo configuration via
-  infrastructure-as-code — either Terraform's `integrations/github`
-  provider or GitHub's own `probot/settings` app — so that the
-  source of truth is a file in this repo rather than prose in
-  `ORG_SETTINGS.md`.
+- **Rulesets (in place):** branch and tag protection is enforced via
+  GitHub Rulesets, not legacy per-repo branch-protection rules. The
+  three ruleset definitions live in [`github-rulesets/`](./github-rulesets/)
+  in this repo:
+
+  - `main-branch-protection.json` — applied to `nyuchi/.github`
+    (2-approver, 5 lint checks).
+  - `release-tag-protection.json` — applied to `nyuchi/.github`
+    (protects `v*.*.*` tags).
+  - `org-wide-main-protection.json` — applied at the org level to
+    all repos except `sandbox-*` and `archive-*` (1-approver, 5 lint
+    checks).
+
+  Apply or update via:
+
+  ```sh
+  gh api --method POST /repos/nyuchi/.github/rulesets \
+    --input github-rulesets/main-branch-protection.json
+  gh api --method POST /orgs/nyuchi/rulesets \
+    --input github-rulesets/org-wide-main-protection.json
+  ```
+
+- **Planned — infrastructure as code:** longer-term, migrate org and
+  repo configuration to Terraform's `integrations/github` provider so
+  that this document becomes a generated artifact rather than
+  hand-maintained prose.
 - **Quarterly audit:** compare live state against this document.
   Note any approved drift; fix any unapproved drift.
 

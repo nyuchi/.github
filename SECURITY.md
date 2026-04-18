@@ -1,6 +1,6 @@
 # Security Policy
 
-We take the security of Nyuchi Web Services projects seriously. This
+We take the security of Nyuchi Africa projects seriously. This
 policy applies to every repository under the
 [@nyuchi](https://github.com/nyuchi) GitHub organization unless
 that repository ships its own `SECURITY.md` with different terms.
@@ -18,8 +18,8 @@ prefer.
 
 Send a report to **<security@nyuchi.com>**.
 
-If you want to encrypt your report, say so in your first message and we
-will respond with a PGP public key.
+If you would like to encrypt your report, say so in your first message
+and we will arrange a secure channel or share a public key.
 
 ### 2. GitHub Private Security Advisory
 
@@ -72,6 +72,8 @@ When you report a vulnerability in good faith, we commit to:
   repositories.
 - Build and release infrastructure controlled by the organization
   (GitHub Actions workflows, release artifacts).
+- Production services at `nyuchi.com`, `mukoko.com`, `siafudb.org`,
+  `travel-info.co.zw`, `barstool.co.zw`, and related subdomains.
 
 ### Out of scope
 

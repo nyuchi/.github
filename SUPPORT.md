@@ -1,6 +1,6 @@
 # Getting Support
 
-Thanks for using a Nyuchi Web Services project. This page tells you
+Thanks for using a Nyuchi Africa project. This page tells you
 **where to go** depending on what you need. Using the right channel
 gets you a faster answer and keeps things discoverable for other
 users.
@@ -15,6 +15,8 @@ users.
 | Report a security vulnerability           | **Do not open a public issue.** See [`SECURITY.md`](./SECURITY.md).                                                           |
 | Report a Code of Conduct concern          | See the reporting section of [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).                                                    |
 | Contribute code or docs                   | See [`CONTRIBUTING.md`](./CONTRIBUTING.md).                                                                                   |
+| General enquiry                           | Email [hi@nyuchi.com](mailto:hi@nyuchi.com).                                                                                  |
+| Customer or product support               | Email [support@nyuchi.com](mailto:support@nyuchi.com).                                                                        |
 | Ask something not tied to a specific repo | Open a discussion on [nyuchi/.github][this-repo] or the relevant umbrella repo.                                               |
 
 ## Before you open an issue
@@ -60,9 +62,13 @@ the timelines stated in [`SECURITY.md`](./SECURITY.md).
 If an issue has not received a response in a reasonable time, a polite
 follow-up comment is fine — please avoid bumping multiple times.
 
-## Commercial support
+## Commercial and professional services
 
-There is no commercial support offering at this time.
+[Nyuchi Web Services](https://services.nyuchi.com) offers professional
+development, integration, and support services built on the Nyuchi
+ecosystem. For commercial enquiries, reach us at
+[dev@nyuchi.com](mailto:dev@nyuchi.com) or visit
+[services.nyuchi.com](https://services.nyuchi.com).
 
 [this-repo]: https://github.com/nyuchi/.github
 [search-issues]: https://github.com/search?type=issues&q=org%3Anyuchi
