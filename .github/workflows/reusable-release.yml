@@ -1,0 +1,131 @@
+# Reusable workflow: release.
+#
+# Standard Nyuchi Africa release flow triggered on a semver tag push.
+# Covers NA-03 §8.2: changelog extraction, artefact upload, SBOM
+# attachment, and GitHub Release creation.
+#
+# Call from a release workflow in a consuming repo:
+#
+#   name: Release
+#   on:
+#     push:
+#       tags: ['v[0-9]*.[0-9]*.[0-9]*']
+#
+#   jobs:
+#     release:
+#       uses: nyuchi/.github/.github/workflows/reusable-release.yml@main
+#       with:
+#         artifact-paths: |
+#           dist/**
+#       permissions:
+#         contents: write
+#         packages: read
+#         id-token: write
+#
+# The caller must grant:
+#   contents: write  (to create a GitHub Release)
+#   packages: read   (SBOM package inspection)
+#   id-token: write  (optional — for sigstore signing)
+#
+# Inputs
+# ------
+# artifact-paths   Newline-separated globs of built artefacts to attach.
+#                  Leave empty if your repo has no binary artefacts.
+# draft            Publish as a draft release (default: false).
+# prerelease       Mark as a pre-release (default: false, auto-detected
+#                  for tags containing -rc, -alpha, or -beta).
+# node-version-file Path to the file pinning the Node version, used for
+#                  changelog extraction (default: .nvmrc).
+
+name: Reusable / Release
+
+on:
+  workflow_call:
+    inputs:
+      artifact-paths:
+        description: |
+          Newline-separated globs of build artefacts to attach to the release.
+          Leave blank for repos without binary outputs.
+        type: string
+        default: ""
+      draft:
+        description: Create the release as a draft.
+        type: boolean
+        default: false
+      prerelease:
+        description: Mark as pre-release. Auto-detected from tag suffix if false.
+        type: boolean
+        default: false
+      node-version-file:
+        description: Path to the Node version file (used for changelog tooling).
+        type: string
+        default: .nvmrc
+
+permissions:
+  contents: write
+  packages: read
+  id-token: write
+
+jobs:
+  validate-tag:
+    name: Validate semver tag
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.semver.outputs.prerelease }}
+    steps:
+      - name: Check tag format
+        id: semver
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not a valid semver tag (expected vX.Y.Z or vX.Y.Z-suffix)."
+            exit 1
+          fi
+          if [[ "$TAG" =~ -(rc|alpha|beta) ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=${{ inputs.prerelease }}" >> "$GITHUB_OUTPUT"
+          fi
+
+  sbom:
+    name: Generate SBOM
+    needs: validate-tag
+    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@main
+    with:
+      artifact-name: sbom-${{ github.ref_name }}
+      upload-release-assets: false   # release job attaches it below
+
+  release:
+    name: Create GitHub release
+    needs: [validate-tag, sbom]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 0
+
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: sbom-${{ github.ref_name }}.json
+          path: release-assets/
+        continue-on-error: true   # SBOM is best-effort; don't block release
+
+      - name: Stage caller artefacts
+        if: inputs.artifact-paths != ''
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          while IFS= read -r glob; do
+            [ -z "$glob" ] && continue
+            # shellcheck disable=SC2086
+            cp -v $glob release-assets/ 2>/dev/null || true
+          done <<< "${{ inputs.artifact-paths }}"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+        with:
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ needs.validate-tag.outputs.prerelease }}
+          generate_release_notes: true
+          files: release-assets/*

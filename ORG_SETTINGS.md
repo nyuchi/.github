@@ -79,8 +79,9 @@ streetsidesoftware/cspell-action@*, lycheeverse/lychee-action@*`.
 
 ### Domain verification
 
-- **Verified domains:** `nyuchi.com`, `mukoko.com`.
-  Email notifications for commits go only to addresses on these
+- **Verified domains:** `nyuchi.com`, `mukoko.com`, `siafudb.org`,
+  `travel-info.co.zw`, `barstool.co.zw`.
+  Email notifications for commits go only to addresses on verified
   domains, which makes commit impersonation harder.
 
 ---
@@ -201,17 +202,28 @@ tokens.
 
 ## Enforcement and audit
 
-- **Today:** settings are applied manually via GitHub's UI, and
-  this document is their source-of-truth.
-- **Near-term:** migrate to **repository rulesets** applied at the
-  org level with _targets_ rather than per-repo branch-protection
-  rules. Rulesets are the direction GitHub is moving and are
-  easier to audit.
-- **Longer-term:** manage org and repo configuration via
-  infrastructure-as-code — either Terraform's `integrations/github`
-  provider or GitHub's own `probot/settings` app — so that the
-  source of truth is a file in this repo rather than prose in
-  `ORG_SETTINGS.md`.
+- **Rulesets (in place):** branch and tag protection is enforced via
+  GitHub Rulesets, not legacy per-repo branch-protection rules. The
+  three ruleset definitions live in [`github-rulesets/`](./github-rulesets/)
+  in this repo:
+  - `main-branch-protection.json` — applied to `nyuchi/.github`
+    (2-approver, 5 lint checks).
+  - `release-tag-protection.json` — applied to `nyuchi/.github`
+    (protects `v*.*.*` tags).
+  - `org-wide-main-protection.json` — applied at the org level to
+    all repos except `sandbox-*` and `archive-*` (1-approver, 5 lint
+    checks).
+  Apply or update via:
+  ```sh
+  gh api --method POST /repos/nyuchi/.github/rulesets \
+    --input github-rulesets/main-branch-protection.json
+  gh api --method POST /orgs/nyuchi/rulesets \
+    --input github-rulesets/org-wide-main-protection.json
+  ```
+- **Planned — infrastructure as code:** longer-term, migrate org and
+  repo configuration to Terraform's `integrations/github` provider so
+  that this document becomes a generated artifact rather than
+  hand-maintained prose.
 - **Quarterly audit:** compare live state against this document.
   Note any approved drift; fix any unapproved drift.
 

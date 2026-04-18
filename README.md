@@ -1,8 +1,8 @@
 # nyuchi/.github
 
 This repository holds **organization-wide defaults** for every repo
-under [Nyuchi Web Services](https://github.com/nyuchi) — the
-development hub of the Nyuchi and Mukoko ecosystems.
+under [Nyuchi Africa](https://github.com/nyuchi) — the parent company
+behind Nyuchi Web Services and the Mukoko super app.
 
 Anything here is inherited by every repository in the org that does
 not define its own equivalent file.
@@ -59,7 +59,12 @@ not define its own equivalent file.
 
 | Path              | Purpose                                                                                                                                                | Status |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | :----: |
-| `ORG_SETTINGS.md` | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning, ruleset migration). Audit quarterly. |   ✅   |
+| `ORG_SETTINGS.md`                            | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning). Rulesets in `github-rulesets/`. Audit quarterly. |   ✅   |
+| `profile/governance/NA-01_CONSTITUTION.md`   | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                |   ✅   |
+| `profile/governance/NA-02_OPEN_SOURCE.md`    | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                          |   ✅   |
+| `profile/governance/NA-03_ENGINEERING.md`    | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.              |   ✅   |
+| `.editorconfig`                              | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                  |   ✅   |
+| `.github/FUNDING.yml`                        | GitHub Sponsors / funding button configuration.                                                                                                                    |   ✅   |
 
 ### Reusable workflows
 
@@ -97,6 +102,8 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-pr-title-lint.yml`      | Conventional-Commits PR title lint. Input: `require-scope`.                                                                                          |   ✅   |
 | `.github/workflows/reusable-stale.yml`              | Stale issues + PRs, fully parameterised.                                                                                                             |   ✅   |
 | `.github/workflows/reusable-lint.yml`               | **Strict org-wide lint.** Five blocking jobs: actionlint, JSON validity, prettier, markdownlint, yamllint. No auto-fix. Every repo should call this. |   ✅   |
+| `.github/workflows/reusable-sbom.yml`               | CycloneDX SBOM generation (anchore/sbom-action). Attaches SBOM to releases. Required by NA-03 §7.2.                                                 |   ✅   |
+| `.github/workflows/reusable-release.yml`            | Standard release flow: semver tag validation, SBOM attachment, GitHub Release creation with auto-generated notes. Covers NA-03 §8.2.                 |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 
