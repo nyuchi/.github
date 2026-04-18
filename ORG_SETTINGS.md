@@ -146,21 +146,33 @@ These should hold for **every public repo** under
 At **Settings → Rules → Rulesets** (preferred) or **Settings →
 Branches → Branch protection rules** (legacy):
 
-| Rule                                                             | Value                                             |
-| ---------------------------------------------------------------- | ------------------------------------------------- |
-| Restrict deletions                                               | **Enabled**                                       |
-| Require linear history                                           | **Enabled**                                       |
-| Require signed commits                                           | **Enabled**                                       |
-| Require a pull request before merging                            | **Enabled**                                       |
-| Required approving reviews                                       | **1** (2 on `.github`, security, and infra repos) |
-| Dismiss stale pull request approvals when new commits are pushed | **Enabled**                                       |
-| Require review from Code Owners                                  | **Enabled** (once `CODEOWNERS` is in place)       |
-| Require approval of the most recent reviewable push              | **Enabled**                                       |
-| Require conversation resolution before merging                   | **Enabled**                                       |
-| Require status checks to pass                                    | **Enabled**                                       |
-| Require branches to be up to date before merging                 | **Enabled**                                       |
-| Block force pushes                                               | **Enabled**                                       |
-| Do not allow bypass                                              | **Applied to admins too**                         |
+| Rule                                                             | Value                                            |
+| ---------------------------------------------------------------- | ------------------------------------------------ |
+| Restrict deletions                                               | **Enabled**                                      |
+| Require linear history                                           | **Enabled**                                      |
+| Require signed commits                                           | **Enabled**                                      |
+| Require a pull request before merging                            | **Enabled**                                      |
+| Required approving reviews                                       | **0** (pre-scale solo-developer phase)           |
+| Dismiss stale pull request approvals when new commits are pushed | **Enabled**                                      |
+| Require review from Code Owners                                  | _Deferred_ until ≥ 2 engineers with merge rights |
+| Require approval of the most recent reviewable push              | _Deferred_ until ≥ 2 engineers with merge rights |
+| Require conversation resolution before merging                   | **Enabled**                                      |
+| Require status checks to pass                                    | **Enabled**                                      |
+| Require branches to be up to date before merging                 | **Enabled**                                      |
+| Block force pushes                                               | **Enabled**                                      |
+| Do not allow bypass                                              | **Applied to admins too**                        |
+
+> **Pre-scale reviewer posture.** The reviewer count is **0**
+> during the solo-developer phase, per NA-01 Article 4.2 (flat
+> structure, pre-scale reality). Every PR still goes through the
+> pull-request flow, CI gates, signed commits, DCO sign-off, and
+> conversation-resolution gates — just without an external
+> reviewer because there isn't one yet. As soon as a second
+> engineer with merge rights joins the org, the ruleset flips
+> back to `required_approving_review_count: 1`, with `.github`,
+> security, and infra repositories rising to `2` per the original
+> design. The trigger is documented in NA-01 Article 10.1 (the
+> transition to formal divisional structure).
 
 #### Required status checks
 

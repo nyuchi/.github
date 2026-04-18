@@ -85,7 +85,7 @@ body:
         - OS: macOS 15.3
         - Node: 20.10.0
         - pnpm: 9.12.0
-        - Package: @nyuchi/ui@1.4.2
+        - Package / repo: nyuchi/<repo-name>@<version-or-sha>
     validations:
       required: true
 

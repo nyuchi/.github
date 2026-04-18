@@ -409,10 +409,15 @@ within the following deadlines measured from the alert timestamp:
 | Medium   | Next weekly cycle  |
 | Low      | Next monthly cycle |
 
-Critical bumps may bypass the standard two-approver review bar
-under NA-01 Article 6.1(a) emergency operational authority. Every
-bypass is logged in the PR description and retrospectively reviewed
-at the next Board meeting per NA-01 Article 7.
+During the pre-scale solo-developer phase (NA-01 Article 4.2), the
+Founder may merge a Critical bump without awaiting an external
+reviewer — the repository's reviewer count is already `0` under
+that phase. Once the reviewer count flips back on (NA-01 Article
+10.1 trigger), Critical bumps may bypass the then-current reviewer
+requirement under NA-01 Article 6.1(a) emergency operational
+authority. Every bypass is logged in the PR description and
+retrospectively reviewed at the next Board meeting per NA-01
+Article 7.
 
 ### 7.2 SBOMs
 
