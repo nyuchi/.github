@@ -2,12 +2,12 @@
 
 ## Document NA-03 — Nyuchi Africa Governance Set
 
-| Field          | Value                                    |
-| -------------- | ---------------------------------------- |
-| Version        | 1.1                                      |
-| Effective date | 19 April 2026 (v1.0 adopted 18 April 2026) |
-| Status         | Approved and in force                    |
-| Approved by    | Bryan Fawcett, Founder & CEO             |
+| Field          | Value                        |
+| -------------- | ---------------------------- |
+| Version        | 1.1                          |
+| Effective date | 19 April 2026                |
+| Status         | Approved and in force        |
+| Approved by    | Bryan Fawcett, Founder & CEO |
 
 **Audience:** Engineers, maintainers, and contributors working on
 Nyuchi Web Services repositories. Partially public — external
