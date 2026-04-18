@@ -1,11 +1,14 @@
 # NA-03 — ENGINEERING WORKING AGREEMENT
 
-**Document NA-03 in the Nyuchi Africa Governance Set**
+## Document NA-03 — Nyuchi Africa Governance Set
 
-**Version:** 1.0
-**Effective date:** 18 April 2026
-**Status:** Approved and in force
-**Approved by:** Bryan Fawcett, Founder & CEO
+| Field          | Value                                    |
+| -------------- | ---------------------------------------- |
+| Version        | 1.0                                      |
+| Effective date | 18 April 2026                            |
+| Status         | Approved and in force                    |
+| Approved by    | Bryan Fawcett, Founder & CEO             |
+
 **Audience:** Engineers, maintainers, and contributors working on
 Nyuchi Web Services repositories. Partially public — external
 contributors benefit from knowing the defaults, even though the
@@ -27,15 +30,15 @@ document is primarily an internal working agreement.
 
 ---
 
-> *We are a frontier infrastructure company. Post-quantum by
+> _We are a frontier infrastructure company. Post-quantum by
 > default. Local-first by default. Edge-native by default. These
-> are not aspirations. They are present design constraints.*
+> are not aspirations. They are present design constraints._
 
 ---
 
 ## 1. Purpose
 
-Most engineering working agreements tell engineers *how* to work:
+Most engineering working agreements tell engineers _how_ to work:
 which linter, which branch name, which review policy. Ours does
 that too — but the mechanics already live in `nyuchi/.github`,
 inherited org-wide and refined over time. This document is
@@ -178,7 +181,7 @@ under NA-01 Article 6.1(b).
 ### 3.2 Schema.org compliance is non-negotiable
 
 Every database table maps to a Schema.org type. Column names use
-Schema.org camelCase property names, snake_cased for PostgreSQL.
+Schema.org camelCase property names, `snake_cased` for PostgreSQL.
 Platform-only columns are prefixed `x_` in API output and
 excluded from JSON-LD serialisation.
 
@@ -638,13 +641,13 @@ All amendments are logged in the changelog below.
 Adopted under the authority of NA-01 Article 17.
 
 **Bryan Fawcett**
-*Founder & Chief Executive Officer*
-*Nyuchi Africa (Private) Limited*
-*18 April 2026*
+_Founder & Chief Executive Officer_
+_Nyuchi Africa (Private) Limited_
+_18 April 2026_
 
 ---
 
-*Nyuchi Africa Engineering Working Agreement — Version 1.0*
-*Adopted 18 April 2026*
-*Nyuchi Africa (Private) Limited*
-*"Ndiri nekuti tiri" — I am because we are.*
+_Nyuchi Africa Engineering Working Agreement — Version 1.0_
+_Adopted 18 April 2026_
+_Nyuchi Africa (Private) Limited_
+_"Ndiri nekuti tiri" — I am because we are._

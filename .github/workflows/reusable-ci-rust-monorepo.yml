@@ -55,7 +55,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master (moving branch — this action publishes no semver tags)
+      # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
           toolchain: ${{ inputs.toolchain }}
           components: rustfmt
@@ -68,7 +69,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master (moving branch — this action publishes no semver tags)
+      # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
           toolchain: ${{ inputs.toolchain }}
           components: clippy
@@ -82,11 +84,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master (moving branch — this action publishes no semver tags)
+      # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
           toolchain: ${{ inputs.toolchain }}
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
-      - uses: taiki-e/install-action@dfd6a81ff1efc1c100332d760e0c9edfe2ae0a51  # nextest (per-tool moving tag — taiki-e ships one tag per CLI tool rather than semver)
+      # taiki-e/install-action uses per-tool moving tags rather than semver.
+      - uses: taiki-e/install-action@dfd6a81ff1efc1c100332d760e0c9edfe2ae0a51  # nextest
       - run: cargo nextest run --workspace --all-features
       - name: doctests
         run: cargo test --workspace --doc
@@ -98,7 +102,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master (moving branch — this action publishes no semver tags)
+      # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
           toolchain: ${{ inputs.toolchain }}
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
@@ -113,7 +118,8 @@ jobs:
       RUSTDOCFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master (moving branch — this action publishes no semver tags)
+      # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
           toolchain: ${{ inputs.toolchain }}
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2

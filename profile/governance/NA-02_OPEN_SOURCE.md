@@ -1,11 +1,14 @@
 # NA-02 — OPEN SOURCE & CONTRIBUTION GOVERNANCE
 
-**Document NA-02 in the Nyuchi Africa Governance Set**
+## Document NA-02 — Nyuchi Africa Governance Set
 
-**Version:** 1.0
-**Effective date:** 18 April 2026
-**Status:** Approved and in force
-**Approved by:** Bryan Fawcett, Founder & CEO
+| Field          | Value                                    |
+| -------------- | ---------------------------------------- |
+| Version        | 1.0                                      |
+| Effective date | 18 April 2026                            |
+| Status         | Approved and in force                    |
+| Approved by    | Bryan Fawcett, Founder & CEO             |
+
 **Audience:** Public. Contributors, partners, press, researchers,
 and anyone building on or alongside the Nyuchi and Mukoko
 ecosystems.
@@ -18,15 +21,15 @@ ecosystems.
   [`nyuchi/.github`](https://github.com/nyuchi/.github) —
   `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`,
   `SUPPORT.md`, `AGENTS.md` — cover the day-to-day mechanics of
-  contribution. This document covers the governance *principles*
+  contribution. This document covers the governance _principles_
   those mechanics embody.
 - **Downstream:** NA-03 Engineering Working Agreement — the
   frontier engineering defaults.
 
 ---
 
-> *Public by default, private only when necessary. The
-> infrastructure belongs to everyone it serves.*
+> _Public by default, private only when necessary. The
+> infrastructure belongs to everyone it serves._
 
 ---
 
@@ -140,17 +143,17 @@ Every component in our frontier infrastructure has a sovereign,
 permissively-licensed fallback running in production — not a plan,
 a live system:
 
-| Layer | Rented (fast) | Owned (sovereign) |
-|-------|---------------|-------------------|
-| Non-relational data | ScyllaDB (source-available from v2025.1) | Apache Cassandra (Apache 2.0) — runs as the archival tier |
-| Relational data | Supabase (managed) | Self-hosted PostgreSQL — migration path maintained |
-| Edge cache | Cloudflare KV + Durable Objects | Caches only; sources of truth are sovereign |
-| Container orchestration | Fly.io (managed) | K3s on MAAS-provisioned bare metal at Teraco (Johannesburg) — long-term path |
-| Stream processing | Redpanda (BSL) | Apache Kafka (Apache 2.0) — wire-compatible |
-| Embedded graph DB | — | SiafuDB / SiafuDB-Kuzu (Apache 2.0, ours) |
-| Data transfer layer | — | NTL (Apache 2.0, ours) |
+| Layer                   | Rented (fast)                            | Owned (sovereign)                                                            |
+| ----------------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
+| Non-relational data     | ScyllaDB (source-available from v2025.1) | Apache Cassandra (Apache 2.0) — runs as the archival tier                    |
+| Relational data         | Supabase (managed)                       | Self-hosted PostgreSQL — migration path maintained                           |
+| Edge cache              | Cloudflare KV + Durable Objects          | Caches only; sources of truth are sovereign                                  |
+| Container orchestration | Fly.io (managed)                         | K3s on MAAS-provisioned bare metal at Teraco (Johannesburg) — long-term path |
+| Stream processing       | Redpanda (BSL)                           | Apache Kafka (Apache 2.0) — wire-compatible                                  |
+| Embedded graph DB       | —                                        | SiafuDB / SiafuDB-Kuzu (Apache 2.0, ours)                                    |
+| Data transfer layer     | —                                        | NTL (Apache 2.0, ours)                                                       |
 
-*Speed is rented. Truth is owned.*
+_Speed is rented. Truth is owned._
 
 ## 3. How We Organise Repositories
 
@@ -326,8 +329,8 @@ in
 
 ### Trademark policy
 
-*Nyuchi*, *Nyuchi Africa*, *Nyuchi Web Services*, *Mukoko*,
-*Bundu Family*, and related visual marks are trademarks of Nyuchi
+_Nyuchi_, _Nyuchi Africa_, _Nyuchi Web Services_, _Mukoko_,
+_Bundu Family_, and related visual marks are trademarks of Nyuchi
 Africa. Community use:
 
 - **Freely permitted.** Referring to projects by name, linking,
@@ -389,12 +392,12 @@ community forum before taking effect.
 
 ## Quick Reference
 
-| Layer | Examples | Default licence |
-|-------|----------|-----------------|
-| Frontier infrastructure | NTL, SiafuDB, SiafuDB-Kuzu, Honeycomb protocol, service bus schemas, SDKs | Apache 2.0 |
-| Platforms and applications | Mukoko, Nyuchi Enterprise products, sister brands | MIT or Apache 2.0 (GPL where copyleft warranted) |
-| Documentation and specs | Canonical documents, architecture docs | CC BY 4.0 |
-| Client engagement code | Per-engagement | Private, client-owned |
+| Layer                      | Examples                                                                  | Default licence                                  |
+| -------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------ |
+| Frontier infrastructure    | NTL, SiafuDB, SiafuDB-Kuzu, Honeycomb protocol, service bus schemas, SDKs | Apache 2.0                                       |
+| Platforms and applications | Mukoko, Nyuchi Enterprise products, sister brands                         | MIT or Apache 2.0 (GPL where copyleft warranted) |
+| Documentation and specs    | Canonical documents, architecture docs                                    | CC BY 4.0                                        |
+| Client engagement code     | Per-engagement                                                            | Private, client-owned                            |
 
 **When in doubt, check the `LICENSE` file of the specific
 repository.**
@@ -418,13 +421,13 @@ repository.**
 Adopted under the authority of NA-01 Article 13 and Article 17.
 
 **Bryan Fawcett**
-*Founder & Chief Executive Officer*
-*Nyuchi Africa (Private) Limited*
-*18 April 2026*
+_Founder & Chief Executive Officer_
+_Nyuchi Africa (Private) Limited_
+_18 April 2026_
 
 ---
 
-*Nyuchi Africa Open Source & Contribution Governance — Version 1.0*
-*Adopted 18 April 2026*
-*Nyuchi Africa (Private) Limited*
-*"Ndiri nekuti tiri" — I am because we are.*
+_Nyuchi Africa Open Source & Contribution Governance — Version 1.0_
+_Adopted 18 April 2026_
+_Nyuchi Africa (Private) Limited_
+_"Ndiri nekuti tiri" — I am because we are._

@@ -94,6 +94,7 @@ At **Settings → Actions → General**:
   grep -rhoE 'uses: [^@[:space:]]+' .github/workflows/ \
     | sort -u
   ```
+
 - **Workflow permissions default:** _Read repository contents
   and packages permissions_. Individual workflows opt into more
   via their own `permissions:` block.
@@ -230,6 +231,7 @@ tokens.
   GitHub Rulesets, not legacy per-repo branch-protection rules. The
   three ruleset definitions live in [`github-rulesets/`](./github-rulesets/)
   in this repo:
+
   - `main-branch-protection.json` — applied to `nyuchi/.github`
     (2-approver, 5 lint checks).
   - `release-tag-protection.json` — applied to `nyuchi/.github`
@@ -237,13 +239,16 @@ tokens.
   - `org-wide-main-protection.json` — applied at the org level to
     all repos except `sandbox-*` and `archive-*` (1-approver, 5 lint
     checks).
+
   Apply or update via:
+
   ```sh
   gh api --method POST /repos/nyuchi/.github/rulesets \
     --input github-rulesets/main-branch-protection.json
   gh api --method POST /orgs/nyuchi/rulesets \
     --input github-rulesets/org-wide-main-protection.json
   ```
+
 - **Planned — infrastructure as code:** longer-term, migrate org and
   repo configuration to Terraform's `integrations/github` provider so
   that this document becomes a generated artifact rather than

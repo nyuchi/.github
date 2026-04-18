@@ -2,12 +2,14 @@
 
 ## Internal Governance of Nyuchi Africa (Private) Limited
 
-**Document NA-01 in the Nyuchi Africa Governance Set**
+### Document NA-01 — Nyuchi Africa Governance Set
 
-**Version:** 1.0
-**Effective date:** 18 April 2026
-**Status:** Approved and in force
-**Prepared and approved by:** Bryan Fawcett, Founder & CEO
+| Field                      | Value                                |
+| -------------------------- | ------------------------------------ |
+| Version                    | 1.0                                  |
+| Effective date             | 18 April 2026                        |
+| Status                     | Approved and in force                |
+| Prepared and approved by   | Bryan Fawcett, Founder & CEO         |
 
 **Relationship to other documents:**
 
@@ -29,9 +31,9 @@
 
 ---
 
-> *We are a frontier infrastructure company. Apps and platforms
+> _We are a frontier infrastructure company. Apps and platforms
 > are proof-of-concept and production expressions — real problems
-> being solved on largely open-source foundations, in the open.*
+> being solved on largely open-source foundations, in the open._
 
 ---
 
@@ -78,7 +80,7 @@ Zimbabwe.
 
 1.2 The company trades publicly as **Nyuchi Web Services** for its
 development hub and technical identity, and as **Nyuchi Africa**
-for its corporate identity. The word *nyuchi* is Shona for *bee* —
+for its corporate identity. The word _nyuchi_ is Shona for _bee_ —
 a deliberate reference to collective intelligence, distributed
 labour, and the pollination of an ecosystem larger than any single
 actor within it.
@@ -191,20 +193,20 @@ with its articles of association. The Board includes at minimum:
 - **(b)** One Director nominated by the Family Holding Company.
 - **(c)** One Director nominated by the Mukoko Foundation.
 
-5.2 Additional Directors may be appointed by ordinary resolution
-of the voting shareholders. Investor-nominated observer seats
-(without voting rights) may be created in share subscription
-agreements subject to the constraints of the Symbiotic Charter.
+  5.2 Additional Directors may be appointed by ordinary resolution
+  of the voting shareholders. Investor-nominated observer seats
+  (without voting rights) may be created in share subscription
+  agreements subject to the constraints of the Symbiotic Charter.
 
-5.3 The Board meets at minimum four times per year, or more
-frequently as convened by the Founder or by any two Directors. Its
-responsibilities are those of a Zimbabwe private company board:
-approval of annual accounts, declaration of dividends, appointment
-of auditors, and oversight of material risk.
+  5.3 The Board meets at minimum four times per year, or more
+  frequently as convened by the Founder or by any two Directors. Its
+  responsibilities are those of a Zimbabwe private company board:
+  approval of annual accounts, declaration of dividends, appointment
+  of auditors, and oversight of material risk.
 
-5.4 The Board does not direct day-to-day operations. Operational
-authority rests with the Founder & CEO under Article 4. The
-Board's role is oversight, not management.
+  5.4 The Board does not direct day-to-day operations. Operational
+  authority rests with the Founder & CEO under Article 4. The
+  Board's role is oversight, not management.
 
 ### Article 6 — The Founder's Decision Rights
 
@@ -231,10 +233,10 @@ rights directly:
   decisions below the Board materiality threshold defined in
   Article 7.
 
-6.2 The Founder may delegate any of these decision rights to team
-members on a case-by-case basis, and will do so increasingly as
-the team grows. Delegation is by written instruction (documented
-in a decision log) and is revocable.
+  6.2 The Founder may delegate any of these decision rights to team
+  members on a case-by-case basis, and will do so increasingly as
+  the team grows. Delegation is by written instruction (documented
+  in a decision log) and is revocable.
 
 ### Article 7 — Decisions Reserved to the Board
 
@@ -257,11 +259,11 @@ be taken by the Founder alone:
   consent under the Symbiotic Charter or the articles of
   association.
 
-7.2 The thresholds stated in Article 7.1 are the **initial
-operative thresholds** adopted with this Constitution. They are
-confirmed or adjusted by the Board at its first meeting after
-adoption and reviewed annually thereafter. Until the Board acts
-under this Article, the values stated in Article 7.1 apply.
+  7.2 The thresholds stated in Article 7.1 are the **initial
+  operative thresholds** adopted with this Constitution. They are
+  confirmed or adjusted by the Board at its first meeting after
+  adoption and reviewed annually thereafter. Until the Board acts
+  under this Article, the values stated in Article 7.1 apply.
 
 ### Article 8 — Decisions Reserved to the Shareholders
 
@@ -335,8 +337,8 @@ is reached:
 - **(d)** The Founder determines that the flat structure is
   materially impairing execution.
 
-10.2 Upon transition, each division will have a named Division
-Head who:
+  10.2 Upon transition, each division will have a named Division
+  Head who:
 
 - **(a)** Reports to the Founder & CEO.
 - **(b)** Holds delegated authority over the division's roadmap,
@@ -346,9 +348,9 @@ Head who:
 - **(d)** Operates within the decision rights framework of this
   Constitution and any working agreements in effect at the time.
 
-10.3 The transition shall be documented in an amendment to this
-Constitution under Article 17. Until such amendment, Article 4.2
-governs.
+  10.3 The transition shall be documented in an amendment to this
+  Constitution under Article 17. Until such amendment, Article 4.2
+  governs.
 
 ### Article 11 — Client Services within Nyuchi Web Services
 
@@ -377,9 +379,9 @@ to protect the integrity of the frontier infrastructure:
   that present a potential conflict with platform strategy or
   frontier positioning are declined.
 
-11.3 Client services revenue is commingled with general company
-revenue. Accounting treats client services as a revenue line item
-rather than a separate legal structure.
+  11.3 Client services revenue is commingled with general company
+  revenue. Accounting treats client services as a revenue line item
+  rather than a separate legal structure.
 
 ---
 
@@ -410,10 +412,10 @@ intellectual property in the company, consistent with Zimbabwe law.
   project. The company makes these contributions freely and does
   not claim ownership over them.
 
-12.4 Contributions from external contributors to
-Nyuchi-governed open-source projects are handled under the
-Developer Certificate of Origin (DCO) sign-off and a Contributor
-Licence Agreement where required, as described in NA-02.
+  12.4 Contributions from external contributors to
+  Nyuchi-governed open-source projects are handled under the
+  Developer Certificate of Origin (DCO) sign-off and a Contributor
+  Licence Agreement where required, as described in NA-02.
 
 ### Article 13 — Licensing Defaults
 
@@ -434,13 +436,13 @@ Contribution Governance). In summary:
 - **(c) Client services work** — private and proprietary, owned
   by the client under the terms of the engagement.
 
-13.2 Deviations from these defaults require the Founder's written
-approval and are logged in NA-02.
+  13.2 Deviations from these defaults require the Founder's written
+  approval and are logged in NA-02.
 
 ### Article 14 — Trademarks and Brands
 
-14.1 *Nyuchi*, *Nyuchi Africa*, *Nyuchi Web Services*, *Mukoko*,
-*Bundu Family*, and related brand marks are trademarks of Nyuchi
+14.1 _Nyuchi_, _Nyuchi Africa_, _Nyuchi Web Services_, _Mukoko_,
+_Bundu Family_, and related brand marks are trademarks of Nyuchi
 Africa. Community use of these marks is governed by a trademark
 policy published alongside NA-02.
 
@@ -525,8 +527,8 @@ Founder, subject to the following constraints:
   commitments below the defaults in Article 13 require Board
   approval and consultation with the Mukoko Foundation.
 
-17.2 All amendments are logged in a changelog at the foot of this
-document and dated.
+  17.2 All amendments are logged in a changelog at the foot of this
+  document and dated.
 
 ### Article 18 — Dissolution
 
@@ -546,9 +548,9 @@ dissolution:
 - **(d)** Residual assets are distributed to shareholders in
   accordance with the articles of association.
 
-18.2 The Foundation's authority over the community's sovereign
-assets (MIT, MXT, Pod) is unaffected by the dissolution of
-Nyuchi Africa.
+  18.2 The Foundation's authority over the community's sovereign
+  assets (MIT, MXT, Pod) is unaffected by the dissolution of
+  Nyuchi Africa.
 
 ---
 
@@ -574,13 +576,13 @@ Executive Officer of Nyuchi Africa (Private) Limited. It takes
 effect on the date stated at the head of this document.
 
 **Bryan Fawcett**
-*Founder & Chief Executive Officer*
-*Nyuchi Africa (Private) Limited*
-*18 April 2026*
+_Founder & Chief Executive Officer_
+_Nyuchi Africa (Private) Limited_
+_18 April 2026_
 
 ---
 
-*Nyuchi Africa Constitution — Version 1.0*
-*Adopted 18 April 2026*
-*Nyuchi Africa (Private) Limited*
-*"Ndiri nekuti tiri" — I am because we are.*
+_Nyuchi Africa Constitution — Version 1.0_
+_Adopted 18 April 2026_
+_Nyuchi Africa (Private) Limited_
+_"Ndiri nekuti tiri" — I am because we are._
