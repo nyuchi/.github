@@ -16,7 +16,11 @@ on:
   workflow_call:
     inputs:
       toolchain:
-        description: Rust toolchain to install (stable, beta, nightly, 1.85, etc.).
+        description: |
+          Rust toolchain channel or version to install. The default is
+          `stable`, which tracks the latest stable release per NA-03 §6.1.
+          Override only for deliberate version pins (e.g. `beta`, `nightly`,
+          or a specific `1.85` style pin for reproducible CI).
         type: string
         default: stable
 

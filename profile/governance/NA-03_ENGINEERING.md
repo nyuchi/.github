@@ -305,18 +305,26 @@ Set at the portfolio level. Default stacks:
 
 - **Frontier infrastructure** — Rust (NTL, SiafuDB) and C++
   (SiafuDB-Kuzu) for performance and sovereignty of the
-  toolchain.
+  toolchain. **Rust tracks latest stable** — the shared
+  `reusable-ci-rust-monorepo.yml` defaults to `toolchain: stable`
+  and every repository is expected to build on the current
+  stable channel unless a specific pin is justified in-repo
+  (e.g. reproducible release CI).
 - **Backend services** — Python 3.11+ (FastAPI), with Rust
   considered for performance-critical paths.
 - **Consumer app** — native Swift (iOS), Kotlin (Android),
   ArkTS (HarmonyOS); Capacitor web shell where native is not
   yet available.
-- **Front-end (web and mini-app web surfaces)** — Next.js with
-  TypeScript. **Node 24 is the minimum supported runtime** across
-  the frontend toolchain; lower versions are known to cause CI
-  failures in the shared reusable workflows. New repositories
-  commit a `.nvmrc` pinning Node 24 or newer; existing
-  repositories migrate at their next dependency-update cycle.
+- **Front-end (web and mini-app web surfaces)** — Next.js and
+  TypeScript, **both tracked at the latest stable major** (not
+  the last-supported-by-legacy-deps version). **Node 24 is the
+  minimum supported runtime** — lower versions are known to
+  cause CI failures in the shared reusable workflows. New
+  repositories commit a `.nvmrc` pinning Node 24 or newer and a
+  `"typescript": "^<latest-major>"` / `"next": "^<latest-major>"`
+  in `package.json`; existing repositories migrate at their next
+  dependency-update cycle. Dependabot handles routine minor and
+  patch bumps; major bumps are reviewed per the SLA in §7.1.2.
 - **Smart contracts** — Solidity, targeting Polygon, with
   Foundry for development and testing.
 - **Infrastructure as code** — Terraform for Cloudflare, Fly.io
@@ -675,10 +683,15 @@ All amendments are logged in the changelog below.
   Actions SHA-pinning policy, rationale, and consumer propagation
   model) and §7.1.2 (security-alert response SLA: Critical 24 h,
   High 5 working days, Medium weekly, Low monthly; Critical
-  bypass authority under NA-01 Article 6.1(a)). §6.1 Front-end
-  bullet updated to name **Node 24 as the minimum supported
-  runtime** (lower versions cause CI failures in the shared
-  reusables). §7.1.2 language reconciled with the pre-scale
+  bypass authority under NA-01 Article 6.1(a)). §6.1 updated to
+  codify runtime floors and tracking policy: **Rust tracks
+  latest stable** (via `toolchain: stable` in the reusable Rust
+  workflow); **Next.js and TypeScript track latest stable
+  major** in consumer repositories; **Node 24 is the minimum
+  supported runtime** across the frontend toolchain (lower
+  versions cause CI failures in the shared reusables).
+  `reusable-ci-rust-monorepo.yml` toolchain input description
+  clarified. §7.1.2 language reconciled with the pre-scale
   reviewer-count = 0 posture set by ORG_SETTINGS.md. Amended by
   the Founder under NA-03 §13.
 - **v1.0** (18 April 2026) — Adopted. Frontier-first framing:
