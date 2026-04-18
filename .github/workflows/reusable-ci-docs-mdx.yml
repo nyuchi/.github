@@ -78,4 +78,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build
-        run: ${{ inputs.build-command }}
+        env:
+          BUILD_COMMAND: ${{ inputs.build-command }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -c "$BUILD_COMMAND"

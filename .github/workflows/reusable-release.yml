@@ -62,14 +62,14 @@ on:
         default: .nvmrc
 
 permissions:
-  contents: write
-  packages: read
-  id-token: write
+  contents: read
 
 jobs:
   validate-tag:
     name: Validate semver tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       prerelease: ${{ steps.semver.outputs.prerelease }}
     steps:
@@ -91,6 +91,9 @@ jobs:
     name: Generate SBOM
     needs: validate-tag
     uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@main
+    permissions:
+      contents: read
+      packages: read
     with:
       artifact-name: sbom-${{ github.ref_name }}
       upload-release-assets: false   # release job attaches it below
@@ -99,6 +102,9 @@ jobs:
     name: Create GitHub release
     needs: [validate-tag, sbom]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # publish the GitHub Release and attach assets
+      id-token: write   # optional: sigstore / cosign keyless signing
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -109,18 +115,40 @@ jobs:
         with:
           name: sbom-${{ github.ref_name }}.json
           path: release-assets/
-        continue-on-error: true   # SBOM is best-effort; don't block release
+
+      - name: Verify SBOM is present before publishing
+        env:
+          SBOM_FILE: release-assets/sbom-${{ github.ref_name }}.json
+        run: |
+          set -euo pipefail
+          if [ ! -s "$SBOM_FILE" ]; then
+            echo "::error::SBOM '$SBOM_FILE' missing or empty — NA-03 §7.2 requires a valid CycloneDX SBOM on every release."
+            exit 1
+          fi
 
       - name: Stage caller artefacts
         if: inputs.artifact-paths != ''
+        env:
+          ARTIFACT_PATHS: ${{ inputs.artifact-paths }}
+        shell: bash
         run: |
           set -euo pipefail
+          shopt -s globstar nullglob
           mkdir -p release-assets
+          copied=0
           while IFS= read -r glob; do
             [ -z "$glob" ] && continue
-            # shellcheck disable=SC2086
-            cp -v $glob release-assets/ 2>/dev/null || true
-          done <<< "${{ inputs.artifact-paths }}"
+            # shellcheck disable=SC2206
+            # Intentional word-splitting + globbing: $glob may be a shell pattern like 'dist/**'.
+            files=( $glob )
+            if [ ${#files[@]} -eq 0 ]; then
+              echo "::error::artifact-paths glob '$glob' matched no files."
+              exit 1
+            fi
+            cp -v "${files[@]}" release-assets/
+            copied=$((copied + ${#files[@]}))
+          done <<< "$ARTIFACT_PATHS"
+          echo "Staged $copied caller artefact(s)."
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2

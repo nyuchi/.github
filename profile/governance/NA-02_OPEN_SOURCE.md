@@ -2,9 +2,10 @@
 
 **Document NA-02 in the Nyuchi Africa Governance Set**
 
-**Version:** 1.0 — DRAFT
-**Date:** April 2026
-**Status:** Working draft — pending Founder sign-off
+**Version:** 1.0
+**Effective date:** 18 April 2026
+**Status:** Approved and in force
+**Approved by:** Bryan Fawcett, Founder & CEO
 **Audience:** Public. Contributors, partners, press, researchers,
 and anyone building on or alongside the Nyuchi and Mukoko
 ecosystems.
@@ -402,17 +403,28 @@ repository.**
 
 ## Changelog
 
-- **v1.0** (April 2026) — Initial draft. Frontier infrastructure
+- **v1.0** (18 April 2026) — Adopted. Frontier infrastructure
   framing. Standard licences only — Apache 2.0 for infrastructure
   primitives, MIT / Apache 2.0 / GPL for applications, CC BY 4.0
   for documentation. Sovereignty fallback table. Contribution
   principles referencing existing `nyuchi/.github` mechanics.
-  Foundation open-source failsafe documented. To be published to
-  `nyuchi/.github/profile/governance/` on Founder sign-off.
+  Foundation open-source failsafe documented. Published to
+  `nyuchi/.github/profile/governance/`.
 
 ---
 
-*Nyuchi Africa Open Source & Contribution Governance — Version 1.0 DRAFT*
-*April 2026*
+## Approval
+
+Adopted under the authority of NA-01 Article 13 and Article 17.
+
+**Bryan Fawcett**
+*Founder & Chief Executive Officer*
+*Nyuchi Africa (Private) Limited*
+*18 April 2026*
+
+---
+
+*Nyuchi Africa Open Source & Contribution Governance — Version 1.0*
+*Adopted 18 April 2026*
 *Nyuchi Africa (Private) Limited*
 *"Ndiri nekuti tiri" — I am because we are.*

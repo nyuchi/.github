@@ -4,10 +4,10 @@
 
 **Document NA-01 in the Nyuchi Africa Governance Set**
 
-**Version:** 1.0 — DRAFT
-**Date:** April 2026
-**Status:** Working draft — pending Founder sign-off
-**Prepared by:** Bryan Fawcett, Founder & CEO
+**Version:** 1.0
+**Effective date:** 18 April 2026
+**Status:** Approved and in force
+**Prepared and approved by:** Bryan Fawcett, Founder & CEO
 
 **Relationship to other documents:**
 
@@ -72,8 +72,9 @@ requiring a constitutional rewrite at every inflection point.
 1.1 Nyuchi Africa (Private) Limited is a private limited company
 incorporated under the Companies and Other Business Entities Act
 2019 of Zimbabwe, with registration number
-`[ZIMRA Registration Number]` and registered office at
-`[Registered Address]`, Harare, Zimbabwe.
+9281/2019 and registered office at
+3 Straven Court, 4 Browning Drive, Strathaven, Harare, Harare,
+Zimbabwe.
 
 1.2 The company trades publicly as **Nyuchi Web Services** for its
 development hub and technical identity, and as **Nyuchi Africa**
@@ -244,11 +245,11 @@ be taken by the Founder alone:
   deviations from it.
 - **(b)** Approval of the annual accounts and financial statements.
 - **(c)** Any borrowing or credit facility above
-  `USD [Threshold]` in aggregate outstanding balance.
-- **(d)** Any capital expenditure above `USD [Threshold]` in a
+  `USD 50,000` in aggregate outstanding balance.
+- **(d)** Any capital expenditure above `USD 100,000` in a
   single commitment.
 - **(e)** Any commercial agreement with an expected value above
-  `USD [Threshold]` over its full term.
+  `USD 100,000` over its full term.
 - **(f)** Any decision to enter or exit a country market.
 - **(g)** Any change to the company's auditors or Compliance
   Officer.
@@ -256,9 +257,11 @@ be taken by the Founder alone:
   consent under the Symbiotic Charter or the articles of
   association.
 
-7.2 The thresholds in Article 7.1 are to be set by the Board at
-its first meeting after adoption of this Constitution and reviewed
-annually thereafter.
+7.2 The thresholds stated in Article 7.1 are the **initial
+operative thresholds** adopted with this Constitution. They are
+confirmed or adjusted by the Board at its first meeting after
+adoption and reviewed annually thereafter. Until the Board acts
+under this Article, the values stated in Article 7.1 apply.
 
 ### Article 8 — Decisions Reserved to the Shareholders
 
@@ -551,17 +554,33 @@ Nyuchi Africa.
 
 ## Changelog
 
-- **v1.0** (April 2026) — Initial draft. Frontier infrastructure
+- **v1.0** (18 April 2026) — Adopted. Frontier infrastructure
   company framing. Three divisions (Nyuchi Africa parent, Nyuchi
   Web Services development, Mukoko super app). Flat operational
   structure with Founder-directed decision rights. Transition
   triggers to formal divisional structure. IP defaults aligned
   with NA-02. Code of Conduct, AGENTS.md, and conflicts of
-  interest referenced to existing org-wide policies.
+  interest referenced to existing org-wide policies. Article 7.1
+  financial thresholds filled in as initial operative values
+  subject to annual Board review under Article 7.2.
 
 ---
 
-*Nyuchi Africa Constitution — Version 1.0 DRAFT*
-*April 2026*
+## Approval
+
+This Constitution is adopted under the authority of the Founder
+as the sole incorporating shareholder of record and the Chief
+Executive Officer of Nyuchi Africa (Private) Limited. It takes
+effect on the date stated at the head of this document.
+
+**Bryan Fawcett**
+*Founder & Chief Executive Officer*
+*Nyuchi Africa (Private) Limited*
+*18 April 2026*
+
+---
+
+*Nyuchi Africa Constitution — Version 1.0*
+*Adopted 18 April 2026*
 *Nyuchi Africa (Private) Limited*
 *"Ndiri nekuti tiri" — I am because we are.*

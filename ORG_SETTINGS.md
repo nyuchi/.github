@@ -64,12 +64,36 @@ At **Settings → Actions → General**:
   workflows_ — do not allow all actions unrestricted.
 - **Allow actions created by GitHub:** **Yes.**
 - **Allow actions by Marketplace verified creators:** **Yes.**
-- **Allow specified actions and reusable workflows:** an allow-list
-  covering the actions we actually use across the org — e.g.
-  `actions/*, github/codeql-action/*, pnpm/action-setup@*,
-Swatinem/rust-cache@*, astral-sh/setup-uv@*,
-amannn/action-semantic-pull-request@*,
-streetsidesoftware/cspell-action@*, lycheeverse/lychee-action@*`.
+- **Allow specified actions and reusable workflows:** the
+  allow-list below is the source of truth — every action used in
+  [`.github/workflows/reusable-*.yml`](./.github/workflows/)
+  must appear here. When adding a new action to any reusable
+  workflow, update this list in the same PR.
+
+  ```text
+  actions/*,
+  github/codeql-action/*,
+  anchore/sbom-action@*,
+  softprops/action-gh-release@*,
+  DavidAnson/markdownlint-cli2-action@*,
+  amannn/action-semantic-pull-request@*,
+  streetsidesoftware/cspell-action@*,
+  lycheeverse/lychee-action@*,
+  dorny/paths-filter@*,
+  pnpm/action-setup@*,
+  Swatinem/rust-cache@*,
+  dtolnay/rust-toolchain@*,
+  taiki-e/install-action@*,
+  astral-sh/setup-uv@*
+  ```
+
+  To audit drift against what's actually referenced in the
+  reusables:
+
+  ```sh
+  grep -rhoE 'uses: [^@[:space:]]+' .github/workflows/ \
+    | sort -u
+  ```
 - **Workflow permissions default:** _Read repository contents
   and packages permissions_. Individual workflows opt into more
   via their own `permissions:` block.

@@ -2,9 +2,10 @@
 
 **Document NA-03 in the Nyuchi Africa Governance Set**
 
-**Version:** 1.0 — DRAFT
-**Date:** April 2026
-**Status:** Working draft — pending Founder sign-off
+**Version:** 1.0
+**Effective date:** 18 April 2026
+**Status:** Approved and in force
+**Approved by:** Bryan Fawcett, Founder & CEO
 **Audience:** Engineers, maintainers, and contributors working on
 Nyuchi Web Services repositories. Partially public — external
 contributors benefit from knowing the defaults, even though the
@@ -622,7 +623,7 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
-- **v1.0** (April 2026) — Initial draft. Frontier-first framing:
+- **v1.0** (18 April 2026) — Adopted. Frontier-first framing:
   post-quantum, local-first, edge-native as present design
   constraints, not future worries. Locked architectural
   commitments (three sources of truth, Schema.org, locked counts,
@@ -632,7 +633,18 @@ All amendments are logged in the changelog below.
 
 ---
 
-*Nyuchi Africa Engineering Working Agreement — Version 1.0 DRAFT*
-*April 2026*
+## Approval
+
+Adopted under the authority of NA-01 Article 17.
+
+**Bryan Fawcett**
+*Founder & Chief Executive Officer*
+*Nyuchi Africa (Private) Limited*
+*18 April 2026*
+
+---
+
+*Nyuchi Africa Engineering Working Agreement — Version 1.0*
+*Adopted 18 April 2026*
 *Nyuchi Africa (Private) Limited*
 *"Ndiri nekuti tiri" — I am because we are.*

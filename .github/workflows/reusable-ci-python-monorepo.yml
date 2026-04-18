@@ -138,4 +138,14 @@ jobs:
           enable-cache: true
       - run: uv sync --all-packages --frozen
       - name: pytest ${{ matrix.package }}
-        run: uv run --package ${{ matrix.package }} pytest packages/${{ matrix.package }}
+        env:
+          PACKAGE: ${{ matrix.package }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Package names come from filesystem scan but still validate to be safe.
+          if [[ ! "$PACKAGE" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+            echo "::error::Invalid package name '$PACKAGE' — must match [a-zA-Z0-9_.-]+."
+            exit 1
+          fi
+          uv run --package "$PACKAGE" pytest "packages/$PACKAGE"

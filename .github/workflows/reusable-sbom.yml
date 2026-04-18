@@ -44,6 +44,9 @@ on:
         type: boolean
         default: true
 
+# Top-level ceiling: direct callers with upload-release-assets:true need
+# contents:write to attach the SBOM to a GitHub Release. Sub-workflow
+# callers (e.g. reusable-release.yml) should grant only contents:read.
 permissions:
   contents: write
   packages: read
@@ -63,3 +66,20 @@ jobs:
           output-file: ${{ inputs.artifact-name }}.json
           upload-artifact: true
           upload-release-assets: ${{ inputs.upload-release-assets }}
+
+      - name: Verify SBOM is non-empty
+        env:
+          SBOM_FILE: ${{ inputs.artifact-name }}.json
+        run: |
+          set -euo pipefail
+          if [ ! -s "$SBOM_FILE" ]; then
+            echo "::error::SBOM file '$SBOM_FILE' is missing or empty — NA-03 §7.2 requires a valid CycloneDX SBOM on every release."
+            exit 1
+          fi
+          # Guard against anchore emitting a syntactically-valid but content-free document.
+          components=$(jq '.components // [] | length' "$SBOM_FILE")
+          if [ "$components" -eq 0 ]; then
+            echo "::error::SBOM '$SBOM_FILE' contains zero components — likely an sbom-action detection failure."
+            exit 1
+          fi
+          echo "SBOM OK: $components components in $SBOM_FILE"

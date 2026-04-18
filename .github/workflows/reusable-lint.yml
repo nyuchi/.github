@@ -68,12 +68,29 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
       - name: Download actionlint
         id: get_actionlint
-        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/v1.7.4/scripts/download-actionlint.bash) 1.7.4
         shell: bash
+        run: |
+          set -euo pipefail
+          installer=$(mktemp)
+          trap 'rm -f "$installer"' EXIT
+          curl --fail --silent --show-error --location \
+            --retry 3 --retry-delay 2 \
+            https://raw.githubusercontent.com/rhysd/actionlint/v1.7.4/scripts/download-actionlint.bash \
+            --output "$installer"
+          # Sanity-check we got a shell script, not an HTML error page.
+          head -n 1 "$installer" | grep -qE '^#!.*(bash|sh)' \
+            || { echo "::error::actionlint installer did not look like a shell script"; head -n 5 "$installer"; exit 1; }
+          bash "$installer" 1.7.4
       - name: actionlint
-        # shellcheck disable=SC2086
-        run: ${{ steps.get_actionlint.outputs.executable }} -color ${{ inputs.actionlint-paths }}
+        env:
+          ACTIONLINT_BIN: ${{ steps.get_actionlint.outputs.executable }}
+          ACTIONLINT_PATHS: ${{ inputs.actionlint-paths }}
         shell: bash
+        run: |
+          set -euo pipefail
+          # Intentional word-splitting: $ACTIONLINT_PATHS is a space-separated glob list.
+          # shellcheck disable=SC2086
+          "$ACTIONLINT_BIN" -color $ACTIONLINT_PATHS
 
   jsonlint:
     name: JSON validity
@@ -100,9 +117,25 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '20'
-      - run: npm install --global prettier@${{ inputs.prettier-version }}
+      - name: Install prettier
+        env:
+          PRETTIER_VERSION: ${{ inputs.prettier-version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Validate version to guard against injection via inputs.prettier-version.
+          if [[ ! "$PRETTIER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]]; then
+            echo "::error::Invalid prettier-version '$PRETTIER_VERSION' — expected semver."
+            exit 1
+          fi
+          npm install --global "prettier@$PRETTIER_VERSION"
       - name: prettier --check
-        run: prettier --check "${{ inputs.prettier-glob }}"
+        env:
+          PRETTIER_GLOB: ${{ inputs.prettier-glob }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          prettier --check "$PRETTIER_GLOB"
 
   markdownlint:
     name: markdownlint
@@ -118,6 +151,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - run: pip install "yamllint==${{ inputs.yamllint-version }}"
+      - name: Install yamllint
+        env:
+          YAMLLINT_VERSION: ${{ inputs.yamllint-version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$YAMLLINT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]]; then
+            echo "::error::Invalid yamllint-version '$YAMLLINT_VERSION' — expected semver."
+            exit 1
+          fi
+          pip install "yamllint==$YAMLLINT_VERSION"
       - name: yamllint (strict)
-        run: yamllint -s -f github ${{ inputs.yamllint-target }}
+        env:
+          YAMLLINT_TARGET: ${{ inputs.yamllint-target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Intentional word-splitting: $YAMLLINT_TARGET may be a space-separated list of paths.
+          # shellcheck disable=SC2086
+          yamllint -s -f github $YAMLLINT_TARGET
