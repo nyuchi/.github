@@ -4,8 +4,8 @@
 
 | Field          | Value                                    |
 | -------------- | ---------------------------------------- |
-| Version        | 1.0                                      |
-| Effective date | 18 April 2026                            |
+| Version        | 1.1                                      |
+| Effective date | 19 April 2026 (v1.0 adopted 18 April 2026) |
 | Status         | Approved and in force                    |
 | Approved by    | Bryan Fawcett, Founder & CEO             |
 
@@ -378,6 +378,42 @@ duplicating pipelines.
   non-critical, immediately for security-critical), driven by
   Dependabot using the org template.
 
+#### 7.1.1 GitHub Actions pinning
+
+GitHub Actions used across the organisation are pinned to 40-character
+commit SHAs in
+[`nyuchi/.github/.github/workflows/reusable-*.yml`](https://github.com/nyuchi/.github/tree/main/.github/workflows),
+never to tag refs such as `@v4`. This is the OpenSSF and SLSA
+recommended practice and is the response to the 2024–25 class of
+supply-chain attacks (for example `tj-actions/changed-files`) in
+which a tag was force-pushed to a malicious commit and every
+tag-consuming workflow executed the malicious code on its next
+run.
+
+Consuming repositories call the central reusables via
+`uses: nyuchi/.github/.github/workflows/reusable-<name>.yml@main`,
+so a SHA bump in `nyuchi/.github` propagates to every consumer on
+its next CI run — no per-repo Dependabot wait.
+
+#### 7.1.2 Security-alert response SLA
+
+When Dependabot, GitHub Security Advisories, or an upstream project
+publishes a vulnerability affecting an action or dependency pinned
+in `nyuchi/.github`, the bump PR in that repository is merged
+within the following deadlines measured from the alert timestamp:
+
+| Severity | SLA to merge       |
+| -------- | ------------------ |
+| Critical | 24 hours           |
+| High     | 5 working days     |
+| Medium   | Next weekly cycle  |
+| Low      | Next monthly cycle |
+
+Critical bumps may bypass the standard two-approver review bar
+under NA-01 Article 6.1(a) emergency operational authority. Every
+bypass is logged in the PR description and retrospectively reviewed
+at the next Board meeting per NA-01 Article 7.
+
 ### 7.2 SBOMs
 
 Release artefacts include a Software Bill of Materials in
@@ -626,6 +662,14 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.1** (19 April 2026) — Amendment: added §7.1.1 (GitHub
+  Actions SHA-pinning policy, rationale, and consumer propagation
+  model) and §7.1.2 (security-alert response SLA: Critical 24 h,
+  High 5 working days, Medium weekly, Low monthly; Critical
+  bypass authority under NA-01 Article 6.1(a)). Codifies the
+  response-time side of the centralised-SHA-pinning chokepoint.
+  No changes to other sections. Amended by the Founder under
+  NA-03 §13.
 - **v1.0** (18 April 2026) — Adopted. Frontier-first framing:
   post-quantum, local-first, edge-native as present design
   constraints, not future worries. Locked architectural
@@ -647,7 +691,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Engineering Working Agreement — Version 1.0_
-_Adopted 18 April 2026_
+_Nyuchi Africa Engineering Working Agreement — Version 1.1_
+_Adopted 18 April 2026 · amended 19 April 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._
