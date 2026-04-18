@@ -76,14 +76,14 @@ body:
       description: |
         Include anything that might be relevant. Examples:
         - OS and version (e.g. macOS 15.3, Ubuntu 24.04, Windows 11)
-        - Runtime and version (e.g. Node 20.10, Rust 1.85, Python 3.12, uv 0.5)
+        - Runtime and version (e.g. Node 24.3, Rust 1.85, Python 3.12, uv 0.5)
         - Browser and version (for web UIs)
         - Package version or commit SHA
         - Deployment target (local, CI, Cloudflare Workers, etc.)
       render: markdown
       placeholder: |
         - OS: macOS 15.3
-        - Node: 20.10.0
+        - Node: 24.3.0
         - pnpm: 9.12.0
         - Package / repo: nyuchi/<repo-name>@<version-or-sha>
     validations:

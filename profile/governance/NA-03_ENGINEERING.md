@@ -312,7 +312,11 @@ Set at the portfolio level. Default stacks:
   ArkTS (HarmonyOS); Capacitor web shell where native is not
   yet available.
 - **Front-end (web and mini-app web surfaces)** — Next.js with
-  TypeScript.
+  TypeScript. **Node 24 is the minimum supported runtime** across
+  the frontend toolchain; lower versions are known to cause CI
+  failures in the shared reusable workflows. New repositories
+  commit a `.nvmrc` pinning Node 24 or newer; existing
+  repositories migrate at their next dependency-update cycle.
 - **Smart contracts** — Solidity, targeting Polygon, with
   Foundry for development and testing.
 - **Infrastructure as code** — Terraform for Cloudflare, Fly.io
@@ -671,10 +675,12 @@ All amendments are logged in the changelog below.
   Actions SHA-pinning policy, rationale, and consumer propagation
   model) and §7.1.2 (security-alert response SLA: Critical 24 h,
   High 5 working days, Medium weekly, Low monthly; Critical
-  bypass authority under NA-01 Article 6.1(a)). Codifies the
-  response-time side of the centralised-SHA-pinning chokepoint.
-  No changes to other sections. Amended by the Founder under
-  NA-03 §13.
+  bypass authority under NA-01 Article 6.1(a)). §6.1 Front-end
+  bullet updated to name **Node 24 as the minimum supported
+  runtime** (lower versions cause CI failures in the shared
+  reusables). §7.1.2 language reconciled with the pre-scale
+  reviewer-count = 0 posture set by ORG_SETTINGS.md. Amended by
+  the Founder under NA-03 §13.
 - **v1.0** (18 April 2026) — Adopted. Frontier-first framing:
   post-quantum, local-first, edge-native as present design
   constraints, not future worries. Locked architectural
