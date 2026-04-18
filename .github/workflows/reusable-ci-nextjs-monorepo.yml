@@ -45,8 +45,18 @@ jobs:
       tasks: ${{ steps.split.outputs.tasks }}
     steps:
       - id: split
+        env:
+          TASKS: ${{ inputs.tasks }}
+        shell: bash
         run: |
-          json=$(printf '%s\n' ${{ inputs.tasks }} | jq -R . | jq -c -s .)
+          set -euo pipefail
+          # Split on whitespace intentionally — $TASKS is a space-separated list.
+          # shellcheck disable=SC2086
+          json=$(printf '%s\n' $TASKS | jq -R . | jq -c -s .)
+          if [ -z "$json" ] || [ "$json" = "[]" ]; then
+            echo "::error::inputs.tasks ('$TASKS') resolved to an empty matrix."
+            exit 1
+          fi
           echo "tasks=$json" >> "$GITHUB_OUTPUT"
 
   ci:
@@ -65,14 +75,24 @@ jobs:
             && format('...[{0}]', github.event.pull_request.base.sha)
             || '...[HEAD^1]' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@71c92474e7e4f5bca283fb17ef80fba9cdb2b4b1  # v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6
         with:
           node-version-file: ${{ inputs.node-version-file }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: turbo run ${{ matrix.task }}
-        run: pnpm turbo run ${{ matrix.task }} --filter="${TURBO_FILTER}"
+        env:
+          TURBO_TASK: ${{ matrix.task }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Validate to guard against a caller passing injection via inputs.tasks.
+          if [[ ! "$TURBO_TASK" =~ ^[a-zA-Z0-9_:.-]+$ ]]; then
+            echo "::error::Invalid turbo task name '$TURBO_TASK' — must match [a-zA-Z0-9_:.-]+."
+            exit 1
+          fi
+          pnpm turbo run "$TURBO_TASK" --filter="$TURBO_FILTER"

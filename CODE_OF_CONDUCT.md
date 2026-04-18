@@ -1,6 +1,6 @@
 # Code of Conduct
 
-All projects under the Nyuchi Web Services GitHub organization
+All projects under the Nyuchi Africa GitHub organization
 ([@nyuchi](https://github.com/nyuchi)) adopt the
 **[Contributor Covenant, version 2.1][cc]** as our code of conduct.
 
@@ -24,13 +24,13 @@ the organization in public spaces.
 ## Reporting
 
 If you experience or witness behavior that violates this Code of
-Conduct, please report it privately through one of the following
-channels. **Do not** open a public issue for a Code of Conduct report.
+Conduct, please report it privately. **Do not** open a public issue
+for a Code of Conduct report.
 
-- **Inside a repository:** open a
-  [private security advisory][advisory-docs] on the affected
-  repository. The advisory form accepts any confidential report —
-  it is not limited to security vulnerabilities.
+- **Email (preferred):** send a private report to
+  **<hi@nyuchi.com>** with the subject line
+  `[Code of Conduct] <brief description>`. All reports go to
+  organization leadership and are treated with strict confidence.
 - **Platform-level abuse** (harassment, impersonation, spam, etc.
   on GitHub itself): use GitHub's built-in
   [report abuse][report-abuse] form.
@@ -65,5 +65,4 @@ available at <https://www.contributor-covenant.org/translations>.
 [cc-home]: https://www.contributor-covenant.org
 [cc-enforcement]: https://www.contributor-covenant.org/version/2/1/code_of_conduct/#enforcement-guidelines
 [mozilla-ladder]: https://github.com/mozilla/diversity
-[advisory-docs]: https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability
 [report-abuse]: https://github.com/contact/report-abuse
