@@ -111,7 +111,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download SBOM artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           name: sbom-${{ github.ref_name }}.json
           path: release-assets/
@@ -151,7 +151,7 @@ jobs:
           echo "Staged $copied caller artefact(s)."
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
           draft: ${{ inputs.draft }}
           prerelease: ${{ needs.validate-tag.outputs.prerelease }}
