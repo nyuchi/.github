@@ -1,4 +1,4 @@
-# Nyuchi Web Services
+# Nyuchi Web Services by Nyuchi Africa (PVT) Ltd
 
 **A frontier infrastructure company building for Africa's unique
 economies — in the open.**
@@ -8,6 +8,7 @@ _Ndiri nekuti tiri._
 
 [services.nyuchi.com](https://services.nyuchi.com) ·
 [mukoko.com](https://mukoko.com) ·
+[nyuchi.com](https://www.nyuchi.com) ·
 [design.nyuchi.com](https://design.nyuchi.com)
 
 [Governance](./governance/) · [Contributing](../CONTRIBUTING.md) ·
