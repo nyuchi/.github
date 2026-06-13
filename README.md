@@ -103,7 +103,9 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-stale.yml`              | Stale issues + PRs, fully parameterised.                                                                                                             |   ✅   |
 | `.github/workflows/reusable-lint.yml`               | **Strict org-wide lint.** Five blocking jobs: actionlint, JSON validity, prettier, markdownlint, yamllint. No auto-fix. Every repo should call this. |   ✅   |
 | `.github/workflows/reusable-sbom.yml`               | CycloneDX SBOM generation (anchore/sbom-action). Attaches SBOM to releases. Required by NA-03 §7.2.                                                  |   ✅   |
-| `.github/workflows/reusable-release.yml`            | Standard release flow: semver tag validation, SBOM attachment, GitHub Release creation with auto-generated notes. Covers NA-03 §8.2.                 |   ✅   |
+| `.github/workflows/reusable-release.yml`            | Standard release flow: semver tag validation, SBOM attachment, SHA-256 checksums, SLSA L2 provenance attestation, GitHub Release creation. Covers NA-03 §8.2. |   ✅   |
+| `.github/workflows/reusable-slsa-provenance.yml`    | Standalone SLSA L2 provenance attestation for repos that need to attest artifacts outside the full release flow. Verifiable via `gh attestation verify`. |   ✅   |
+| `.github/workflows/scheduled-settings-audit.yml`    | Quarterly drift-detection: opens a GitHub Issue on 1 Jan · 1 Apr · 1 Jul · 1 Oct with a checklist to compare ORG_SETTINGS.md against live GitHub state. |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 

@@ -103,8 +103,11 @@ jobs:
     needs: [validate-tag, sbom]
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # publish the GitHub Release and attach assets
-      id-token: write   # optional: sigstore / cosign keyless signing
+      contents: write      # publish the GitHub Release and attach assets
+      id-token: write      # Sigstore OIDC token for provenance signing
+      attestations: write  # write to the repository's attestation store
+    outputs:
+      hashes: ${{ steps.checksums.outputs.hashes }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
@@ -149,6 +152,23 @@ jobs:
             copied=$((copied + ${#files[@]}))
           done <<< "$ARTIFACT_PATHS"
           echo "Staged $copied caller artefact(s)."
+
+      - name: Generate SHA-256 checksums
+        id: checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-assets
+          sha256sum -- * > SHA256SUMS
+          echo "=== SHA-256 checksums ==="
+          cat SHA256SUMS
+          # base64-encoded hashes for downstream provenance consumers.
+          echo "hashes=$(sha256sum -- * | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+      - name: Attest build provenance (SLSA L2)
+        uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd  # v2.3.0 — TODO: confirm SHA per NA-03 §7.1.1
+        with:
+          subject-path: "release-assets/*"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
