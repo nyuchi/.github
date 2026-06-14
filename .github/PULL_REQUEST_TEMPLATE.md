@@ -50,7 +50,9 @@ Closes #
 ## Checklist
 
 <!-- All boxes must be ticked before a maintainer will merge. These mirror
-     the requirements in CONTRIBUTING.md — they are not suggestions. -->
+     the requirements in CONTRIBUTING.md and NA-03 — they are not suggestions. -->
+
+### Process
 
 - [ ] My PR **title** follows [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 - [ ] All of my commits are **signed** and show "Verified" on GitHub
@@ -71,6 +73,33 @@ Closes #
       (name, version, license, why).
 - [ ] If this is a breaking change, I have marked the box above and
       included a `BREAKING CHANGE:` footer in at least one commit.
+
+### NA-03 merge blockers
+
+<!-- These checks mirror the Quick Reference in NA-03 §§ 3–7.
+     Tick only the boxes that are relevant to this PR. If none apply,
+     check "N/A" and leave the others blank. -->
+
+- [ ] **N/A** — this change does not touch schema, APIs, dependencies,
+      cryptography, data placement, or smart-contract counts.
+      _(If ticked, skip the remaining boxes in this section.)_
+- [ ] **Secret hygiene** — I confirmed no API keys, tokens, `.env` contents,
+      private keys, or credentials appear anywhere in the diff.
+- [ ] **Prohibited dependencies** — this PR introduces no Flutter,
+      Couchbase, or CouchDB-as-datastore dependency, and contains no
+      reference to a fixed 10-billion MXT supply cap.
+- [ ] **Schema.org compliance** — new database tables, columns, or API fields
+      map to Schema.org types, or the PR description justifies any deviation.
+- [ ] **Locked counts respected** — no change to the platform's locked counts
+      (17 mini-apps · 7 Enterprise products · 7 data layers · 7 covenants ·
+      40 interest categories · 12 manifesto sections · 3 sources of truth)
+      without Founder approval documented in the PR description.
+- [ ] **Frontier defaults** — for user-facing or infrastructure work:
+      offline / local-first behaviour has been considered; any new
+      cryptographic primitive has a documented post-quantum migration path;
+      edge-native placement has been addressed.
+- [ ] **New GitHub Actions** are pinned to a 40-character commit SHA
+      (not a floating tag) per NA-03 §7.1.1.
 
 ## Screenshots / recordings
 
