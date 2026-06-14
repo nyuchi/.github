@@ -52,7 +52,7 @@ on:
         default: ".github/workflows/*.yml"
       prettier-version:
         type: string
-        default: "3.3.3"
+        default: "3.5.3"
       yamllint-version:
         type: string
         default: "1.35.1"
