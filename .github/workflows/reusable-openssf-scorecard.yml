@@ -1,0 +1,94 @@
+# Reusable workflow: OpenSSF Scorecard.
+#
+# Runs the OpenSSF Scorecard tool, which checks a repository against
+# supply-chain security best practices and publishes a public score.
+# Results are uploaded to GitHub's Security tab as a SARIF file.
+#
+# Scorecard checks include: branch protection, CI/CD, code review,
+# dependency version pinning, SAST, signed releases, token permissions,
+# vulnerability reporting, and more.
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   name: Scorecard
+#   on:
+#     branch_protection_rule:
+#     schedule:
+#       - cron: '30 1 * * 1'   # Weekly on Monday
+#     push:
+#       branches: [main]
+#
+#   jobs:
+#     scorecard:
+#       uses: nyuchi/.github/.github/workflows/reusable-openssf-scorecard.yml@main
+#       with:
+#         publish-results: true
+#       permissions:
+#         security-events: write
+#         id-token: write
+#         contents: read
+#         actions: read
+#
+# The caller must grant:
+#   security-events: write  (upload SARIF to GitHub Security tab)
+#   id-token: write         (publish results to the OpenSSF API)
+#   contents: read
+#   actions: read           (inspect workflow permissions)
+#
+# Note: `publish-results: true` requires the repository to be PUBLIC.
+# For private repos set `publish-results: false`.
+
+name: Reusable / OpenSSF Scorecard
+
+on:
+  workflow_call:
+    inputs:
+      publish-results:
+        description: |
+          Publish results to the OpenSSF REST API so the public score badge
+          reflects the current state. Set to false for private repos.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  scorecard:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          persist-credentials: false
+
+      # TODO(supply-chain): replace with SHA pin before merging to main.
+      # Run: gh api repos/ossf/scorecard-action/git/refs/tags/v2 --jq '.object.sha'
+      # Then pin to the specific release SHA, e.g.:
+      #   ossf/scorecard-action@<40-char-sha>  # v2.x.x
+      - name: Run OpenSSF Scorecard
+        uses: ossf/scorecard-action@v2
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          publish_results: ${{ inputs.publish-results }}
+
+      # TODO(supply-chain): replace with SHA pin before merging to main.
+      # Run: gh api repos/actions/upload-artifact/git/refs/tags/v4 --jq '.object.sha'
+      - name: Upload SARIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scorecard-results
+          path: scorecard-results.sarif
+          retention-days: 5
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225  # v4
+        with:
+          sarif_file: scorecard-results.sarif
+          category: ossf-scorecard

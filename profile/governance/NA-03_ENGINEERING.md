@@ -4,8 +4,8 @@
 
 | Field          | Value                        |
 | -------------- | ---------------------------- |
-| Version        | 1.1                          |
-| Effective date | 19 April 2026                |
+| Version        | 1.2                          |
+| Effective date | 14 June 2026                 |
 | Status         | Approved and in force        |
 | Approved by    | Bryan Fawcett, Founder & CEO |
 
@@ -178,6 +178,21 @@ store.** If a change would introduce a new source of truth, it is
 a canonical-document-level decision that escalates to the Founder
 under NA-01 Article 6.1(b).
 
+**Sanctioned operational layers (not sources of truth):**
+
+- **MongoDB** — the current hot-tier operational database. Serves
+  as the primary read/write layer for platform non-relational data.
+  Replication and archival into ScyllaDB / Cassandra is the
+  long-term durability path. The SSPL licence is accepted for
+  internal infrastructure use; it does not extend to any software
+  distributed to end users. Engineers may use MongoDB freely in
+  platform services.
+- **Cloudflare D1** — used for agentic workloads (per-agent
+  relational state, tool-call logs, session metadata). D1 is an
+  operational store scoped to agentic flows, not a general-purpose
+  data layer. It does not hold platform user data or serve as a
+  source of truth.
+
 ### 3.2 Schema.org compliance is non-negotiable
 
 Every database table maps to a Schema.org type. Column names use
@@ -223,14 +238,15 @@ and must be corrected.
 
 Repeated from NA-02 for engineer visibility:
 
-- **MongoDB** (SSPL).
 - **Flutter** (Google-controlled cross-platform runtime).
 - **Couchbase** (proprietary; we use Apache CouchDB for sync and
   ScyllaDB/Cassandra for documents).
-- **References to "D1"** — D1 has been removed from the
-  architecture entirely. Any remaining reference is a bug.
 - **Any "10 billion" MXT supply cap** — legacy from v1.0, wrong,
   must be corrected on sight.
+
+> **Removed prohibitions (v1.2):** MongoDB and D1 are no longer
+> prohibited. Both are in active use as sanctioned operational
+> layers — see §3.1 for their defined roles and constraints.
 
 ## 4. Repository Structure
 
@@ -647,8 +663,8 @@ All amendments are logged in the changelog below.
 - ✗ Missing DCO sign-off
 - ✗ Failing CI (tests, linters, security scans, SBOM generation)
 - ✗ Missing required review
-- ✗ Prohibited dependency (MongoDB, Flutter, Couchbase, D1, or
-  others on the banned list)
+- ✗ Prohibited dependency (Flutter, Couchbase, or others on the
+  banned list — MongoDB and D1 are sanctioned; see §3.1)
 - ✗ Committed secret
 - ✗ Schema.org non-compliance without justification
 - ✗ New source of truth without Founder approval
@@ -679,6 +695,13 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.2** (14 June 2026) — Amendment: §3.1 updated to document
+  MongoDB and Cloudflare D1 as sanctioned operational layers with
+  defined constraints (MongoDB as hot-tier operational database;
+  D1 scoped to agentic workloads). §3.5 removes MongoDB and D1
+  from the prohibited-patterns list; the removed-prohibition note
+  cross-references §3.1. Quick Reference merge-blocker updated to
+  match. Amended by the Founder under NA-03 §13.
 - **v1.1** (19 April 2026) — Amendment: added §7.1.1 (GitHub
   Actions SHA-pinning policy, rationale, and consumer propagation
   model) and §7.1.2 (security-alert response SLA: Critical 24 h,
@@ -715,7 +738,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Engineering Working Agreement — Version 1.1_
-_Adopted 18 April 2026 · amended 19 April 2026_
+_Nyuchi Africa Engineering Working Agreement — Version 1.2_
+_Adopted 18 April 2026 · amended 19 April 2026 · amended 14 June 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._

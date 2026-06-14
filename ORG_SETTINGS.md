@@ -84,7 +84,9 @@ At **Settings → Actions → General**:
   Swatinem/rust-cache@*,
   dtolnay/rust-toolchain@*,
   taiki-e/install-action@*,
-  astral-sh/setup-uv@*
+  astral-sh/setup-uv@*,
+  ossf/scorecard-action@*,
+  foundry-rs/foundry-toolchain@*
   ```
 
   To audit drift against what's actually referenced in the

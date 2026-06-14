@@ -104,6 +104,8 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-lint.yml`               | **Strict org-wide lint.** Five blocking jobs: actionlint, JSON validity, prettier, markdownlint, yamllint. No auto-fix. Every repo should call this. |   ✅   |
 | `.github/workflows/reusable-sbom.yml`               | CycloneDX SBOM generation (anchore/sbom-action). Attaches SBOM to releases. Required by NA-03 §7.2.                                                  |   ✅   |
 | `.github/workflows/reusable-release.yml`            | Standard release flow: semver tag validation, SBOM attachment, GitHub Release creation with auto-generated notes. Covers NA-03 §8.2.                 |   ✅   |
+| `.github/workflows/reusable-ci-solidity.yml`        | Foundry CI for smart contracts. Jobs: `forge fmt`, `forge build`, `forge test`, `forge coverage` (≥60% line coverage). NA-03 §6.1, §10.4.            |   ✅   |
+| `.github/workflows/reusable-openssf-scorecard.yml`  | OpenSSF Scorecard analysis. Runs supply-chain security checks and uploads SARIF results to the GitHub Security tab. Inputs: `publish-results`.       |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 
