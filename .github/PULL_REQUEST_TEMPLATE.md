@@ -85,8 +85,8 @@ Closes #
       _(If ticked, skip the remaining boxes in this section.)_
 - [ ] **Secret hygiene** — I confirmed no API keys, tokens, `.env` contents,
       private keys, or credentials appear anywhere in the diff.
-- [ ] **Prohibited dependencies** — this PR introduces no MongoDB, Flutter,
-      Couchbase, D1, or CouchDB-as-datastore dependency, and contains no
+- [ ] **Prohibited dependencies** — this PR introduces no Flutter,
+      Couchbase, or CouchDB-as-datastore dependency, and contains no
       reference to a fixed 10-billion MXT supply cap.
 - [ ] **Schema.org compliance** — new database tables, columns, or API fields
       map to Schema.org types, or the PR description justifies any deviation.
