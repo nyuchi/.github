@@ -63,32 +63,26 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
         with:
           persist-credentials: false
 
-      # TODO(supply-chain): replace with SHA pin before merging to main.
-      # Run: gh api repos/ossf/scorecard-action/git/refs/tags/v2 --jq '.object.sha'
-      # Then pin to the specific release SHA, e.g.:
-      #   ossf/scorecard-action@<40-char-sha>  # v2.x.x
       - name: Run OpenSSF Scorecard
-        uses: ossf/scorecard-action@v2
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a  # v2.4.3
         with:
           results_file: scorecard-results.sarif
           results_format: sarif
           publish_results: ${{ inputs.publish-results }}
 
-      # TODO(supply-chain): replace with SHA pin before merging to main.
-      # Run: gh api repos/actions/upload-artifact/git/refs/tags/v4 --jq '.object.sha'
       - name: Upload SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scorecard-results
           path: scorecard-results.sarif
           retention-days: 5
 
       - name: Upload SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225  # v4
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e  # v4
         with:
           sarif_file: scorecard-results.sarif
           category: ossf-scorecard

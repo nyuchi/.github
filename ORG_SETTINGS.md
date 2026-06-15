@@ -52,7 +52,7 @@ and let the settings propagate to new repos as defaults:
 | Secret scanning                         | **Enabled**                                  |
 | Secret scanning — push protection       | **Enabled**                                  |
 | Secret scanning — validity checks       | **Enabled**                                  |
-| Secret scanning — non-provider patterns | Enabled for public repos                     |
+| Secret scanning — non-provider patterns | **Enabled** org-wide                         |
 | Private vulnerability reporting         | **Enabled**                                  |
 | CodeQL default setup                    | Enabled per-repo (see below)                 |
 
