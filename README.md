@@ -93,6 +93,7 @@ reusable by commit SHA rather than `@main`.
 
 | Path                                                | Purpose                                                                                                                                              | Status |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `.github/workflows/reusable-ci-typescript.yml`      | TypeScript CI for non-monorepo projects (pnpm, tsc, Vitest/Jest, ESLint/Biome). Inputs: `node-version-file`, `typecheck-script`, `lint-script`, `test-script`, `build-script`, `skip-build`. | ✅ |
 | `.github/workflows/reusable-ci-nextjs-monorepo.yml` | Turborepo + pnpm CI. Inputs: `tasks`, `node-version-file`. Secrets: `TURBO_TOKEN`, `TURBO_TEAM`.                                                     |   ✅   |
 | `.github/workflows/reusable-ci-rust-monorepo.yml`   | Cargo workspace CI. Input: `toolchain` (default `stable`).                                                                                           |   ✅   |
 | `.github/workflows/reusable-ci-python-monorepo.yml` | uv workspace CI. Convention-based, no inputs.                                                                                                        |   ✅   |

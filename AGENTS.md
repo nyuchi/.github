@@ -59,8 +59,10 @@ glance what opened the PR:
 | `cursor/`  | Cursor background agent                   |
 | `copilot/` | GitHub Copilot Workspace / Copilot coding |
 | `aider/`   | Aider                                     |
-| `devin/`   | Devin                                     |
+| `devin/`   | Devin (Cognition)                         |
 | `codex/`   | OpenAI Codex CLI                          |
+| `gemini/`  | Gemini CLI (Google)                       |
+| `amp/`     | Amp (Sourcegraph)                         |
 | `agent/`   | Any other agent not listed above          |
 
 Everything else in [`CONTRIBUTING.md` § Branch naming](./CONTRIBUTING.md#branch-naming)
@@ -164,12 +166,14 @@ Stop and ask the human operator when:
 Repos declare their own local check commands — honour what's there
 before guessing. Common patterns across the org:
 
-| Stack                | Install          | Check                                                                   |
-| -------------------- | ---------------- | ----------------------------------------------------------------------- |
-| TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build`                |
-| Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy -- -D warnings && cargo nextest run` |
-| Python (uv)          | `uv sync`        | `uv run ruff check && uv run mypy . && uv run pytest`                   |
-| MDX / docs           | `pnpm install`   | `pnpm cspell && pnpm build`                                             |
+| Stack                | Install          | Check                                                                            |
+| -------------------- | ---------------- | -------------------------------------------------------------------------------- |
+| TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build`                         |
+| TypeScript (Biome)   | `pnpm install`   | `pnpm check && pnpm typecheck && pnpm test && pnpm build`                        |
+| Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy -- -D warnings && cargo nextest run`          |
+| Python (uv)          | `uv sync`        | `uv run ruff check && uv run ruff format --check && uv run mypy . && uv run pytest` |
+| MDX / docs           | `pnpm install`   | `pnpm cspell && pnpm build`                                                      |
+| Solidity (Foundry)   | (foundryup)      | `forge fmt --check && forge build && forge test`                                 |
 
 If a repo disagrees with this table, the repo wins.
 
