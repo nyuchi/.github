@@ -35,6 +35,7 @@ not define its own equivalent file.
 | `SUPPORT.md`                      | Where users should go for help (Discussions, Issues, Security).                               |   ✅   |
 | `CONTRIBUTING.md`                 | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements. |   ✅   |
 | `AGENTS.md`                       | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex).           |   ✅   |
+| `CLAUDE.md`                       | Claude Code–specific supplement to `AGENTS.md`: branch naming, SHA-pinning rule, architecture constraints, escalation triggers. |   ✅   |
 | `.github/copilot-instructions.md` | GitHub Copilot–specific pointer to `AGENTS.md` with the rules Copilot most often gets wrong.  |   ✅   |
 
 ### Issue and PR forms
@@ -106,6 +107,7 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-release.yml`            | Standard release flow: semver tag validation, SBOM attachment, GitHub Release creation with auto-generated notes. Covers NA-03 §8.2.                 |   ✅   |
 | `.github/workflows/reusable-ci-solidity.yml`        | Foundry CI for smart contracts. Jobs: `forge fmt`, `forge build`, `forge test`, `forge coverage` (≥60% line coverage). NA-03 §6.1, §10.4.            |   ✅   |
 | `.github/workflows/reusable-openssf-scorecard.yml`  | OpenSSF Scorecard analysis. Runs supply-chain security checks and uploads SARIF results to the GitHub Security tab. Inputs: `publish-results`.       |   ✅   |
+| `.github/workflows/reusable-ci-terraform.yml`       | Terraform IaC CI. Jobs: `terraform fmt`, `terraform validate`, Trivy IaC security scan (CRITICAL/HIGH → blocks). Inputs: `working-directory`, `terraform-version`. NA-03 §6.1. | ✅ |
 
 Legend: ✅ shipped · ⏳ planned
 
@@ -136,10 +138,12 @@ different files.
 
 ### Read by AI agents in this repo only
 
-- **`AGENTS.md`** and **`.github/copilot-instructions.md`** are
-  read by agents operating inside _this_ repository. They do NOT
+- **`AGENTS.md`**, **`CLAUDE.md`**, and **`.github/copilot-instructions.md`**
+  are read by agents operating inside _this_ repository. They do NOT
   auto-propagate. Repos that want these rules applied to their own
-  agent sessions should copy the files into their own repo.
+  agent sessions should copy the relevant file(s) into their own repo
+  (`AGENTS.md` for all agents, `CLAUDE.md` for Claude Code specifically,
+  `copilot-instructions.md` for Copilot).
 
 ### Per-repo configuration (starter templates here, each repo copies)
 

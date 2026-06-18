@@ -86,7 +86,9 @@ At **Settings → Actions → General**:
   taiki-e/install-action@*,
   astral-sh/setup-uv@*,
   ossf/scorecard-action@*,
-  foundry-rs/foundry-toolchain@*
+  foundry-rs/foundry-toolchain@*,
+  hashicorp/setup-terraform@*,
+  aquasecurity/trivy-action@*
   ```
 
   To audit drift against what's actually referenced in the

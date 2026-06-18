@@ -1,0 +1,131 @@
+# Reusable workflow: Terraform IaC CI.
+#
+# Validates Terraform modules with fmt check, init + validate, and a
+# Trivy IaC security scan. NA-03 §6.1 names Terraform as the IaC tool
+# for Cloudflare and Fly.io resources.
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   jobs:
+#     terraform:
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-terraform.yml@main
+#       with:
+#         working-directory: infra/cloudflare
+#       secrets:
+#         TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+#       permissions:
+#         contents: read
+#         security-events: write
+#
+# The caller must grant `contents: read`.
+# The `security` job additionally requires `security-events: write` to
+# upload the Trivy SARIF to the GitHub Security tab.
+#
+# Inputs
+# ------
+# working-directory    Root of the Terraform module (default: ".").
+# terraform-version    Exact semver or "latest" (default: "latest").
+#
+# Secrets
+# -------
+# TF_API_TOKEN   HCP Terraform / Terraform Cloud API token. Optional;
+#                required only for modules with remote state backends.
+
+name: Reusable / CI / Terraform
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing the Terraform root module.
+        type: string
+        default: "."
+      terraform-version:
+        description: Terraform version to install (exact semver or "latest").
+        type: string
+        default: "latest"
+    secrets:
+      TF_API_TOKEN:
+        description: HCP Terraform API token. Required for remote state backends.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      terraform: ${{ steps.filter.outputs.terraform }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - id: filter
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+        with:
+          filters: |
+            terraform:
+              - '**/*.tf'
+              - '**/*.tfvars'
+              - '**/*.tfvars.example'
+              - '**/.terraform.lock.hcl'
+              - '.github/workflows/**'
+
+  fmt:
+    name: terraform fmt
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+      - name: terraform fmt --check
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform fmt -check -recursive
+
+  validate:
+    name: terraform validate
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+      - name: terraform init (no backend)
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform init -backend=false
+      - name: terraform validate
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform validate
+
+  security:
+    name: trivy (IaC scan)
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Trivy IaC scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: ${{ inputs.working-directory }}
+          format: sarif
+          output: trivy-iac-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+      - name: Upload Trivy SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225  # v4
+        with:
+          sarif_file: trivy-iac-results.sarif
+          category: trivy-iac-terraform
