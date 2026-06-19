@@ -1,0 +1,225 @@
+# Reusable workflow: Container (Docker / OCI) CI.
+#
+# Builds an OCI image, scans it with Trivy, and optionally pushes and
+# signs it with cosign keyless signing. Covers NA-03 §7.1 (supply-chain
+# hygiene) and §7.2 (SBOM / container provenance).
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   jobs:
+#     container:
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-container.yml@main
+#       with:
+#         image-name: ghcr.io/nyuchi/my-service
+#         push: ${{ github.event_name != 'pull_request' }}
+#       secrets:
+#         REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+#       permissions:
+#         contents: read
+#         packages: write
+#         id-token: write
+#         security-events: write
+#
+# Caller permissions
+# ------------------
+#   contents: read         always required
+#   packages: write        required when push: true (GHCR)
+#   id-token: write        required for cosign keyless signing
+#   security-events: write required for Trivy SARIF upload
+#
+# Inputs
+# ------
+# image-name      Full OCI image name (e.g. ghcr.io/nyuchi/my-service). Required.
+# context         Docker build context path (default: .).
+# dockerfile      Path to the Dockerfile (default: ./Dockerfile).
+# push            Push the image after a successful scan (default: false).
+# platforms       Comma-separated OCI platforms for the push build.
+#                 On PRs only linux/amd64 is built for speed.
+# sign            Sign the pushed image with cosign (default: true).
+# scan-severity   Trivy severity levels that fail CI (default: CRITICAL,HIGH).
+
+name: Reusable / CI / Container
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: Full OCI image name (e.g. ghcr.io/nyuchi/my-service).
+        type: string
+        required: true
+      context:
+        description: Docker build context directory.
+        type: string
+        default: "."
+      dockerfile:
+        description: Path to the Dockerfile.
+        type: string
+        default: "./Dockerfile"
+      push:
+        description: Push image to the registry after a successful scan.
+        type: boolean
+        default: false
+      platforms:
+        description: |
+          Comma-separated OCI platforms for the push build.
+          Only linux/amd64 is built on PR runs regardless of this input.
+        type: string
+        default: "linux/amd64,linux/arm64"
+      sign:
+        description: |
+          Sign the pushed image digest with cosign keyless signing.
+          Skipped automatically on pull_request events.
+        type: boolean
+        default: true
+      scan-severity:
+        description: |
+          Comma-separated Trivy severity levels that cause CI to fail.
+          Set to "" to report without failing.
+        type: string
+        default: "CRITICAL,HIGH"
+    secrets:
+      REGISTRY_PASSWORD:
+        description: |
+          Registry credential (e.g. secrets.GITHUB_TOKEN for GHCR).
+          Only required when push: true.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Job 1: build (linux/amd64), scan, then optionally push multi-platform.
+  # -------------------------------------------------------------------------
+  build-scan:
+    name: Build + Trivy scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      security-events: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      # TODO(supply-chain): pin each docker/* action to a 40-char SHA.
+      # Run: gh api repos/docker/setup-qemu-action/git/refs/tags/v3 --jq '.object.sha'
+      # Dependabot will pin these on its next github-actions run (Monday).
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: inputs.push
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ inputs.image-name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+
+      # Step A: always build linux/amd64 and load it locally for Trivy.
+      - name: Build (linux/amd64, local load for scan)
+        id: build-local
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Trivy vulnerability scan (local image)
+        id: trivy
+        if: inputs.scan-severity != ''
+        # TODO(supply-chain): pin aquasecurity/trivy-action to SHA.
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ${{ inputs.image-name }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: ${{ inputs.scan-severity }}
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        if: inputs.scan-severity != '' && always()
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225  # v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-container
+
+      # Step B: multi-platform push (only on non-PR push events).
+      - name: Build & push (multi-platform)
+        id: push
+        if: inputs.push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          platforms: ${{ inputs.platforms }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+  # -------------------------------------------------------------------------
+  # Job 2: cosign keyless signing — runs only after a successful push.
+  # -------------------------------------------------------------------------
+  sign:
+    name: Sign image (cosign keyless)
+    needs: build-scan
+    if: >-
+      inputs.sign
+      && inputs.push
+      && github.event_name != 'pull_request'
+      && needs.build-scan.outputs.digest != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write  # OIDC token for cosign keyless signing
+    steps:
+      # TODO(supply-chain): pin sigstore/cosign-installer to SHA.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Sign image digest
+        env:
+          IMAGE_NAME: ${{ inputs.image-name }}
+          IMAGE_DIGEST: ${{ needs.build-scan.outputs.digest }}
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${IMAGE_NAME}@${IMAGE_DIGEST}"
+          echo "Signed ${IMAGE_NAME}@${IMAGE_DIGEST}"

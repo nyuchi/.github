@@ -106,6 +106,8 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-release.yml`            | Standard release flow: semver tag validation, SBOM attachment, GitHub Release creation with auto-generated notes. Covers NA-03 §8.2.                 |   ✅   |
 | `.github/workflows/reusable-ci-solidity.yml`        | Foundry CI for smart contracts. Jobs: `forge fmt`, `forge build`, `forge test`, `forge coverage` (≥60% line coverage). NA-03 §6.1, §10.4.            |   ✅   |
 | `.github/workflows/reusable-openssf-scorecard.yml`  | OpenSSF Scorecard analysis. Runs supply-chain security checks and uploads SARIF results to the GitHub Security tab. Inputs: `publish-results`.       |   ✅   |
+| `.github/workflows/reusable-ci-container.yml`       | Docker / OCI CI. Jobs: Trivy vulnerability scan, multi-platform build + push (linux/amd64 + arm64), cosign keyless signing. Inputs: `image-name`, `push`, `sign`. | ✅ |
+| `.github/workflows/reusable-ci-opentofu.yml`        | OpenTofu / Terraform IaC CI. Jobs: `tofu fmt --check`, `tofu validate`, Trivy IaC scan, `tofu plan` (PR comment). Inputs: `working-directory`, `tofu-version`. | ✅ |
 
 Legend: ✅ shipped · ⏳ planned
 

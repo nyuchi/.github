@@ -86,7 +86,15 @@ At **Settings → Actions → General**:
   taiki-e/install-action@*,
   astral-sh/setup-uv@*,
   ossf/scorecard-action@*,
-  foundry-rs/foundry-toolchain@*
+  foundry-rs/foundry-toolchain@*,
+  docker/setup-qemu-action@*,
+  docker/setup-buildx-action@*,
+  docker/login-action@*,
+  docker/build-push-action@*,
+  docker/metadata-action@*,
+  aquasecurity/trivy-action@*,
+  sigstore/cosign-installer@*,
+  opentofu/setup-opentofu@*
   ```
 
   To audit drift against what's actually referenced in the
@@ -263,12 +271,54 @@ tokens.
     --input github-rulesets/org-wide-main-protection.json
   ```
 
-- **Planned — infrastructure as code:** longer-term, migrate org and
-  repo configuration to Terraform's `integrations/github` provider so
-  that this document becomes a generated artifact rather than
-  hand-maintained prose.
+- **In progress — infrastructure as code:** migrating org and repo
+  configuration to OpenTofu (the open-source Terraform fork) using
+  the `integrations/github` provider. When complete this document
+  becomes a generated artifact rather than hand-maintained prose.
+  Target: all new repos provisioned via `tofu apply` by Q3 2026.
+  The `reusable-ci-opentofu.yml` reusable workflow supports this.
 - **Quarterly audit:** compare live state against this document.
   Note any approved drift; fix any unapproved drift.
+
+---
+
+## Supply chain security
+
+### Container signing and verification
+
+All OCI images built and published by Nyuchi repos must be:
+
+1. **Scanned** by Trivy (CRITICAL + HIGH severity — exit-code 1) before push.
+2. **Signed** with cosign keyless signing using the `reusable-ci-container.yml`
+   reusable workflow.
+3. **Verified** by consumers: `cosign verify --certificate-oidc-issuer
+   https://token.actions.githubusercontent.com --certificate-identity-regexp
+   'https://github.com/nyuchi/'`.
+
+The OIDC issuer and identity regexp above act as the trust anchor —
+only images built by a GitHub Actions workflow in the `nyuchi` org
+will verify successfully. Do not use a long-lived cosign key.
+
+### SLSA provenance
+
+From Q3 2026, all published releases must include SLSA level 2
+provenance attestations:
+
+- The `reusable-release.yml` reusable workflow already attaches a
+  CycloneDX SBOM (NA-03 §7.2).
+- Container images built by `reusable-ci-container.yml` include
+  BuildKit-generated SBOM and provenance via `sbom: true` and
+  `provenance: true` in the build step.
+- For binary releases (Rust crates, Python wheels, JS packages),
+  add SLSA provenance via `slsa-framework/slsa-github-generator`
+  when the toolchain supports it.
+
+### Trivy IaC scanning
+
+All OpenTofu / Terraform configurations must be scanned with Trivy
+in `config` mode (CRITICAL + HIGH). The `reusable-ci-opentofu.yml`
+reusable workflow does this automatically. SARIF results appear in
+each repo's GitHub Security tab.
 
 ---
 
