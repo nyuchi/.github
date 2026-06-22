@@ -1,0 +1,148 @@
+# Reusable workflow: Container image security scanning (Trivy).
+#
+# Scans an OCI/Docker image for OS and language vulnerabilities,
+# exposed secrets, and misconfigurations. Results upload to the
+# GitHub Security tab (Dependency review / SARIF).
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   name: Container scan
+#   on:
+#     push:
+#       branches: [main]
+#     pull_request:
+#
+#   jobs:
+#     scan:
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-container.yml@main
+#       with:
+#         image-ref: ghcr.io/nyuchi/myapp:${{ github.sha }}
+#       permissions:
+#         contents: read
+#         security-events: write
+#         packages: read
+#
+# If you build the image inside CI, push or load it before calling this
+# workflow, or pass a pre-built tag. For a local Dockerfile build pass
+# `build-context: "."` and omit `image-ref` — the workflow will build
+# the image in a temporary tag and scan it.
+#
+# The caller must grant:
+#   contents: read
+#   security-events: write  (upload SARIF to GitHub Security tab)
+#   packages: read          (pull images from GHCR)
+
+name: Reusable / CI / Container
+
+on:
+  workflow_call:
+    inputs:
+      image-ref:
+        description: |
+          Full image reference to scan (e.g. ghcr.io/nyuchi/app:sha).
+          Mutually exclusive with build-context. One of the two must be set.
+        type: string
+        default: ""
+      build-context:
+        description: |
+          Docker build context path. When set the workflow builds the image
+          from the Dockerfile in this path before scanning.
+          Mutually exclusive with image-ref.
+        type: string
+        default: ""
+      dockerfile:
+        description: Path to Dockerfile. Only used when build-context is set.
+        type: string
+        default: Dockerfile
+      severity:
+        description: Comma-separated Trivy severities that fail the scan.
+        type: string
+        default: "HIGH,CRITICAL"
+      ignore-unfixed:
+        description: Ignore vulnerabilities without an available fix.
+        type: boolean
+        default: false
+      sarif-category:
+        description: SARIF category label for the GitHub Security tab entry.
+        type: string
+        default: trivy-container
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: trivy scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      packages: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Validate inputs
+        shell: bash
+        env:
+          IMAGE_REF: ${{ inputs.image-ref }}
+          BUILD_CONTEXT: ${{ inputs.build-context }}
+        run: |
+          set -euo pipefail
+          if [ -z "$IMAGE_REF" ] && [ -z "$BUILD_CONTEXT" ]; then
+            echo "::error::One of inputs.image-ref or inputs.build-context must be set."
+            exit 1
+          fi
+          if [ -n "$IMAGE_REF" ] && [ -n "$BUILD_CONTEXT" ]; then
+            echo "::error::inputs.image-ref and inputs.build-context are mutually exclusive."
+            exit 1
+          fi
+
+      - name: Build image from context
+        if: inputs.build-context != ''
+        env:
+          BUILD_CONTEXT: ${{ inputs.build-context }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Validate to guard against injection via inputs.
+          if [[ ! "$BUILD_CONTEXT" =~ ^[a-zA-Z0-9_./-]+$ ]]; then
+            echo "::error::Invalid build-context '$BUILD_CONTEXT'."
+            exit 1
+          fi
+          docker build \
+            --file "$DOCKERFILE" \
+            --tag "scan-target:ci" \
+            "$BUILD_CONTEXT"
+
+      - name: Resolve effective image ref
+        id: image
+        env:
+          IMAGE_REF: ${{ inputs.image-ref }}
+          BUILD_CONTEXT: ${{ inputs.build-context }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$BUILD_CONTEXT" ]; then
+            echo "ref=scan-target:ci" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$IMAGE_REF" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # 0.35.0
+        with:
+          image-ref: ${{ steps.image.outputs.ref }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: ${{ inputs.severity }}
+          ignore-unfixed: ${{ inputs.ignore-unfixed }}
+          exit-code: "1"
+          vuln-type: os,library
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225  # v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: ${{ inputs.sarif-category }}

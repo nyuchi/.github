@@ -86,7 +86,8 @@ At **Settings → Actions → General**:
   taiki-e/install-action@*,
   astral-sh/setup-uv@*,
   ossf/scorecard-action@*,
-  foundry-rs/foundry-toolchain@*
+  foundry-rs/foundry-toolchain@*,
+  aquasecurity/trivy-action@*
   ```
 
   To audit drift against what's actually referenced in the
@@ -207,6 +208,17 @@ name and is fixed):
   `reusable-ci-rust-monorepo.yml`,
   `reusable-ci-python-monorepo.yml`, or
   `reusable-ci-docs-mdx.yml` the repo uses.
+
+**Supply-chain and security gates added per-stack:**
+
+- `ci / pnpm audit` — from `reusable-ci-nextjs-monorepo.yml` (moderate+ CVEs
+  fail the PR; matches `dependency-review` but uses the pnpm lockfile directly)
+- `ci / pip-audit` — from `reusable-ci-python-monorepo.yml` (scans the
+  exported `uv` lockfile against PyPI advisory DB)
+- `ci / cargo deny` — from `reusable-ci-rust-monorepo.yml` (advisories, bans,
+  licence compliance, source verification; requires `deny.toml` in the repo root)
+- `container / trivy scan` — from `reusable-ci-container.yml` (image
+  vulnerability scan; HIGH+CRITICAL fail the PR; results visible in Security tab)
 
 ### Tag protection
 

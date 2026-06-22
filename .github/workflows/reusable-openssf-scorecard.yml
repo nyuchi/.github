@@ -67,21 +67,15 @@ jobs:
         with:
           persist-credentials: false
 
-      # TODO(supply-chain): replace with SHA pin before merging to main.
-      # Run: gh api repos/ossf/scorecard-action/git/refs/tags/v2 --jq '.object.sha'
-      # Then pin to the specific release SHA, e.g.:
-      #   ossf/scorecard-action@<40-char-sha>  # v2.x.x
       - name: Run OpenSSF Scorecard
-        uses: ossf/scorecard-action@v2
+        uses: ossf/scorecard-action@99c09fe975337306107572b4fdf4db224cf8e2f2  # v2.4.3
         with:
           results_file: scorecard-results.sarif
           results_format: sarif
           publish_results: ${{ inputs.publish-results }}
 
-      # TODO(supply-chain): replace with SHA pin before merging to main.
-      # Run: gh api repos/actions/upload-artifact/git/refs/tags/v4 --jq '.object.sha'
       - name: Upload SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scorecard-results
           path: scorecard-results.sarif
