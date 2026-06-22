@@ -186,10 +186,12 @@ before guessing. Common patterns across the org:
 | Stack                | Install          | Check                                                                                                   |
 | -------------------- | ---------------- | ------------------------------------------------------------------------------------------------------- |
 | TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm audit --audit-level=moderate`           |
+| TypeScript (Biome)   | `pnpm install`   | `pnpm check && pnpm typecheck && pnpm test && pnpm build`                                               |
 | TypeScript / Bun     | `bun install`    | `bun lint && bun typecheck && bun test && bun build`                                                    |
 | Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy --workspace -- -D warnings && cargo nextest run && cargo deny check` |
 | Python (uv)          | `uv sync`        | `uv run ruff check && uv run ruff format --check && uv run mypy . && uv run pytest`                     |
 | MDX / docs           | `pnpm install`   | `pnpm cspell && pnpm build`                                                                             |
+| Solidity (Foundry)   | (foundryup)      | `forge fmt --check && forge build && forge test`                                                        |
 | IaC (OpenTofu)       | (tofu in PATH)   | `tofu fmt -check -recursive && tofu validate`                                                           |
 
 If a repo disagrees with this table, the repo wins.
