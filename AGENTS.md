@@ -53,20 +53,20 @@ contributions without exception. In particular:
 Use the prefix that matches the agent, so reviewers can see at a
 glance what opened the PR:
 
-| Prefix        | Agent                                          |
-| ------------- | ---------------------------------------------- |
-| `claude/`     | Claude Code (Anthropic)                        |
-| `cursor/`     | Cursor background agent                        |
-| `copilot/`    | GitHub Copilot Workspace / Copilot coding      |
-| `aider/`      | Aider                                          |
-| `devin/`      | Devin (Cognition AI)                           |
-| `codex/`      | OpenAI Codex CLI / Codex cloud agent           |
-| `windsurf/`   | Windsurf (Codeium)                             |
-| `amp/`        | Amp (Sourcegraph)                              |
-| `gemini/`     | Gemini Code Assist / Jules (Google)            |
-| `continue/`   | Continue.dev                                   |
-| `supermaven/` | Supermaven                                     |
-| `agent/`      | Any other agent not listed above               |
+| Prefix        | Agent                                     |
+| ------------- | ----------------------------------------- |
+| `claude/`     | Claude Code (Anthropic)                   |
+| `cursor/`     | Cursor background agent                   |
+| `copilot/`    | GitHub Copilot Workspace / Copilot coding |
+| `aider/`      | Aider                                     |
+| `devin/`      | Devin (Cognition AI)                      |
+| `codex/`      | OpenAI Codex CLI / Codex cloud agent      |
+| `windsurf/`   | Windsurf (Codeium)                        |
+| `amp/`        | Amp (Sourcegraph)                         |
+| `gemini/`     | Gemini Code Assist / Jules (Google)       |
+| `continue/`   | Continue.dev                              |
+| `supermaven/` | Supermaven                                |
+| `agent/`      | Any other agent not listed above          |
 
 Everything else in [`CONTRIBUTING.md` § Branch naming](./CONTRIBUTING.md#branch-naming)
 still applies (lowercase, kebab-case, under 50 characters).
@@ -120,7 +120,8 @@ explicitly. Humans reviewing an agent's PR should check each.
 - **Never commit secrets.** Scan the diff before proposing it —
   API keys, tokens, `.env` contents, private keys, credentials.
 - **Never disable SECURITY checks** (`codeql`, `dependency-review`,
-  secret-scanning, `pr-title-lint`, DCO) to make a PR pass.
+  `pip-audit`, `pnpm audit`, `cargo deny`, secret-scanning,
+  `pr-title-lint`, DCO) to make a PR pass.
 - **Pin third-party GitHub Actions by SHA** (not by floating tag)
   when you add a new one. Example:
   `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`.
@@ -182,14 +183,14 @@ Stop and ask the human operator when:
 Repos declare their own local check commands — honour what's there
 before guessing. Common patterns across the org:
 
-| Stack                | Install          | Check                                                                              |
-| -------------------- | ---------------- | ---------------------------------------------------------------------------------- |
-| TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build`                           |
-| TypeScript / Bun     | `bun install`    | `bun lint && bun typecheck && bun test && bun build`                               |
-| Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy --workspace -- -D warnings && cargo nextest run`|
-| Python (uv)          | `uv sync`        | `uv run ruff check && uv run ruff format --check && uv run mypy . && uv run pytest`|
-| MDX / docs           | `pnpm install`   | `pnpm cspell && pnpm build`                                                        |
-| IaC (OpenTofu)       | (tofu in PATH)   | `tofu fmt -check -recursive && tofu validate`                                      |
+| Stack                | Install          | Check                                                                                                   |
+| -------------------- | ---------------- | ------------------------------------------------------------------------------------------------------- |
+| TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm audit --audit-level=moderate`           |
+| TypeScript / Bun     | `bun install`    | `bun lint && bun typecheck && bun test && bun build`                                                    |
+| Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy --workspace -- -D warnings && cargo nextest run && cargo deny check` |
+| Python (uv)          | `uv sync`        | `uv run ruff check && uv run ruff format --check && uv run mypy . && uv run pytest`                     |
+| MDX / docs           | `pnpm install`   | `pnpm cspell && pnpm build`                                                                             |
+| IaC (OpenTofu)       | (tofu in PATH)   | `tofu fmt -check -recursive && tofu validate`                                                           |
 
 If a repo disagrees with this table, the repo wins.
 

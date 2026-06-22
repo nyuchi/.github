@@ -216,6 +216,15 @@ name and is fixed):
   `reusable-ci-python-monorepo.yml`, or
   `reusable-ci-docs-mdx.yml` the repo uses.
 
+**Supply-chain and security gates added per-stack:**
+
+- `ci / pnpm audit` — from `reusable-ci-nextjs-monorepo.yml` (moderate+ CVEs
+  fail the PR; matches `dependency-review` but uses the pnpm lockfile directly)
+- `ci / pip-audit` — from `reusable-ci-python-monorepo.yml` (scans the
+  exported `uv` lockfile against PyPI advisory DB)
+- `ci / cargo deny` — from `reusable-ci-rust-monorepo.yml` (advisories, bans,
+  licence compliance, source verification; requires `deny.toml` in the repo root)
+
 ### Tag protection
 
 - Tags matching `v*` require **admin** or
@@ -292,8 +301,8 @@ All OCI images built and published by Nyuchi repos must be:
 2. **Signed** with cosign keyless signing using the `reusable-ci-container.yml`
    reusable workflow.
 3. **Verified** by consumers: `cosign verify --certificate-oidc-issuer
-   https://token.actions.githubusercontent.com --certificate-identity-regexp
-   'https://github.com/nyuchi/'`.
+https://token.actions.githubusercontent.com --certificate-identity-regexp
+'https://github.com/nyuchi/'`.
 
 The OIDC issuer and identity regexp above act as the trust anchor —
 only images built by a GitHub Actions workflow in the `nyuchi` org
