@@ -196,7 +196,7 @@ jobs:
           set -euo pipefail
           # Validate severity string to guard against injection via inputs.trivy-severity.
           if [[ ! "$TRIVY_SEVERITY" =~ ^[A-Z]+(,[A-Z]+)*$ ]]; then
-            echo "::error::trivy-severity '$TRIVY_SEVERITY' must be a comma-separated list of uppercase severity names (e.g. CRITICAL,HIGH)."
+            echo "::error::trivy-severity '$TRIVY_SEVERITY' must be a comma-separated list of uppercase severities (e.g. CRITICAL,HIGH)."
             exit 1
           fi
           trivy image \
