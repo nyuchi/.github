@@ -115,7 +115,8 @@ explicitly. Humans reviewing an agent's PR should check each.
 - **Never commit secrets.** Scan the diff before proposing it —
   API keys, tokens, `.env` contents, private keys, credentials.
 - **Never disable SECURITY checks** (`codeql`, `dependency-review`,
-  secret-scanning, `pr-title-lint`, DCO) to make a PR pass.
+  `pip-audit`, `pnpm audit`, `cargo deny`, secret-scanning,
+  `pr-title-lint`, DCO) to make a PR pass.
 - **Pin third-party GitHub Actions by SHA** (not by floating tag)
   when you add a new one. Example:
   `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`.
@@ -164,12 +165,12 @@ Stop and ask the human operator when:
 Repos declare their own local check commands — honour what's there
 before guessing. Common patterns across the org:
 
-| Stack                | Install          | Check                                                                   |
-| -------------------- | ---------------- | ----------------------------------------------------------------------- |
-| TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build`                |
-| Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy -- -D warnings && cargo nextest run` |
-| Python (uv)          | `uv sync`        | `uv run ruff check && uv run mypy . && uv run pytest`                   |
-| MDX / docs           | `pnpm install`   | `pnpm cspell && pnpm build`                                             |
+| Stack                | Install          | Check                                                                                         |
+| -------------------- | ---------------- | --------------------------------------------------------------------------------------------- |
+| TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm audit --audit-level=moderate` |
+| Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy -- -D warnings && cargo nextest run && cargo deny check`   |
+| Python (uv)          | `uv sync`        | `uv run ruff check && uv run ruff format --check && uv run mypy . && uv run pytest`           |
+| MDX / docs           | `pnpm install`   | `pnpm cspell && pnpm build`                                                                   |
 
 If a repo disagrees with this table, the repo wins.
 

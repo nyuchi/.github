@@ -208,6 +208,15 @@ name and is fixed):
   `reusable-ci-python-monorepo.yml`, or
   `reusable-ci-docs-mdx.yml` the repo uses.
 
+**Supply-chain and security gates added per-stack:**
+
+- `ci / pnpm audit` — from `reusable-ci-nextjs-monorepo.yml` (moderate+ CVEs
+  fail the PR; matches `dependency-review` but uses the pnpm lockfile directly)
+- `ci / pip-audit` — from `reusable-ci-python-monorepo.yml` (scans the
+  exported `uv` lockfile against PyPI advisory DB)
+- `ci / cargo deny` — from `reusable-ci-rust-monorepo.yml` (advisories, bans,
+  licence compliance, source verification; requires `deny.toml` in the repo root)
+
 ### Tag protection
 
 - Tags matching `v*` require **admin** or

@@ -122,6 +122,24 @@ jobs:
       - run: uv sync --all-packages --frozen
       - run: uv run mypy packages
 
+  audit:
+    name: pip-audit
+    needs: changes
+    if: needs.changes.outputs.any_python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
+        with:
+          enable-cache: true
+      - run: uv sync --all-packages --frozen
+      - name: pip-audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv export --frozen --no-hashes --quiet > /tmp/requirements.txt
+          uvx pip-audit --requirement /tmp/requirements.txt
+
   test:
     name: pytest (${{ matrix.package }})
     needs: changes
