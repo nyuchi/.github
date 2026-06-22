@@ -4,7 +4,7 @@
 
 | Field          | Value                        |
 | -------------- | ---------------------------- |
-| Version        | 1.3                          |
+| Version        | 1.4                          |
 | Effective date | 22 June 2026                 |
 | Status         | Approved and in force        |
 | Approved by    | Bryan Fawcett, Founder & CEO |
@@ -220,6 +220,23 @@ The platform has locked counts:
 Engineers do not add an 18th mini-app, an 8th enterprise product,
 or a 41st interest category through a pull request. These are
 canonical decisions that the Founder makes explicitly.
+
+The **7 covenants** are the platform's non-negotiable promises to
+its users. They are product and engineering constraints, not
+marketing copy: a pull request that would require breaking any of
+them is a pull request that does not ship.
+
+1. We will never sell your personal data.
+2. We will never design for addiction.
+3. We will never let advertisers control what you see.
+4. We will never abandon African creators.
+5. We will never choose proprietary technology when open source is
+   adequate.
+6. We will never treat African languages as an afterthought.
+7. We will never abandon our values when growth demands it.
+
+Like the counts above, the covenants are amended only by the
+Founder, never through a routine pull request.
 
 ### 3.4 MXT has no hard cap
 
@@ -697,6 +714,12 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.4** (22 June 2026) — Amendment: enumerated the **7
+  covenants** verbatim in §3.3. The covenants were previously cited
+  only as a locked count with no canonical text in the governance
+  set; this records the authoritative list and frames them as
+  binding product/engineering constraints amendable only by the
+  Founder. Amended by the Founder under NA-03 §13.
 - **v1.3** (22 June 2026) — Errata: corrected the "What Blocks a
   Merge" quick reference, which still listed "Reference to D1" as a
   merge blocker, to match §3.1 (D1 is sanctioned for agentic
@@ -746,7 +769,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Engineering Working Agreement — Version 1.3_
+_Nyuchi Africa Engineering Working Agreement — Version 1.4_
 _Adopted 18 April 2026 · amended 19 April 2026 · amended 14 June 2026 · amended 22 June 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._
