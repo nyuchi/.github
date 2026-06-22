@@ -144,6 +144,31 @@ updates:
   #       update-types: ["major", "minor", "patch"]
 
   # -------------------------------------------------------------------
+  # Terraform / OpenTofu providers and modules.
+  # Dependabot's "terraform" ecosystem covers both Terraform and
+  # OpenTofu registry sources. Uncomment and adjust the directory
+  # if your repo ships .tf / .tofu configuration.
+  # -------------------------------------------------------------------
+  # - package-ecosystem: "terraform"
+  #   directory: "/infra"   # root of your .tf files
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "06:00"
+  #     timezone: "Africa/Harare"
+  #   open-pull-requests-limit: 1
+  #   reviewers:
+  #     - "bryanfawcett"
+  #   labels: ["dependencies", "infrastructure"]
+  #   commit-message:
+  #     prefix: "build"
+  #     include: "scope"
+  #   groups:
+  #     all:
+  #       patterns: ["*"]
+  #       update-types: ["major", "minor", "patch"]
+
+  # -------------------------------------------------------------------
   # Gitsubmodules — only if your repo uses them.
   # -------------------------------------------------------------------
   # - package-ecosystem: "gitsubmodule"
