@@ -4,8 +4,8 @@
 
 | Field          | Value                                    |
 | -------------- | ---------------------------------------- |
-| Version        | 1.0                                      |
-| Effective date | 18 April 2026                            |
+| Version        | 1.1                                      |
+| Effective date | 22 June 2026                             |
 | Status         | Approved and in force                    |
 | Approved by    | Bryan Fawcett, Founder & CEO             |
 
@@ -55,8 +55,9 @@ The apps and platforms in the organisation — Mukoko, the Nyuchi
 Enterprise products, the sister brands — are production
 expressions of that infrastructure. They solve real problems and
 they prove the infrastructure in the field. The community's
-sovereign assets (MIT, MXT, and the sovereign Pod) are governed
-separately by the **Mukoko Foundation** under the Symbiotic
+sovereign assets — the four platform tokens (MIT, MXT, NST, NHC)
+and the sovereign Pod — are governed separately by the **Bundu
+Foundation** under the Symbiotic
 Charter. The Foundation ensures that the community always has
 structural authority over the infrastructure that serves it.
 
@@ -118,8 +119,6 @@ rationale no longer applies.
 We maintain an explicit list of dependencies and patterns we will
 not adopt, on principle:
 
-- **MongoDB (SSPL)** — the Server Side Public Licence is not
-  OSI-approved and imposes downstream obligations we reject.
 - **Flutter (Google-controlled)** — we build native consumer
   applications to avoid dependence on a single corporation's
   cross-platform runtime.
@@ -136,6 +135,15 @@ not adopt, on principle:
   on paper.
 
 This list is illustrative, not exhaustive.
+
+> **Operational databases are not on this list.** MongoDB (SSPL)
+> and Cloudflare D1 are **sanctioned operational layers**, not
+> prohibited dependencies — governed by **NA-03 §3.1**. MongoDB
+> serves as the hot-tier operational database (the SSPL is
+> accepted for internal infrastructure and does not extend to any
+> software distributed to end users); D1 is scoped to agentic
+> workloads and is never a source of truth. Neither displaces the
+> three sources of truth in NA-03 §3.1.
 
 ### Sovereignty fallbacks
 
@@ -233,8 +241,9 @@ one-time Nyuchi CLA. The CLA:
 - Is executed once per contributor and applies to all subsequent
   contributions.
 
-The CLA lives in `nyuchi/.github` and can be signed
-electronically.
+The CLA text is
+[`CLA.md`](https://github.com/nyuchi/.github/blob/main/CLA.md) in
+`nyuchi/.github` and is signed electronically, once per contributor.
 
 **(c) AI-assisted contributions.** Contributions made with the
 help of AI tools follow the
@@ -298,7 +307,7 @@ escalation path is:
    documents.
 4. If the decision materially affects the Symbiotic Charter or
    the community's sovereign assets, it is escalated to the
-   Mukoko Foundation Council under the Foundation's governance
+   Bundu Foundation Council under the Foundation's governance
    process.
 
 We aim to resolve disputes at the lowest level possible.
@@ -312,7 +321,7 @@ stewardship.
 
 The Symbiotic Charter contains an **open-source failsafe**
 provision: in the event Nyuchi Africa materially breaches its
-commitments, the Mukoko Foundation has the right to assume
+commitments, the Bundu Foundation has the right to assume
 stewardship of Apache 2.0 infrastructure repositories and to
 continue the work on behalf of the community. This is a
 structural guarantee — its purpose is that it never needs to be
@@ -348,7 +357,7 @@ are granted liberally for community purposes.
 
 - **GitHub Discussions** — technical conversation on specific
   repositories.
-- **Mukoko Foundation governance portal** — proposals and votes
+- **Bundu Foundation governance portal** — proposals and votes
   affecting community sovereign assets.
 - **[`SUPPORT.md`](https://github.com/nyuchi/.github/blob/main/SUPPORT.md)** —
   routing for help requests.
@@ -382,7 +391,7 @@ This document is owned by Nyuchi Africa and amended by the Founder
 under NA-01 (Articles 13 and 17). Amendments that reduce
 open-source commitments below the Apache 2.0 baseline for frontier
 infrastructure require Board approval and consultation with the
-Mukoko Foundation.
+Bundu Foundation.
 
 All amendments are logged in the changelog below. Material
 amendments are announced in the organisation README and on the
@@ -406,6 +415,20 @@ repository.**
 
 ## Changelog
 
+- **v1.1** (22 June 2026) — Amendment: removed MongoDB from §2
+  "What we will not use" and added a note clarifying that MongoDB
+  and Cloudflare D1 are sanctioned operational layers governed by
+  NA-03 §3.1, not prohibited dependencies. Aligns NA-02 with the
+  NA-03 v1.2 decision (14 June 2026). §4(b) updated to reference
+  the contributor licence agreement text now published as `CLA.md`
+  in `nyuchi/.github`. References to the "Mukoko Foundation" updated
+  to the steward's incorporated legal name, the **Bundu Foundation**
+  (Zimbabwe company limited by guarantee, <https://www.bundu.org>); identity
+  only, no change to the Foundation's failsafe or governance roles.
+  §1 sovereign-asset list extended from MIT/MXT to the four
+  Bundu-governed platform tokens (MIT, MXT, NST, NHC) plus the
+  sovereign Pod (NST/NHC power Honeycomb storage; see NA-03 §3.6).
+  Amended by the Founder under NA-01 Article 17.
 - **v1.0** (18 April 2026) — Adopted. Frontier infrastructure
   framing. Standard licences only — Apache 2.0 for infrastructure
   primitives, MIT / Apache 2.0 / GPL for applications, CC BY 4.0
@@ -427,7 +450,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Open Source & Contribution Governance — Version 1.0_
-_Adopted 18 April 2026_
+_Nyuchi Africa Open Source & Contribution Governance — Version 1.1_
+_Adopted 18 April 2026 · amended 22 June 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._

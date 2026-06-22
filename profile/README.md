@@ -113,7 +113,7 @@ work, and how our engineers build:
 
 - **[NA-01 Constitution](./governance/NA-01_CONSTITUTION.md)** —
   internal corporate governance, decision rights, and the
-  relationship with the Mukoko Foundation.
+  relationship with the Bundu Foundation.
 - **[NA-02 Open Source & Contribution Governance](./governance/NA-02_OPEN_SOURCE.md)** —
   licensing posture, contribution process, and sovereignty
   commitments.
