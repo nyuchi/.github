@@ -86,8 +86,7 @@ At **Settings → Actions → General**:
   taiki-e/install-action@*,
   astral-sh/setup-uv@*,
   ossf/scorecard-action@*,
-  foundry-rs/foundry-toolchain@*,
-  aquasecurity/trivy-action@*
+  foundry-rs/foundry-toolchain@*
   ```
 
   To audit drift against what's actually referenced in the
@@ -217,8 +216,6 @@ name and is fixed):
   exported `uv` lockfile against PyPI advisory DB)
 - `ci / cargo deny` — from `reusable-ci-rust-monorepo.yml` (advisories, bans,
   licence compliance, source verification; requires `deny.toml` in the repo root)
-- `container / trivy scan` — from `reusable-ci-container.yml` (image
-  vulnerability scan; HIGH+CRITICAL fail the PR; results visible in Security tab)
 
 ### Tag protection
 
