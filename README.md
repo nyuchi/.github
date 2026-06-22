@@ -28,14 +28,15 @@ not define its own equivalent file.
 
 ### Community health files (org-wide defaults)
 
-| Path                              | Purpose                                                                                       | Status |
-| --------------------------------- | --------------------------------------------------------------------------------------------- | :----: |
-| `CODE_OF_CONDUCT.md`              | Contributor Covenant 2.1 adopted by reference.                                                |   ✅   |
-| `SECURITY.md`                     | How to privately report vulnerabilities; response commitments; safe-harbor terms.             |   ✅   |
-| `SUPPORT.md`                      | Where users should go for help (Discussions, Issues, Security).                               |   ✅   |
-| `CONTRIBUTING.md`                 | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements. |   ✅   |
-| `AGENTS.md`                       | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex).           |   ✅   |
-| `.github/copilot-instructions.md` | GitHub Copilot–specific pointer to `AGENTS.md` with the rules Copilot most often gets wrong.  |   ✅   |
+| Path                              | Purpose                                                                                                                                      | Status |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `CODE_OF_CONDUCT.md`              | Contributor Covenant 2.1 adopted by reference.                                                                                               |   ✅   |
+| `SECURITY.md`                     | How to privately report vulnerabilities; response commitments; safe-harbor terms.                                                            |   ✅   |
+| `SUPPORT.md`                      | Where users should go for help (Discussions, Issues, Security).                                                                              |   ✅   |
+| `CONTRIBUTING.md`                 | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements.                                                |   ✅   |
+| `AGENTS.md`                       | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex).                                                          |   ✅   |
+| `CLAUDE.md`                       | Claude Code–specific supplement to `AGENTS.md`: remote-session hygiene, model selection, MCP servers, SHA-pinning, architecture constraints. |   ✅   |
+| `.github/copilot-instructions.md` | GitHub Copilot–specific pointer to `AGENTS.md` with the rules Copilot most often gets wrong.                                                 |   ✅   |
 
 ### Issue and PR forms
 
