@@ -39,7 +39,7 @@ jobs:
     outputs:
       rust: ${{ steps.filter.outputs.rust }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       - id: filter
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
         with:
@@ -58,7 +58,7 @@ jobs:
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
@@ -72,7 +72,7 @@ jobs:
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
@@ -87,7 +87,7 @@ jobs:
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
@@ -105,7 +105,7 @@ jobs:
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
@@ -121,10 +121,35 @@ jobs:
     env:
       RUSTDOCFLAGS: "-D warnings"
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       # dtolnay/rust-toolchain publishes no semver tags; # master is a moving branch ref.
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # master
         with:
           toolchain: ${{ inputs.toolchain }}
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
       - run: cargo doc --workspace --all-features --no-deps
+
+  deny:
+    name: cargo deny
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Check for deny.toml
+        id: check-deny
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f deny.toml ] || [ -f .cargo/deny.toml ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No deny.toml found; cargo deny skipped. Add one to enable supply-chain checks (advisories, bans, licences)."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      # taiki-e/install-action uses per-tool moving tags rather than semver.
+      - uses: taiki-e/install-action@ea2ee51eb0d48fc4f895702355487d299a6f3b22  # cargo-deny
+        if: steps.check-deny.outputs.present == 'true'
+      - name: cargo deny check
+        if: steps.check-deny.outputs.present == 'true'
+        run: cargo deny check
