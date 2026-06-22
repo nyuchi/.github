@@ -43,9 +43,11 @@ jobs:
           elif [ "$M" -le 9 ]; then Q=Q3
           else                       Q=Q4
           fi
-          echo "id=${YEAR}-${Q}"                                              >> "$GITHUB_OUTPUT"
-          echo "label=settings-audit-${YEAR}-${Q}"                           >> "$GITHUB_OUTPUT"
-          echo "title=chore: quarterly ORG_SETTINGS.md audit (${YEAR} ${Q})" >> "$GITHUB_OUTPUT"
+          {
+            echo "id=${YEAR}-${Q}"
+            echo "label=settings-audit-${YEAR}-${Q}"
+            echo "title=chore: quarterly ORG_SETTINGS.md audit (${YEAR} ${Q})"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Ensure audit label exists
         env:
