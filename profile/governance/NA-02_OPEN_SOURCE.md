@@ -240,8 +240,9 @@ one-time Nyuchi CLA. The CLA:
 - Is executed once per contributor and applies to all subsequent
   contributions.
 
-The CLA lives in `nyuchi/.github` and can be signed
-electronically.
+The CLA text is
+[`CLA.md`](https://github.com/nyuchi/.github/blob/main/CLA.md) in
+`nyuchi/.github` and is signed electronically, once per contributor.
 
 **(c) AI-assisted contributions.** Contributions made with the
 help of AI tools follow the
@@ -417,8 +418,10 @@ repository.**
   "What we will not use" and added a note clarifying that MongoDB
   and Cloudflare D1 are sanctioned operational layers governed by
   NA-03 §3.1, not prohibited dependencies. Aligns NA-02 with the
-  NA-03 v1.2 decision (14 June 2026). Amended by the Founder under
-  NA-01 Article 17.
+  NA-03 v1.2 decision (14 June 2026). §4(b) updated to reference
+  the contributor licence agreement text now published as `CLA.md`
+  in `nyuchi/.github`. Amended by the Founder under NA-01
+  Article 17.
 - **v1.0** (18 April 2026) — Adopted. Frontier infrastructure
   framing. Standard licences only — Apache 2.0 for infrastructure
   primitives, MIT / Apache 2.0 / GPL for applications, CC BY 4.0
