@@ -6,7 +6,7 @@
 
 | Field                      | Value                                |
 | -------------------------- | ------------------------------------ |
-| Version                    | 1.0                                  |
+| Version                    | 1.1                                  |
 | Effective date             | 18 April 2026                        |
 | Status                     | Approved and in force                |
 | Prepared and approved by   | Bryan Fawcett, Founder & CEO         |
@@ -14,8 +14,8 @@
 **Relationship to other documents:**
 
 - **Above this document:** The Symbiotic Charter (Doc 07 of the
-  Mukoko Foundation document set) governs the external relationship
-  between Nyuchi Africa and the Mukoko Foundation — the three-way
+  Bundu Foundation document set) governs the external relationship
+  between Nyuchi Africa and the Bundu Foundation — the three-way
   voting shareholding lock, investor non-voting shares, Foundation
   director nomination rights, and the immutable boundaries
   protecting Pod sovereignty and static gas. The Symbiotic Charter
@@ -30,7 +30,7 @@
   within the framework this Constitution establishes.
 
 > The Symbiotic Charter, Platform Stewardship Agreement, and
-> Honeycomb Amendment are **Mukoko Foundation instruments**,
+> Honeycomb Amendment are **Bundu Foundation instruments**,
 > maintained in the Foundation's document set — they are not
 > mirrored in `nyuchi/.github`. Where this Constitution cites
 > them, refer to the Foundation's canonical copies.
@@ -60,8 +60,9 @@ today. They also demonstrate, validate, and harden the
 infrastructure for the decades ahead.
 
 The company operates under a permanent symbiotic relationship with
-the Mukoko Foundation, which governs the community's sovereign
-assets. This Constitution describes how Nyuchi Africa governs
+the Bundu Foundation — a company limited by guarantee incorporated
+in Zimbabwe ([www.bundu.org](https://www.bundu.org)) — which
+governs the community's sovereign assets. This Constitution describes how Nyuchi Africa governs
 itself: how decisions are made, how work is organised, how
 intellectual property is assigned, and how the company remains
 faithful to its founding purpose as it grows.
@@ -94,7 +95,7 @@ actor within it.
 1.3 The company operates under the three-way voting shareholding
 lock described in Part 2 of the Symbiotic Charter: the Founder in
 personal capacity, the Fawcett Family Holding Company, and the
-Mukoko Foundation. No provision of this Constitution may be
+Bundu Foundation. No provision of this Constitution may be
 interpreted inconsistently with the Symbiotic Charter.
 
 ### Article 2 — Purpose
@@ -197,7 +198,7 @@ with its articles of association. The Board includes at minimum:
 
 - **(a)** The Founder & CEO.
 - **(b)** One Director nominated by the Family Holding Company.
-- **(c)** One Director nominated by the Mukoko Foundation.
+- **(c)** One Director nominated by the Bundu Foundation.
 
   5.2 Additional Directors may be appointed by ordinary resolution
   of the voting shareholders. Investor-nominated observer seats
@@ -531,7 +532,7 @@ Founder, subject to the following constraints:
   notification but not Board approval.
 - **(d)** Amendments reducing the company's open-source
   commitments below the defaults in Article 13 require Board
-  approval and consultation with the Mukoko Foundation.
+  approval and consultation with the Bundu Foundation.
 
   17.2 All amendments are logged in a changelog at the foot of this
   document and dated.
@@ -546,7 +547,7 @@ dissolution:
   with their respective engagement agreements.
 - **(b)** Open-source infrastructure assets — notably NTL,
   SiafuDB, and the Honeycomb protocol — are transferred to the
-  Mukoko Foundation or to a successor organisation acceptable to
+  Bundu Foundation or to a successor organisation acceptable to
   the Foundation, in accordance with the Symbiotic Charter's
   open-source failsafe provisions.
 - **(c)** Employee obligations are settled in accordance with
@@ -562,9 +563,20 @@ dissolution:
 
 ## Changelog
 
+- **v1.1** (22 June 2026) — Amendment: renamed the community's
+  sovereign-asset steward from "Mukoko Foundation" to its
+  incorporated legal name, the **Bundu Foundation**, a Zimbabwe
+  company limited by guarantee ([www.bundu.org](https://www.bundu.org)).
+  The rename is identity-only: the entity, its powers, the
+  three-way voting shareholding lock (Article 1.3), its
+  Board-nomination right (Article 5), and its dissolution-beneficiary
+  status (Article 18) are unchanged. The Symbiotic Charter,
+  Platform Stewardship Agreement, and Honeycomb Amendment remain
+  the Foundation's externally-maintained instruments. Amended by
+  the Founder under Article 17.
 - **v1.0** (22 June 2026, editorial) — Clarified in "Relationship
   to other documents" that the Symbiotic Charter, Platform
-  Stewardship Agreement, and Honeycomb Amendment are Mukoko
+  Stewardship Agreement, and Honeycomb Amendment are Bundu
   Foundation instruments maintained externally, not mirrored in
   `nyuchi/.github`. No normative change to any Article.
 - **v1.0** (18 April 2026) — Adopted. Frontier infrastructure
@@ -593,7 +605,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Constitution — Version 1.0_
+_Nyuchi Africa Constitution — Version 1.1_
 _Adopted 18 April 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._
