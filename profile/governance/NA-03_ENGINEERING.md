@@ -4,7 +4,7 @@
 
 | Field          | Value                        |
 | -------------- | ---------------------------- |
-| Version        | 1.4                          |
+| Version        | 1.5                          |
 | Effective date | 22 June 2026                 |
 | Status         | Approved and in force        |
 | Approved by    | Bryan Fawcett, Founder & CEO |
@@ -94,9 +94,9 @@ Our default:
   are the highest priority for post-quantum design. Session
   encryption for short-lived transport can migrate later.
 - **Long-term keys** — MIT issuance signing keys, MXT
-  EmissionController admin keys, Foundation treasury keys — are
-  planned for post-quantum migration as soon as tooling supports
-  it.
+  EmissionController admin keys, NST/NHC Honeycomb network keys,
+  Foundation treasury keys — are planned for post-quantum migration
+  as soon as tooling supports it.
 
 "Harvest now, decrypt later" is a real adversarial model for an
 infrastructure company whose data outlives any single vendor's
@@ -264,6 +264,23 @@ Repeated from NA-02 for engineer visibility:
 > **Removed prohibitions (v1.2):** MongoDB and D1 are no longer
 > prohibited. Both are in active use as sanctioned operational
 > layers — see §3.1 for their defined roles and constraints.
+
+### 3.6 The four platform tokens
+
+The platform has **four tokens**, all governed by the Bundu
+Foundation and operated on-platform by Nyuchi Africa:
+
+- **MIT** — the **soulbound, non-transferable identity token**.
+  Issued per verified identity; not tradable.
+- **MXT** — the **MUKOKO Exchange Token**: transferable, elastic
+  supply for commerce. Supply mechanics in §3.4.
+- **NST** and **NHC** — the **Honeycomb network tokens** that power
+  the Honeycomb decentralised storage network.
+
+Token policy is set by the Bundu Foundation's Token Governance
+Policy (NA-01 Article 15). Engineers do not add, rename, or change
+the economic rules of a token through a pull request — these are
+Foundation-governed decisions.
 
 ## 4. Repository Structure
 
@@ -714,6 +731,13 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.5** (22 June 2026) — Amendment: added §3.6 enumerating the
+  **four Bundu-governed platform tokens** — MIT (soulbound
+  identity), MXT (exchange), and the NST/NHC Honeycomb storage
+  tokens. NST and NHC were previously undocumented. The §2
+  post-quantum key inventory was extended to include the NST/NHC
+  Honeycomb network keys. No change to MXT supply mechanics (§3.4).
+  Amended by the Founder under NA-03 §13.
 - **v1.4** (22 June 2026) — Amendment: enumerated the **7
   covenants** verbatim in §3.3. The covenants were previously cited
   only as a locked count with no canonical text in the governance
@@ -769,7 +793,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Engineering Working Agreement — Version 1.4_
+_Nyuchi Africa Engineering Working Agreement — Version 1.5_
 _Adopted 18 April 2026 · amended 19 April 2026 · amended 14 June 2026 · amended 22 June 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._

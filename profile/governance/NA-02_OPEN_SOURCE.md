@@ -55,8 +55,9 @@ The apps and platforms in the organisation — Mukoko, the Nyuchi
 Enterprise products, the sister brands — are production
 expressions of that infrastructure. They solve real problems and
 they prove the infrastructure in the field. The community's
-sovereign assets (MIT, MXT, and the sovereign Pod) are governed
-separately by the **Bundu Foundation** under the Symbiotic
+sovereign assets — the four platform tokens (MIT, MXT, NST, NHC)
+and the sovereign Pod — are governed separately by the **Bundu
+Foundation** under the Symbiotic
 Charter. The Foundation ensures that the community always has
 structural authority over the infrastructure that serves it.
 
@@ -424,6 +425,9 @@ repository.**
   to the steward's incorporated legal name, the **Bundu Foundation**
   (Zimbabwe company limited by guarantee, <https://www.bundu.org>); identity
   only, no change to the Foundation's failsafe or governance roles.
+  §1 sovereign-asset list extended from MIT/MXT to the four
+  Bundu-governed platform tokens (MIT, MXT, NST, NHC) plus the
+  sovereign Pod (NST/NHC power Honeycomb storage; see NA-03 §3.6).
   Amended by the Founder under NA-01 Article 17.
 - **v1.0** (18 April 2026) — Adopted. Frontier infrastructure
   framing. Standard licences only — Apache 2.0 for infrastructure

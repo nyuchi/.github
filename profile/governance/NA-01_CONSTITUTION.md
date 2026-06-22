@@ -6,7 +6,7 @@
 
 | Field                      | Value                                |
 | -------------------------- | ------------------------------------ |
-| Version                    | 1.1                                  |
+| Version                    | 1.2                                  |
 | Effective date             | 18 April 2026                        |
 | Status                     | Approved and in force                |
 | Prepared and approved by   | Bryan Fawcett, Founder & CEO         |
@@ -330,6 +330,29 @@ legal entities. All three are parts of Nyuchi Africa (Private)
 Limited and share its balance sheet, employees, and governance.
 The Foundation is a separate legal entity and is not a division.
 
+9.3 **Relationship to the public "pillar" framing.** Publicly, the
+ecosystem is presented under the Bundu Foundation's three
+**pillars** — Mukoko, Nyuchi Africa, and Shamwari AI ("Nyuchi is
+the workshop; Bundu is the village"). This public framing is not
+identical to the divisional structure above: it groups the work by
+audience-facing brand rather than by internal division. Where the
+two framings are read together, the legal divisional structure in
+this Article governs.
+
+9.4 **Shamwari AI.** Shamwari AI is **governed and researched under
+the Bundu Foundation** and is **operated and developed as a product
+within Nyuchi Africa**. Research direction and governance sit with
+the Foundation; build, operation, and commercial delivery sit with
+Nyuchi Africa, on the same basis as the company's other products.
+
+9.5 **Foundation economics.** The Bundu Foundation does not earn
+revenue from the company's projects or products. The Foundation's
+income is limited to dividends on its shareholding, grants, and
+similar non-operational sources. Project and product revenue
+accrues to Nyuchi Africa, which sustains the work and funds the
+company's obligations to the Foundation under the Symbiotic
+Charter.
+
 ### Article 10 — Transition to Formal Divisional Structure
 
 10.1 The company will transition from the flat structure to a
@@ -556,13 +579,27 @@ dissolution:
   accordance with the articles of association.
 
   18.2 The Foundation's authority over the community's sovereign
-  assets (MIT, MXT, Pod) is unaffected by the dissolution of
-  Nyuchi Africa.
+  assets — the four platform tokens (MIT, MXT, NST, NHC) and the
+  sovereign Pod — is unaffected by the dissolution of Nyuchi
+  Africa.
 
 ---
 
 ## Changelog
 
+- **v1.2** (22 June 2026) — Amendment: expanded Article 9 to
+  reconcile the governance structure with the live ecosystem.
+  Added **9.3** (the public "three-pillar" framing — Mukoko /
+  Nyuchi Africa / Shamwari AI — is reconciled with the legal
+  divisional structure, which governs where the two are read
+  together); **9.4** placing **Shamwari AI** (governed and
+  researched under the Bundu Foundation, operated and developed as
+  a product within Nyuchi Africa); and **9.5** stating Foundation
+  economics — the Bundu Foundation earns only from dividends,
+  grants, and similar non-operational sources, never from project
+  or product revenue. Article **18.2** sovereign-asset list updated
+  to the four platform tokens (MIT, MXT, NST, NHC) plus the Pod.
+  Amended by the Founder under Article 17.
 - **v1.1** (22 June 2026) — Amendment: renamed the community's
   sovereign-asset steward from "Mukoko Foundation" to its
   incorporated legal name, the **Bundu Foundation**, a Zimbabwe
@@ -605,7 +642,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Constitution — Version 1.1_
+_Nyuchi Africa Constitution — Version 1.2_
 _Adopted 18 April 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._
