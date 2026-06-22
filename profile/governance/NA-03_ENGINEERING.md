@@ -4,8 +4,8 @@
 
 | Field          | Value                        |
 | -------------- | ---------------------------- |
-| Version        | 1.2                          |
-| Effective date | 14 June 2026                 |
+| Version        | 1.3                          |
+| Effective date | 22 June 2026                 |
 | Status         | Approved and in force        |
 | Approved by    | Bryan Fawcett, Founder & CEO |
 
@@ -671,7 +671,9 @@ All amendments are logged in the changelog below.
 - ✗ Change to a locked count
 - ✗ Statement of a fixed MXT hard cap anywhere in code, comments,
   or docs
-- ✗ Reference to D1 or CouchDB-as-a-data-store
+- ✗ Treating CouchDB as a data store, or D1 as a source of truth
+  or general-purpose data layer (both are sanctioned only in the
+  scoped roles defined in §3.1)
 - ✗ Critical security vulnerability
 - ✗ New cryptographic primitive without a documented
   post-quantum migration path
@@ -695,6 +697,12 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.3** (22 June 2026) — Errata: corrected the "What Blocks a
+  Merge" quick reference, which still listed "Reference to D1" as a
+  merge blocker, to match §3.1 (D1 is sanctioned for agentic
+  workloads and is blocked only when used as a source of truth or
+  general-purpose data layer). Completes the Quick Reference update
+  begun in v1.2. Amended by the Founder under NA-03 §13.
 - **v1.2** (14 June 2026) — Amendment: §3.1 updated to document
   MongoDB and Cloudflare D1 as sanctioned operational layers with
   defined constraints (MongoDB as hot-tier operational database;
@@ -738,7 +746,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Engineering Working Agreement — Version 1.2_
-_Adopted 18 April 2026 · amended 19 April 2026 · amended 14 June 2026_
+_Nyuchi Africa Engineering Working Agreement — Version 1.3_
+_Adopted 18 April 2026 · amended 19 April 2026 · amended 14 June 2026 · amended 22 June 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._

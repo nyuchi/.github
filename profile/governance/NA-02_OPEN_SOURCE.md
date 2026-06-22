@@ -4,8 +4,8 @@
 
 | Field          | Value                                    |
 | -------------- | ---------------------------------------- |
-| Version        | 1.0                                      |
-| Effective date | 18 April 2026                            |
+| Version        | 1.1                                      |
+| Effective date | 22 June 2026                             |
 | Status         | Approved and in force                    |
 | Approved by    | Bryan Fawcett, Founder & CEO             |
 
@@ -118,8 +118,6 @@ rationale no longer applies.
 We maintain an explicit list of dependencies and patterns we will
 not adopt, on principle:
 
-- **MongoDB (SSPL)** — the Server Side Public Licence is not
-  OSI-approved and imposes downstream obligations we reject.
 - **Flutter (Google-controlled)** — we build native consumer
   applications to avoid dependence on a single corporation's
   cross-platform runtime.
@@ -136,6 +134,15 @@ not adopt, on principle:
   on paper.
 
 This list is illustrative, not exhaustive.
+
+> **Operational databases are not on this list.** MongoDB (SSPL)
+> and Cloudflare D1 are **sanctioned operational layers**, not
+> prohibited dependencies — governed by **NA-03 §3.1**. MongoDB
+> serves as the hot-tier operational database (the SSPL is
+> accepted for internal infrastructure and does not extend to any
+> software distributed to end users); D1 is scoped to agentic
+> workloads and is never a source of truth. Neither displaces the
+> three sources of truth in NA-03 §3.1.
 
 ### Sovereignty fallbacks
 
@@ -406,6 +413,12 @@ repository.**
 
 ## Changelog
 
+- **v1.1** (22 June 2026) — Amendment: removed MongoDB from §2
+  "What we will not use" and added a note clarifying that MongoDB
+  and Cloudflare D1 are sanctioned operational layers governed by
+  NA-03 §3.1, not prohibited dependencies. Aligns NA-02 with the
+  NA-03 v1.2 decision (14 June 2026). Amended by the Founder under
+  NA-01 Article 17.
 - **v1.0** (18 April 2026) — Adopted. Frontier infrastructure
   framing. Standard licences only — Apache 2.0 for infrastructure
   primitives, MIT / Apache 2.0 / GPL for applications, CC BY 4.0
@@ -427,7 +440,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Open Source & Contribution Governance — Version 1.0_
-_Adopted 18 April 2026_
+_Nyuchi Africa Open Source & Contribution Governance — Version 1.1_
+_Adopted 18 April 2026 · amended 22 June 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._

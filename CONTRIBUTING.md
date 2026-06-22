@@ -9,11 +9,11 @@ Individual repositories may add stricter rules on top of these, but
 
 If you are reading this for the first time, also read:
 
-- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — how we treat each
+- [`CODE_OF_CONDUCT.md`](https://github.com/nyuchi/.github/blob/main/CODE_OF_CONDUCT.md) — how we treat each
   other.
-- [`SECURITY.md`](./SECURITY.md) — how to report vulnerabilities.
-- [`SUPPORT.md`](./SUPPORT.md) — where to get help.
-- [`AGENTS.md`](./AGENTS.md) — rules for AI-assisted contributions.
+- [`SECURITY.md`](https://github.com/nyuchi/.github/blob/main/SECURITY.md) — how to report vulnerabilities.
+- [`SUPPORT.md`](https://github.com/nyuchi/.github/blob/main/SUPPORT.md) — where to get help.
+- [`AGENTS.md`](https://github.com/nyuchi/.github/blob/main/AGENTS.md) — rules for AI-assisted contributions.
   Everything in this file still applies; `AGENTS.md` adds
   agent-specific behaviour on top.
 
@@ -255,8 +255,9 @@ grouped PR per ecosystem). When you see a Dependabot PR:
    workflow files. These are safe to merge once CI is green — the SHA
    comment shows the new version.
 5. **Never approve a Dependabot PR that introduces a prohibited
-   dependency** (see [NA-03 §3.5][na03] — MongoDB, Flutter, Couchbase,
-   D1 references).
+   dependency** (see [NA-03 §3.5][na03] — Flutter, Couchbase).
+   MongoDB and Cloudflare D1 are **not** prohibited; they are
+   sanctioned operational layers governed by [NA-03 §3.1][na03].
 
 ---
 
@@ -284,8 +285,8 @@ When you contribute:
 ## Security and the Code of Conduct
 
 - **Vulnerability?** Do not open a public issue. Follow
-  [`SECURITY.md`](./SECURITY.md).
-- **Behavior issue?** See [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
+  [`SECURITY.md`](https://github.com/nyuchi/.github/blob/main/SECURITY.md).
+- **Behavior issue?** See [`CODE_OF_CONDUCT.md`](https://github.com/nyuchi/.github/blob/main/CODE_OF_CONDUCT.md)
   for how to report, and what we'll do.
 
 ---
@@ -316,7 +317,7 @@ additional steps:
 
 ## Getting help
 
-- **How do I use this project?** → [`SUPPORT.md`](./SUPPORT.md).
+- **How do I use this project?** → [`SUPPORT.md`](https://github.com/nyuchi/.github/blob/main/SUPPORT.md).
 - **Where's the discussion?** → GitHub Discussions on each repo.
 - **Who reviews PRs?** → The CODEOWNERS file in each repo.
 
@@ -329,5 +330,5 @@ here is possible because someone else contributed first.
 [gpg]: https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits
 [ssh]: https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key
 [dco]: https://developercertificate.org/
-[na03]: ./profile/governance/NA-03_ENGINEERING.md
-[ga-template]: .github/ISSUE_TEMPLATE/governance_amendment.yml
+[na03]: https://github.com/nyuchi/.github/blob/main/profile/governance/NA-03_ENGINEERING.md
+[ga-template]: https://github.com/nyuchi/.github/blob/main/.github/ISSUE_TEMPLATE/governance_amendment.yml

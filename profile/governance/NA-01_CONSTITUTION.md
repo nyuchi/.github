@@ -29,6 +29,12 @@
   Governance) and NA-03 (Engineering Working Agreement) operate
   within the framework this Constitution establishes.
 
+> The Symbiotic Charter, Platform Stewardship Agreement, and
+> Honeycomb Amendment are **Mukoko Foundation instruments**,
+> maintained in the Foundation's document set — they are not
+> mirrored in `nyuchi/.github`. Where this Constitution cites
+> them, refer to the Foundation's canonical copies.
+
 ---
 
 > _We are a frontier infrastructure company. Apps and platforms
@@ -556,6 +562,11 @@ dissolution:
 
 ## Changelog
 
+- **v1.0** (22 June 2026, editorial) — Clarified in "Relationship
+  to other documents" that the Symbiotic Charter, Platform
+  Stewardship Agreement, and Honeycomb Amendment are Mukoko
+  Foundation instruments maintained externally, not mirrored in
+  `nyuchi/.github`. No normative change to any Article.
 - **v1.0** (18 April 2026) — Adopted. Frontier infrastructure
   company framing. Three divisions (Nyuchi Africa parent, Nyuchi
   Web Services development, Mukoko super app). Flat operational
