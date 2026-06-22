@@ -1,0 +1,113 @@
+name: Governance Amendment
+description: >
+  Propose an amendment to a Nyuchi Africa governance document
+  (NA-01 Constitution, NA-02 Open Source, or NA-03 Engineering).
+  Amendments are approved by the Founder under NA-01 Article 17.
+title: "governance: amend [NA-0X §Y.Z] — <one-line summary>"
+labels: ["governance", "needs-review"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, read **NA-01 Article 17** (amendment authority)
+        and **NA-03 §13** (amendment process for the Engineering Working
+        Agreement). All governance changes follow the same PR process as
+        other security-adjacent files — see
+        [`.github/CODEOWNERS`](.github/CODEOWNERS).
+
+  - type: dropdown
+    id: document
+    attributes:
+      label: Document being amended
+      description: Which governance document does this amendment affect?
+      options:
+        - "NA-01 — Constitution"
+        - "NA-02 — Open Source & Contribution Governance"
+        - "NA-03 — Engineering Working Agreement"
+        - "ORG_SETTINGS.md — GitHub Settings Source of Truth"
+        - "Multiple documents"
+    validations:
+      required: true
+
+  - type: input
+    id: section
+    attributes:
+      label: Section(s) being amended
+      description: >
+        Cite the specific article or section (e.g. `NA-01 Article 7`,
+        `NA-03 §7.1.2`). For ORG_SETTINGS.md, cite the heading.
+      placeholder: "NA-03 §7.1.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-text
+    attributes:
+      label: Current text (quote exactly)
+      description: >
+        Paste the exact text being changed. Use a fenced code block
+        if the extract is long.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-text
+    attributes:
+      label: Proposed replacement text
+      description: >
+        The full replacement text for the cited section.
+        Use a fenced code block for long extracts.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale
+      description: >
+        Why is this change needed? Reference any incident, external
+        requirement, or strategic decision that motivates it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: security-impact
+    attributes:
+      label: Security or compliance impact
+      description: Does this amendment change a security practice, testing requirement, privacy filter, or frontier default?
+      options:
+        - "No — purely clarification or editorial"
+        - "Minor — changes a non-critical policy or threshold"
+        - "Significant — changes a security practice, frontier default, or testing requirement"
+        - "High — reduces a security control, relaxes a privacy requirement, or changes the frontier defaults (§2)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: board-notification
+    attributes:
+      label: Board notification (NA-01 Article 17)
+      description: >
+        Amendments that reduce security practices, testing requirements,
+        the privacy filter, or the frontier defaults **require** Board
+        notification per NA-03 §13.
+      options:
+        - label: >
+            I confirm this amendment does NOT require Board notification,
+            OR I have already notified the Board and will reference that
+            notification in the PR.
+
+  - type: textarea
+    id: changelog-entry
+    attributes:
+      label: Proposed changelog entry
+      description: >
+        Draft the changelog line for the document's Changelog section.
+        Format: `**vX.Y** (DD Month YYYY) — <summary>. Amended by the
+        Founder under NA-03 §13.`
+      placeholder: "**v1.2** (13 June 2026) — Updated §7.1.1 to require … Amended by the Founder under NA-03 §13."
+    validations:
+      required: true

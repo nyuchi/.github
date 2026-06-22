@@ -235,6 +235,29 @@ truth.
   `Cargo.toml`, pnpm lockfile, `uv.lock`, etc.). Don't mix styles
   within a repo.
 
+### Dependabot PRs
+
+Dependabot opens PRs automatically on a weekly Monday cadence (one
+grouped PR per ecosystem). When you see a Dependabot PR:
+
+1. **Check CI green.** If any test or lint job fails, investigate before
+   merging — a failing Dependabot PR usually means the upgrade is a
+   breaking change, not a CI flake.
+2. **Security-advisory bumps.** These arrive outside the weekly cadence
+   and are labelled `security`. Merge them per the SLA in
+   [NA-03 §7.1.2][na03] — Critical within 24 h, High within 5 working
+   days.
+3. **Major-version upgrades.** Dependabot groups all minor/patch changes
+   into one PR but opens a separate PR for each major upgrade. Review
+   these manually against the package's changelog; they are not
+   auto-mergeable.
+4. **GitHub Actions SHA bumps.** Dependabot updates pinned SHAs in
+   workflow files. These are safe to merge once CI is green — the SHA
+   comment shows the new version.
+5. **Never approve a Dependabot PR that introduces a prohibited
+   dependency** (see [NA-03 §3.5][na03] — MongoDB, Flutter, Couchbase,
+   D1 references).
+
 ---
 
 ## Licensing
@@ -267,6 +290,30 @@ When you contribute:
 
 ---
 
+## Governance amendments
+
+Changes to the organisation's governance documents — NA-01
+Constitution, NA-02 Open Source, NA-03 Engineering Working Agreement,
+or `ORG_SETTINGS.md` — follow the same PR process as code but require
+additional steps:
+
+1. **Open a Governance Amendment issue** using the
+   [governance amendment template][ga-template] before opening a PR.
+   The issue documents the current text, proposed text, and rationale,
+   and requires the author to declare whether Board notification is
+   required (NA-01 Article 17).
+2. **Draft the PR** with the exact text changes, the changelog entry,
+   and a reference to the amendment issue (`Implements #<issue>`).
+3. **Review bar:** governance changes require review by
+   `@nyuchi/maintainers`. Changes that reduce a security practice,
+   relax the privacy filter, or alter a frontier default additionally
+   require a comment from the Founder confirming the Board has been
+   notified (per NA-03 §13).
+4. **Merge** — the Founder approves amendments under NA-01 Article 17.
+   This supersedes the normal reviewer-count posture.
+
+---
+
 ## Getting help
 
 - **How do I use this project?** → [`SUPPORT.md`](./SUPPORT.md).
@@ -282,3 +329,5 @@ here is possible because someone else contributed first.
 [gpg]: https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits
 [ssh]: https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key
 [dco]: https://developercertificate.org/
+[na03]: ./profile/governance/NA-03_ENGINEERING.md
+[ga-template]: .github/ISSUE_TEMPLATE/governance_amendment.yml

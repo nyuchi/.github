@@ -43,18 +43,18 @@ files (see [`CODEOWNERS`](./.github/CODEOWNERS)).
 Enable at **Settings → Code security and analysis** for the org,
 and let the settings propagate to new repos as defaults:
 
-| Feature                                 | State                                        |
-| --------------------------------------- | -------------------------------------------- |
-| Dependency graph                        | **Enabled**                                  |
-| Dependabot alerts                       | **Enabled**                                  |
-| Dependabot security updates             | **Enabled**                                  |
-| Dependabot version updates              | Opt-in per-repo via `.github/dependabot.yml` |
-| Secret scanning                         | **Enabled**                                  |
-| Secret scanning — push protection       | **Enabled**                                  |
-| Secret scanning — validity checks       | **Enabled**                                  |
-| Secret scanning — non-provider patterns | Enabled for public repos                     |
-| Private vulnerability reporting         | **Enabled**                                  |
-| CodeQL default setup                    | Enabled per-repo (see below)                 |
+| Feature                                 | State                                         |
+| --------------------------------------- | --------------------------------------------- |
+| Dependency graph                        | **Enabled**                                   |
+| Dependabot alerts                       | **Enabled**                                   |
+| Dependabot security updates             | **Enabled**                                   |
+| Dependabot version updates              | Opt-in per-repo via `.github/dependabot.yml`  |
+| Secret scanning                         | **Enabled**                                   |
+| Secret scanning — push protection       | **Enabled**                                   |
+| Secret scanning — validity checks       | **Enabled**                                   |
+| Secret scanning — non-provider patterns | **Enabled** (org-wide, not just public repos) |
+| Private vulnerability reporting         | **Enabled**                                   |
+| CodeQL default setup                    | Enabled per-repo (see below)                  |
 
 ### Actions permissions
 
@@ -94,7 +94,8 @@ At **Settings → Actions → General**:
   docker/metadata-action@*,
   aquasecurity/trivy-action@*,
   sigstore/cosign-installer@*,
-  opentofu/setup-opentofu@*
+  opentofu/setup-opentofu@*,
+  actions/attest-build-provenance@*
   ```
 
   To audit drift against what's actually referenced in the
@@ -286,8 +287,128 @@ tokens.
   becomes a generated artifact rather than hand-maintained prose.
   Target: all new repos provisioned via `tofu apply` by Q3 2026.
   The `reusable-ci-opentofu.yml` reusable workflow supports this.
-- **Quarterly audit:** compare live state against this document.
-  Note any approved drift; fix any unapproved drift.
+- **Quarterly audit (automated):** a GitHub Actions scheduled workflow
+  (`.github/workflows/scheduled-settings-audit.yml`) opens a GitHub
+  Issue on the first day of every quarter with a checklist of items to
+  verify. Close the issue once the audit is complete and any drift has
+  been corrected.
+
+---
+
+## Artifact provenance and supply-chain security
+
+### SLSA provenance (SLSA L2)
+
+Every release attaches a **GitHub Artifact Attestation** (SLSA L2
+provenance) signed with a short-lived OIDC token via Sigstore. This is
+generated automatically by the `attestations` step in
+`reusable-release.yml` and by the standalone
+`reusable-slsa-provenance.yml` workflow.
+
+Attestations can be verified by any user with read access to the
+repository:
+
+```sh
+gh attestation verify <artifact-file> --repo nyuchi/<repo>
+```
+
+Each release also ships a `SHA256SUMS` file covering all attached
+release assets. Consumers must verify this file against the attestation
+before executing any release artifact.
+
+### OpenSSF alignment
+
+The organisation targets the following OpenSSF / SLSA milestones:
+
+| Practice                              | Target                                                   |
+| ------------------------------------- | -------------------------------------------------------- |
+| SHA-pinned Actions (supply-chain)     | **Enforced** — NA-03 §7.1.1                              |
+| SBOM on every production release      | **Enforced** — NA-03 §7.2, `reusable-sbom.yml`           |
+| Artifact provenance (SLSA L2)         | **Enforced** — `reusable-release.yml` + attestation step |
+| OIDC federation for cloud credentials | **Required** — see §Secrets and tokens below             |
+| Dependency review on every PR         | **Enforced** — `reusable-dependency-review.yml`          |
+| Secret scanning (all patterns)        | **Enabled** — org-wide                                   |
+| Signed commits on `main`              | **Enforced** — rulesets                                  |
+| OpenSSF Scorecard (aspirational)      | Track via `ossf/scorecard-action` (planned)              |
+| SLSA L3 (hermetic builds)             | Planned — requires isolated build runners                |
+
+### Reusable workflow versioning and rollback
+
+Consuming repos reference reusables at `@main`, so changes propagate
+instantly on the next CI run. To avoid a broken change from silently
+affecting every downstream repo:
+
+1. **Test in isolation first.** Always run the reusable's own
+   `lint.yml` CI before merging to `main`.
+2. **Use feature flags via workflow inputs.** New behaviour is opt-in
+   (`default: false`) for at least one release cycle before becoming
+   the default.
+3. **Rollback procedure.** If a merged change breaks downstream repos:
+   - Open a hotfix branch in `nyuchi/.github`.
+   - Revert the offending commit.
+   - Merge immediately (no waiting for the normal review bar if the
+     regression is confirmed and the Founder approves — per NA-01
+     Article 6.1(a)).
+   - Notify affected repo maintainers via a GitHub Issue.
+4. **Versioned refs (planned).** Long-term, critical consumers should
+   reference a `@v1`, `@v2` tag rather than `@main` to opt into
+   upgrades deliberately. This is tracked as a future enhancement.
+
+---
+
+## OIDC federation for cloud credentials
+
+Long-lived cloud API keys (AWS, GCP, Cloudflare, Fly.io) must **not**
+be stored as GitHub secrets. Use OIDC federation so workflows obtain
+short-lived tokens at runtime. The trust policy must be scoped to
+specific repositories, branches, and environments.
+
+### Cloudflare example
+
+```yaml
+- name: Authenticate to Cloudflare via OIDC
+  uses: cloudflare/cloudflare-action@v1   # pin to SHA per NA-03 §7.1.1
+  with:
+    api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}  # narrow-scope token
+```
+
+For a Cloudflare Workers deployment the preferred approach is Wrangler
+with a scoped API token generated from a service account, not a Global
+API key.
+
+### Fly.io example
+
+```yaml
+- name: Deploy to Fly.io
+  env:
+    FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}   # deploy-only token
+  run: flyctl deploy --remote-only
+```
+
+Generate the `FLY_API_TOKEN` via `fly tokens create deploy` — this
+creates a token scoped to deploy operations only, not account admin.
+Store it as a repository- or environment-level secret, never as an
+org-level secret unless the token legitimately covers all repos.
+
+### AWS / GCP (future)
+
+When Nyuchi services expand to AWS or GCP, use OIDC federation:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+
+steps:
+  - uses: aws-actions/configure-aws-credentials@v4   # pin to SHA
+    with:
+      role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsRole
+      aws-region: af-south-1
+      role-session-name: GitHubActions
+```
+
+Document the trust policy (`aud`, `sub` conditions) in the Terraform
+module for that environment.
 
 ---
 

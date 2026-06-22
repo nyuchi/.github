@@ -83,3 +83,11 @@ jobs:
             exit 1
           fi
           echo "SBOM OK: $components components in $SBOM_FILE"
+
+      - name: Print SHA-256 checksum of SBOM
+        env:
+          SBOM_FILE: ${{ inputs.artifact-name }}.json
+        run: |
+          set -euo pipefail
+          sha256sum "$SBOM_FILE"
+          echo "::notice::SBOM SHA-256 printed above. The release workflow includes this in SHA256SUMS."
