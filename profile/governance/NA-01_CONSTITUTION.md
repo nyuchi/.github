@@ -6,7 +6,7 @@
 
 | Field                      | Value                                |
 | -------------------------- | ------------------------------------ |
-| Version                    | 1.2                                  |
+| Version                    | 1.3                                  |
 | Effective date             | 18 April 2026                        |
 | Status                     | Approved and in force                |
 | Prepared and approved by   | Bryan Fawcett, Founder & CEO         |
@@ -53,7 +53,7 @@ protocols, graph engines, identity primitives, and cryptographic
 foundations that apps and platforms are built on.
 
 The apps and platforms operated by the company — the Mukoko
-consumer super app, the seven Nyuchi Enterprise products, and the
+consumer super app, the Nyuchi Enterprise products, and the
 sister brands — are proof-of-concept and production expressions of
 this infrastructure. They solve real problems for real communities
 today. They also demonstrate, validate, and harden the
@@ -591,6 +591,11 @@ dissolution:
 
 ## Changelog
 
+- **v1.3** (22 June 2026) — Amendment: removed the word "seven"
+  from the Preamble's reference to the Nyuchi Enterprise products.
+  The enterprise product line is not a fixed count (see NA-03 §3.3,
+  which de-locks it); the constitution no longer asserts a number.
+  Amended by the Founder under Article 17.
 - **v1.2** (22 June 2026) — Amendment: expanded Article 9 to
   reconcile the governance structure with the live ecosystem.
   Added **9.3** (the public "three-pillar" framing — Mukoko /
@@ -649,7 +654,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Constitution — Version 1.2_
+_Nyuchi Africa Constitution — Version 1.3_
 _Adopted 18 April 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._

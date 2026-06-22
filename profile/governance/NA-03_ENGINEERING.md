@@ -4,7 +4,7 @@
 
 | Field          | Value                        |
 | -------------- | ---------------------------- |
-| Version        | 1.5                          |
+| Version        | 1.6                          |
 | Effective date | 22 June 2026                 |
 | Status         | Approved and in force        |
 | Approved by    | Bryan Fawcett, Founder & CEO |
@@ -210,16 +210,22 @@ Review checks this.
 The platform has locked counts:
 
 - **17** Mukoko mini-apps
-- **7** Nyuchi Enterprise products
 - **7** data layers
 - **7** covenants
 - **40** interest categories
 - **12** manifesto sections
 - **3** sources of truth
 
-Engineers do not add an 18th mini-app, an 8th enterprise product,
-or a 41st interest category through a pull request. These are
-canonical decisions that the Founder makes explicitly.
+Engineers do not add an 18th mini-app or a 41st interest category
+through a pull request. These are canonical decisions that the
+Founder makes explicitly.
+
+The **Nyuchi Enterprise products** are **not** a locked count. The
+enterprise product line grows as the company builds and ships; it
+is **not capped at any fixed number**. (Earlier drafts of the
+governance set listed "7" here — that was a point-in-time snapshot,
+not a limit, and has been removed to prevent it being read as a
+cap.)
 
 The **7 covenants** are the platform's non-negotiable promises to
 its users. They are product and engineering constraints, not
@@ -731,6 +737,16 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.6** (22 June 2026) — Amendment: **removed "7 Nyuchi
+  Enterprise products" from the §3.3 locked counts.** The
+  enterprise product line is not capped — the organisation operates
+  well more than seven product lines (confirmed against the live
+  `github.com/nyuchi` repositories) and grows as it builds. The
+  "8th enterprise product" example was removed from the
+  add-nothing-via-PR sentence accordingly; the remaining locked
+  counts (17 mini-apps, 7 data layers, 40 interest categories, 7
+  covenants, 12 manifesto sections, 3 sources of truth) are
+  unchanged. Amended by the Founder under NA-03 §13.
 - **v1.5** (22 June 2026) — Amendment: added §3.6 enumerating the
   **four Bundu-governed platform tokens** — MIT (soulbound
   identity), MXT (exchange), and the NST/NHC Honeycomb storage
@@ -793,7 +809,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Engineering Working Agreement — Version 1.5_
+_Nyuchi Africa Engineering Working Agreement — Version 1.6_
 _Adopted 18 April 2026 · amended 19 April 2026 · amended 14 June 2026 · amended 22 June 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._
