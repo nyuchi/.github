@@ -333,11 +333,15 @@ The Foundation is a separate legal entity and is not a division.
 9.3 **Relationship to the public "pillar" framing.** Publicly, the
 ecosystem is presented under the Bundu Foundation's three
 **pillars** — Mukoko, Nyuchi Africa, and Shamwari AI ("Nyuchi is
-the workshop; Bundu is the village"). This public framing is not
-identical to the divisional structure above: it groups the work by
-audience-facing brand rather than by internal division. Where the
-two framings are read together, the legal divisional structure in
-this Article governs.
+the workshop; Bundu is the village"). The three pillars are not of
+the same kind: **Nyuchi Africa** is the operating legal entity —
+the frontier-infrastructure company itself — while **Mukoko** and
+**Shamwari AI** are specific products built and operated within it.
+Only the **Bundu Foundation** and **Nyuchi Africa** are separate
+legal entities; the products are not. The pillar framing therefore
+groups the work by audience-facing brand rather than by the
+internal divisional structure above; where the two are read
+together, the legal structure in this Article governs.
 
 9.4 **Shamwari AI.** Shamwari AI is **governed and researched under
 the Bundu Foundation** and is **operated and developed as a product
@@ -592,7 +596,10 @@ dissolution:
   Added **9.3** (the public "three-pillar" framing — Mukoko /
   Nyuchi Africa / Shamwari AI — is reconciled with the legal
   divisional structure, which governs where the two are read
-  together); **9.4** placing **Shamwari AI** (governed and
+  together; clarifies that Nyuchi Africa is the operating legal
+  entity while Mukoko and Shamwari AI are products, and that only
+  the Bundu Foundation and Nyuchi Africa are separate legal
+  entities); **9.4** placing **Shamwari AI** (governed and
   researched under the Bundu Foundation, operated and developed as
   a product within Nyuchi Africa); and **9.5** stating Foundation
   economics — the Bundu Foundation earns only from dividends,
