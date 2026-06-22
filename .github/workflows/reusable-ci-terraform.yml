@@ -1,0 +1,154 @@
+# Reusable workflow: Terraform / OpenTofu CI.
+#
+# Runs format-check, init, validate, and tflint on Terraform code.
+# No apply or plan — this workflow is CI-only; deployment is handled
+# separately via the relevant platform CLI (fly deploy, wrangler, etc.).
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   jobs:
+#     ci:
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-terraform.yml@main
+#       with:
+#         working-directory: infra/cloudflare
+#
+# The caller must grant `contents: read`.
+#
+# Assumes:
+#   - Terraform (or OpenTofu) configuration files under working-directory.
+#   - A .tflint.hcl at the repo root (or under working-directory).
+#   - No remote backend is contacted — init uses -backend=false.
+#
+# Per NA-03 §6.1: Terraform for Cloudflare and Fly.io IaC.
+
+name: Reusable / CI / Terraform
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: |
+          Directory containing the Terraform configuration root module.
+          Defaults to the repo root. For monorepos, set this to the
+          relevant subdirectory (e.g. "infra/cloudflare").
+        type: string
+        default: "."
+      terraform-version:
+        description: |
+          Terraform version to install. Pin to a specific version for
+          reproducible CI (e.g. "1.11.4"). Defaults to "latest" to
+          track the latest stable release per NA-03 §6.1.
+        type: string
+        default: "latest"
+      tflint-version:
+        description: |
+          tflint version to install. Pin to a specific version for
+          reproducible CI. Defaults to "latest".
+        type: string
+        default: "latest"
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      terraform: ${{ steps.filter.outputs.terraform }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 0
+      - id: filter
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+        with:
+          filters: |
+            terraform:
+              - '**/*.tf'
+              - '**/*.tfvars'
+              - '**/.tflint.hcl'
+              - '.github/workflows/**'
+
+  fmt:
+    name: terraform fmt
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+      - name: terraform fmt --check
+        env:
+          WORKING_DIR: ${{ inputs.working-directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Validate to guard against injection via inputs.working-directory.
+          if [[ ! "$WORKING_DIR" =~ ^[a-zA-Z0-9_./-]+$ ]]; then
+            echo "::error::Invalid working-directory '$WORKING_DIR'."
+            exit 1
+          fi
+          terraform -chdir="$WORKING_DIR" fmt -check -recursive
+
+  validate:
+    name: terraform validate
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+      - name: terraform init (no backend)
+        env:
+          WORKING_DIR: ${{ inputs.working-directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$WORKING_DIR" =~ ^[a-zA-Z0-9_./-]+$ ]]; then
+            echo "::error::Invalid working-directory '$WORKING_DIR'."
+            exit 1
+          fi
+          terraform -chdir="$WORKING_DIR" init -backend=false -input=false
+      - name: terraform validate
+        env:
+          WORKING_DIR: ${{ inputs.working-directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir="$WORKING_DIR" validate
+
+  tflint:
+    name: tflint
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: terraform-linters/setup-tflint@b480b8fcdaa6f2c577f8e4fa799e89e756bb7c93  # v6.2.2
+        with:
+          tflint_version: ${{ inputs.tflint-version }}
+      - name: tflint --init
+        env:
+          WORKING_DIR: ${{ inputs.working-directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$WORKING_DIR" =~ ^[a-zA-Z0-9_./-]+$ ]]; then
+            echo "::error::Invalid working-directory '$WORKING_DIR'."
+            exit 1
+          fi
+          cd "$WORKING_DIR"
+          tflint --init
+      - name: tflint
+        env:
+          WORKING_DIR: ${{ inputs.working-directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$WORKING_DIR"
+          tflint --format=compact --recursive
