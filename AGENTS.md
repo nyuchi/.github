@@ -165,8 +165,8 @@ Stop and ask the human operator when:
 Repos declare their own local check commands — honour what's there
 before guessing. Common patterns across the org:
 
-| Stack                | Install          | Check                                                                                      |
-| -------------------- | ---------------- | ------------------------------------------------------------------------------------------ |
+| Stack                | Install          | Check                                                                                         |
+| -------------------- | ---------------- | --------------------------------------------------------------------------------------------- |
 | TypeScript / Next.js | `pnpm install`   | `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm audit --audit-level=moderate` |
 | Rust                 | (cargo vendored) | `cargo fmt --check && cargo clippy -- -D warnings && cargo nextest run && cargo deny check`   |
 | Python (uv)          | `uv sync`        | `uv run ruff check && uv run ruff format --check && uv run mypy . && uv run pytest`           |

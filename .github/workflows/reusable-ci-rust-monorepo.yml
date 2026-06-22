@@ -144,7 +144,7 @@ jobs:
           if [ -f deny.toml ] || [ -f .cargo/deny.toml ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::No deny.toml found — cargo deny skipped. Add deny.toml (see cargo-deny docs) to enable supply-chain checks (advisories, bans, licences, sources)."
+            echo "::notice::No deny.toml found; cargo deny skipped. Add one to enable supply-chain checks (advisories, bans, licences)."
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
       # taiki-e/install-action uses per-tool moving tags rather than semver.
