@@ -1,0 +1,142 @@
+# Reusable workflow: Solidity smart-contract CI (Foundry).
+#
+# Call from a caller workflow in a consuming repo:
+#
+#   jobs:
+#     ci:
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-solidity.yml@main
+#       with:
+#         foundry-version: stable
+#
+# The caller must grant `contents: read`.
+#
+# Assumes:
+#   - A foundry.toml at the repo root.
+#   - Contracts under src/ (default Foundry layout).
+#   - Tests under test/ (default Foundry layout).
+#   - forge, cast, anvil available after installing the toolchain.
+#
+# Per NA-03 §6.1: Solidity, targeting Polygon, with Foundry for
+# development and testing.
+# Per NA-03 §10.4: comprehensive test coverage is required before
+# any mainnet deployment; the coverage job surfaces the report.
+
+name: Reusable / CI / Solidity (Foundry)
+
+on:
+  workflow_call:
+    inputs:
+      foundry-version:
+        description: |
+          Foundry toolchain channel to install. Use `stable` for reproducible CI
+          and `nightly` only for repos that deliberately track nightly features.
+        type: string
+        default: stable
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      solidity: ${{ steps.filter.outputs.solidity }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+      - id: filter
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+        with:
+          filters: |
+            solidity:
+              - '**/*.sol'
+              - 'foundry.toml'
+              - 'remappings.txt'
+              - 'lib/**'
+              - '.github/workflows/**'
+
+  fmt:
+    name: forge fmt
+    needs: changes
+    if: needs.changes.outputs.solidity == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d  # v1.8.0
+        with:
+          version: ${{ inputs.foundry-version }}
+      - run: forge fmt --check
+
+  build:
+    name: forge build
+    needs: changes
+    if: needs.changes.outputs.solidity == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d  # v1.8.0
+        with:
+          version: ${{ inputs.foundry-version }}
+      - name: forge build
+        run: forge build --sizes
+
+  test:
+    name: forge test
+    needs: changes
+    if: needs.changes.outputs.solidity == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d  # v1.8.0
+        with:
+          version: ${{ inputs.foundry-version }}
+      - name: forge test
+        run: forge test -vvv
+
+  coverage:
+    name: forge coverage
+    needs: changes
+    if: needs.changes.outputs.solidity == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d  # v1.8.0
+        with:
+          version: ${{ inputs.foundry-version }}
+      - name: forge coverage (lcov)
+        run: forge coverage --report lcov
+      - name: Enforce minimum line coverage (60%)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f lcov.info ]; then
+            echo "::error::lcov.info not found — forge coverage did not produce expected output."
+            exit 1
+          fi
+          total_lines=0
+          hit_lines=0
+          while IFS= read -r line; do
+            case "$line" in
+              LF:*)  total_lines=$((total_lines + ${line#LF:})) ;;
+              LH:*)  hit_lines=$((hit_lines + ${line#LH:})) ;;
+            esac
+          done < lcov.info
+          if [ "$total_lines" -eq 0 ]; then
+            echo "::warning::No instrumented lines found in lcov.info — is the test suite empty?"
+            exit 0
+          fi
+          # Compute coverage × 100 to avoid fractional shell arithmetic.
+          pct=$(( hit_lines * 100 / total_lines ))
+          echo "Line coverage: ${pct}% (${hit_lines}/${total_lines})"
+          if [ "$pct" -lt 60 ]; then
+            echo "::error::Line coverage ${pct}% is below the 60% floor required by NA-03 §6.3."
+            exit 1
+          fi

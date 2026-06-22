@@ -109,7 +109,7 @@ jobs:
     outputs:
       hashes: ${{ steps.checksums.outputs.hashes }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
         with:
           fetch-depth: 0
 
@@ -166,12 +166,12 @@ jobs:
           echo "hashes=$(sha256sum -- * | base64 -w0)" >> "$GITHUB_OUTPUT"
 
       - name: Attest build provenance (SLSA L2)
-        uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd  # v2.3.0 — TODO: confirm SHA per NA-03 §7.1.1
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
         with:
           subject-path: "release-assets/*"
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
         with:
           draft: ${{ inputs.draft }}
           prerelease: ${{ needs.validate-tag.outputs.prerelease }}

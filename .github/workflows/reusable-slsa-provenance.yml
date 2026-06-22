@@ -90,13 +90,13 @@ jobs:
 
       - name: Upload SHA256SUMS artifact
         id: upload
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b  # v4.6.2 — TODO: confirm SHA per NA-03 §7.1.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: sha256sums-${{ inputs.artifact-name }}
           path: SHA256SUMS
           retention-days: 90
 
       - name: Attest build provenance (SLSA L2)
-        uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd  # v2.3.0 — TODO: confirm SHA per NA-03 §7.1.1
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
         with:
           subject-path: ${{ inputs.subject-path }}

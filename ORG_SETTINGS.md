@@ -43,18 +43,18 @@ files (see [`CODEOWNERS`](./.github/CODEOWNERS)).
 Enable at **Settings → Code security and analysis** for the org,
 and let the settings propagate to new repos as defaults:
 
-| Feature                                 | State                                        |
-| --------------------------------------- | -------------------------------------------- |
-| Dependency graph                        | **Enabled**                                  |
-| Dependabot alerts                       | **Enabled**                                  |
-| Dependabot security updates             | **Enabled**                                  |
-| Dependabot version updates              | Opt-in per-repo via `.github/dependabot.yml` |
-| Secret scanning                         | **Enabled**                                  |
-| Secret scanning — push protection       | **Enabled**                                  |
-| Secret scanning — validity checks       | **Enabled**                                  |
+| Feature                                 | State                                         |
+| --------------------------------------- | --------------------------------------------- |
+| Dependency graph                        | **Enabled**                                   |
+| Dependabot alerts                       | **Enabled**                                   |
+| Dependabot security updates             | **Enabled**                                   |
+| Dependabot version updates              | Opt-in per-repo via `.github/dependabot.yml`  |
+| Secret scanning                         | **Enabled**                                   |
+| Secret scanning — push protection       | **Enabled**                                   |
+| Secret scanning — validity checks       | **Enabled**                                   |
 | Secret scanning — non-provider patterns | **Enabled** (org-wide, not just public repos) |
-| Private vulnerability reporting         | **Enabled**                                  |
-| CodeQL default setup                    | Enabled per-repo (see below)                 |
+| Private vulnerability reporting         | **Enabled**                                   |
+| CodeQL default setup                    | Enabled per-repo (see below)                  |
 
 ### Actions permissions
 
@@ -85,6 +85,16 @@ At **Settings → Actions → General**:
   dtolnay/rust-toolchain@*,
   taiki-e/install-action@*,
   astral-sh/setup-uv@*,
+  ossf/scorecard-action@*,
+  foundry-rs/foundry-toolchain@*,
+  docker/setup-qemu-action@*,
+  docker/setup-buildx-action@*,
+  docker/login-action@*,
+  docker/build-push-action@*,
+  docker/metadata-action@*,
+  aquasecurity/trivy-action@*,
+  sigstore/cosign-installer@*,
+  opentofu/setup-opentofu@*,
   actions/attest-build-provenance@*
   ```
 
@@ -207,6 +217,15 @@ name and is fixed):
   `reusable-ci-python-monorepo.yml`, or
   `reusable-ci-docs-mdx.yml` the repo uses.
 
+**Supply-chain and security gates added per-stack:**
+
+- `ci / pnpm audit` — from `reusable-ci-nextjs-monorepo.yml` (moderate+ CVEs
+  fail the PR; matches `dependency-review` but uses the pnpm lockfile directly)
+- `ci / pip-audit` — from `reusable-ci-python-monorepo.yml` (scans the
+  exported `uv` lockfile against PyPI advisory DB)
+- `ci / cargo deny` — from `reusable-ci-rust-monorepo.yml` (advisories, bans,
+  licence compliance, source verification; requires `deny.toml` in the repo root)
+
 ### Tag protection
 
 - Tags matching `v*` require **admin** or
@@ -262,10 +281,12 @@ tokens.
     --input github-rulesets/org-wide-main-protection.json
   ```
 
-- **Planned — infrastructure as code:** longer-term, migrate org and
-  repo configuration to Terraform's `integrations/github` provider so
-  that this document becomes a generated artifact rather than
-  hand-maintained prose.
+- **In progress — infrastructure as code:** migrating org and repo
+  configuration to OpenTofu (the open-source Terraform fork) using
+  the `integrations/github` provider. When complete this document
+  becomes a generated artifact rather than hand-maintained prose.
+  Target: all new repos provisioned via `tofu apply` by Q3 2026.
+  The `reusable-ci-opentofu.yml` reusable workflow supports this.
 - **Quarterly audit (automated):** a GitHub Actions scheduled workflow
   (`.github/workflows/scheduled-settings-audit.yml`) opens a GitHub
   Issue on the first day of every quarter with a checklist of items to
@@ -299,17 +320,17 @@ before executing any release artifact.
 
 The organisation targets the following OpenSSF / SLSA milestones:
 
-| Practice                                | Target                                          |
-| --------------------------------------- | ----------------------------------------------- |
-| SHA-pinned Actions (supply-chain)       | **Enforced** — NA-03 §7.1.1                     |
-| SBOM on every production release        | **Enforced** — NA-03 §7.2, `reusable-sbom.yml`  |
-| Artifact provenance (SLSA L2)           | **Enforced** — `reusable-release.yml` + attestation step |
-| OIDC federation for cloud credentials   | **Required** — see §Secrets and tokens below    |
-| Dependency review on every PR           | **Enforced** — `reusable-dependency-review.yml` |
-| Secret scanning (all patterns)          | **Enabled** — org-wide                          |
-| Signed commits on `main`                | **Enforced** — rulesets                         |
-| OpenSSF Scorecard (aspirational)        | Track via `ossf/scorecard-action` (planned)     |
-| SLSA L3 (hermetic builds)              | Planned — requires isolated build runners       |
+| Practice                              | Target                                                   |
+| ------------------------------------- | -------------------------------------------------------- |
+| SHA-pinned Actions (supply-chain)     | **Enforced** — NA-03 §7.1.1                              |
+| SBOM on every production release      | **Enforced** — NA-03 §7.2, `reusable-sbom.yml`           |
+| Artifact provenance (SLSA L2)         | **Enforced** — `reusable-release.yml` + attestation step |
+| OIDC federation for cloud credentials | **Required** — see §Secrets and tokens below             |
+| Dependency review on every PR         | **Enforced** — `reusable-dependency-review.yml`          |
+| Secret scanning (all patterns)        | **Enabled** — org-wide                                   |
+| Signed commits on `main`              | **Enforced** — rulesets                                  |
+| OpenSSF Scorecard (aspirational)      | Track via `ossf/scorecard-action` (planned)              |
+| SLSA L3 (hermetic builds)             | Planned — requires isolated build runners                |
 
 ### Reusable workflow versioning and rollback
 
@@ -388,6 +409,46 @@ steps:
 
 Document the trust policy (`aud`, `sub` conditions) in the Terraform
 module for that environment.
+
+---
+
+## Supply chain security
+
+### Container signing and verification
+
+All OCI images built and published by Nyuchi repos must be:
+
+1. **Scanned** by Trivy (CRITICAL + HIGH severity — exit-code 1) before push.
+2. **Signed** with cosign keyless signing using the `reusable-ci-container.yml`
+   reusable workflow.
+3. **Verified** by consumers: `cosign verify --certificate-oidc-issuer
+https://token.actions.githubusercontent.com --certificate-identity-regexp
+'https://github.com/nyuchi/'`.
+
+The OIDC issuer and identity regexp above act as the trust anchor —
+only images built by a GitHub Actions workflow in the `nyuchi` org
+will verify successfully. Do not use a long-lived cosign key.
+
+### SLSA provenance
+
+From Q3 2026, all published releases must include SLSA level 2
+provenance attestations:
+
+- The `reusable-release.yml` reusable workflow already attaches a
+  CycloneDX SBOM (NA-03 §7.2).
+- Container images built by `reusable-ci-container.yml` include
+  BuildKit-generated SBOM and provenance via `sbom: true` and
+  `provenance: true` in the build step.
+- For binary releases (Rust crates, Python wheels, JS packages),
+  add SLSA provenance via `slsa-framework/slsa-github-generator`
+  when the toolchain supports it.
+
+### Trivy IaC scanning
+
+All OpenTofu / Terraform configurations must be scanned with Trivy
+in `config` mode (CRITICAL + HIGH). The `reusable-ci-opentofu.yml`
+reusable workflow does this automatically. SARIF results appear in
+each repo's GitHub Security tab.
 
 ---
 
