@@ -52,10 +52,10 @@ on:
         default: ".github/workflows/*.yml"
       prettier-version:
         type: string
-        default: "3.5.3"
+        default: "3.8.4"
       yamllint-version:
         type: string
-        default: "1.35.1"
+        default: "1.38.0"
 
 permissions:
   contents: read
@@ -75,12 +75,12 @@ jobs:
           trap 'rm -f "$installer"' EXIT
           curl --fail --silent --show-error --location \
             --retry 3 --retry-delay 2 \
-            https://raw.githubusercontent.com/rhysd/actionlint/v1.7.4/scripts/download-actionlint.bash \
+            https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash \
             --output "$installer"
           # Sanity-check we got a shell script, not an HTML error page.
           head -n 1 "$installer" | grep -qE '^#!.*(bash|sh)' \
             || { echo "::error::actionlint installer did not look like a shell script"; head -n 5 "$installer"; exit 1; }
-          bash "$installer" 1.7.4
+          bash "$installer" 1.7.12
       - name: actionlint
         env:
           ACTIONLINT_BIN: ${{ steps.get_actionlint.outputs.executable }}
@@ -142,7 +142,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
-      - uses: DavidAnson/markdownlint-cli2-action@ded1f9488f68a970bc66ea5619e13e9b52e601cd  # v23
+      - uses: DavidAnson/markdownlint-cli2-action@ded1f9488f68a970bc66ea5619e13e9b52e601cd  # v23.2.0
         with:
           globs: ${{ inputs.markdownlint-globs }}
 
