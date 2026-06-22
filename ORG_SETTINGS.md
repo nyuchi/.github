@@ -329,7 +329,7 @@ The organisation targets the following OpenSSF / SLSA milestones:
 | Dependency review on every PR         | **Enforced** — `reusable-dependency-review.yml`          |
 | Secret scanning (all patterns)        | **Enabled** — org-wide                                   |
 | Signed commits on `main`              | **Enforced** — rulesets                                  |
-| OpenSSF Scorecard (aspirational)      | Track via `ossf/scorecard-action` (planned)              |
+| OpenSSF Scorecard                     | **Available** — `reusable-openssf-scorecard.yml`         |
 | SLSA L3 (hermetic builds)             | Planned — requires isolated build runners                |
 
 ### Reusable workflow versioning and rollback
@@ -431,8 +431,9 @@ will verify successfully. Do not use a long-lived cosign key.
 
 ### SLSA provenance
 
-From Q3 2026, all published releases must include SLSA level 2
-provenance attestations:
+All published releases must include SLSA level 2 provenance
+attestations (enforced today — see "SLSA provenance (SLSA L2)"
+above):
 
 - The `reusable-release.yml` reusable workflow already attaches a
   CycloneDX SBOM (NA-03 §7.2).

@@ -12,9 +12,9 @@ users.
 | Ask a question or share an idea           | The repository's **Discussions** tab (if enabled), otherwise open an issue with the _Question_ or _Feature request_ template. |
 | Report a bug                              | The repository's **Issues** tab → _Bug report_ template.                                                                      |
 | Request a feature                         | The repository's **Issues** tab → _Feature request_ template.                                                                 |
-| Report a security vulnerability           | **Do not open a public issue.** See [`SECURITY.md`](./SECURITY.md).                                                           |
-| Report a Code of Conduct concern          | See the reporting section of [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).                                                    |
-| Contribute code or docs                   | See [`CONTRIBUTING.md`](./CONTRIBUTING.md).                                                                                   |
+| Report a security vulnerability           | **Do not open a public issue.** See [`SECURITY.md`](https://github.com/nyuchi/.github/blob/main/SECURITY.md).                 |
+| Report a Code of Conduct concern          | See the reporting section of [`CODE_OF_CONDUCT.md`](https://github.com/nyuchi/.github/blob/main/CODE_OF_CONDUCT.md).          |
+| Contribute code or docs                   | See [`CONTRIBUTING.md`](https://github.com/nyuchi/.github/blob/main/CONTRIBUTING.md).                                         |
 | General enquiry                           | Email [hi@nyuchi.com](mailto:hi@nyuchi.com).                                                                                  |
 | Customer or product support               | Email [support@nyuchi.com](mailto:support@nyuchi.com).                                                                        |
 | Ask something not tied to a specific repo | Open a discussion on [nyuchi/.github][this-repo] or the relevant umbrella repo.                                               |
@@ -42,7 +42,7 @@ A few minutes of prep makes a big difference:
 - Documentation that is unclear, incorrect, or missing.
 - Reasonable feature requests aligned with a project's scope.
 - Security vulnerabilities (via the private channels in
-  [`SECURITY.md`](./SECURITY.md)).
+  [`SECURITY.md`](https://github.com/nyuchi/.github/blob/main/SECURITY.md)).
 
 ### We generally cannot help with
 
@@ -57,7 +57,8 @@ A few minutes of prep makes a big difference:
 
 These are open-source projects. We triage as capacity allows and do
 not offer an SLA for general support. Security reports are handled on
-the timelines stated in [`SECURITY.md`](./SECURITY.md).
+the timelines stated in
+[`SECURITY.md`](https://github.com/nyuchi/.github/blob/main/SECURITY.md).
 
 If an issue has not received a response in a reasonable time, a polite
 follow-up comment is fine — please avoid bumping multiple times.

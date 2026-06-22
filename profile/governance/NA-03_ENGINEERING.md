@@ -4,8 +4,8 @@
 
 | Field          | Value                        |
 | -------------- | ---------------------------- |
-| Version        | 1.2                          |
-| Effective date | 14 June 2026                 |
+| Version        | 1.6                          |
+| Effective date | 22 June 2026                 |
 | Status         | Approved and in force        |
 | Approved by    | Bryan Fawcett, Founder & CEO |
 
@@ -94,9 +94,9 @@ Our default:
   are the highest priority for post-quantum design. Session
   encryption for short-lived transport can migrate later.
 - **Long-term keys** — MIT issuance signing keys, MXT
-  EmissionController admin keys, Foundation treasury keys — are
-  planned for post-quantum migration as soon as tooling supports
-  it.
+  EmissionController admin keys, NST/NHC Honeycomb network keys,
+  Foundation treasury keys — are planned for post-quantum migration
+  as soon as tooling supports it.
 
 "Harvest now, decrypt later" is a real adversarial model for an
 infrastructure company whose data outlives any single vendor's
@@ -210,16 +210,39 @@ Review checks this.
 The platform has locked counts:
 
 - **17** Mukoko mini-apps
-- **7** Nyuchi Enterprise products
 - **7** data layers
 - **7** covenants
 - **40** interest categories
 - **12** manifesto sections
 - **3** sources of truth
 
-Engineers do not add an 18th mini-app, an 8th enterprise product,
-or a 41st interest category through a pull request. These are
-canonical decisions that the Founder makes explicitly.
+Engineers do not add an 18th mini-app or a 41st interest category
+through a pull request. These are canonical decisions that the
+Founder makes explicitly.
+
+The **Nyuchi Enterprise products** are **not** a locked count. The
+enterprise product line grows as the company builds and ships; it
+is **not capped at any fixed number**. (Earlier drafts of the
+governance set listed "7" here — that was a point-in-time snapshot,
+not a limit, and has been removed to prevent it being read as a
+cap.)
+
+The **7 covenants** are the platform's non-negotiable promises to
+its users. They are product and engineering constraints, not
+marketing copy: a pull request that would require breaking any of
+them is a pull request that does not ship.
+
+1. We will never sell your personal data.
+2. We will never design for addiction.
+3. We will never let advertisers control what you see.
+4. We will never abandon African creators.
+5. We will never choose proprietary technology when open source is
+   adequate.
+6. We will never treat African languages as an afterthought.
+7. We will never abandon our values when growth demands it.
+
+Like the counts above, the covenants are amended only by the
+Founder, never through a routine pull request.
 
 ### 3.4 MXT has no hard cap
 
@@ -247,6 +270,23 @@ Repeated from NA-02 for engineer visibility:
 > **Removed prohibitions (v1.2):** MongoDB and D1 are no longer
 > prohibited. Both are in active use as sanctioned operational
 > layers — see §3.1 for their defined roles and constraints.
+
+### 3.6 The four platform tokens
+
+The platform has **four tokens**, all governed by the Bundu
+Foundation and operated on-platform by Nyuchi Africa:
+
+- **MIT** — the **soulbound, non-transferable identity token**.
+  Issued per verified identity; not tradable.
+- **MXT** — the **MUKOKO Exchange Token**: transferable, elastic
+  supply for commerce. Supply mechanics in §3.4.
+- **NST** and **NHC** — the **Honeycomb network tokens** that power
+  the Honeycomb decentralised storage network.
+
+Token policy is set by the Bundu Foundation's Token Governance
+Policy (NA-01 Article 15). Engineers do not add, rename, or change
+the economic rules of a token through a pull request — these are
+Foundation-governed decisions.
 
 ## 4. Repository Structure
 
@@ -671,7 +711,9 @@ All amendments are logged in the changelog below.
 - ✗ Change to a locked count
 - ✗ Statement of a fixed MXT hard cap anywhere in code, comments,
   or docs
-- ✗ Reference to D1 or CouchDB-as-a-data-store
+- ✗ Treating CouchDB as a data store, or D1 as a source of truth
+  or general-purpose data layer (both are sanctioned only in the
+  scoped roles defined in §3.1)
 - ✗ Critical security vulnerability
 - ✗ New cryptographic primitive without a documented
   post-quantum migration path
@@ -695,6 +737,35 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.6** (22 June 2026) — Amendment: **removed "7 Nyuchi
+  Enterprise products" from the §3.3 locked counts.** The
+  enterprise product line is not capped — the organisation operates
+  well more than seven product lines (confirmed against the live
+  `github.com/nyuchi` repositories) and grows as it builds. The
+  "8th enterprise product" example was removed from the
+  add-nothing-via-PR sentence accordingly; the remaining locked
+  counts (17 mini-apps, 7 data layers, 40 interest categories, 7
+  covenants, 12 manifesto sections, 3 sources of truth) are
+  unchanged. Amended by the Founder under NA-03 §13.
+- **v1.5** (22 June 2026) — Amendment: added §3.6 enumerating the
+  **four Bundu-governed platform tokens** — MIT (soulbound
+  identity), MXT (exchange), and the NST/NHC Honeycomb storage
+  tokens. NST and NHC were previously undocumented. The §2
+  post-quantum key inventory was extended to include the NST/NHC
+  Honeycomb network keys. No change to MXT supply mechanics (§3.4).
+  Amended by the Founder under NA-03 §13.
+- **v1.4** (22 June 2026) — Amendment: enumerated the **7
+  covenants** verbatim in §3.3. The covenants were previously cited
+  only as a locked count with no canonical text in the governance
+  set; this records the authoritative list and frames them as
+  binding product/engineering constraints amendable only by the
+  Founder. Amended by the Founder under NA-03 §13.
+- **v1.3** (22 June 2026) — Errata: corrected the "What Blocks a
+  Merge" quick reference, which still listed "Reference to D1" as a
+  merge blocker, to match §3.1 (D1 is sanctioned for agentic
+  workloads and is blocked only when used as a source of truth or
+  general-purpose data layer). Completes the Quick Reference update
+  begun in v1.2. Amended by the Founder under NA-03 §13.
 - **v1.2** (14 June 2026) — Amendment: §3.1 updated to document
   MongoDB and Cloudflare D1 as sanctioned operational layers with
   defined constraints (MongoDB as hot-tier operational database;
@@ -738,7 +809,7 @@ _18 April 2026_
 
 ---
 
-_Nyuchi Africa Engineering Working Agreement — Version 1.2_
-_Adopted 18 April 2026 · amended 19 April 2026 · amended 14 June 2026_
+_Nyuchi Africa Engineering Working Agreement — Version 1.6_
+_Adopted 18 April 2026 · amended 19 April 2026 · amended 14 June 2026 · amended 22 June 2026_
 _Nyuchi Africa (Private) Limited_
 _"Ndiri nekuti tiri" — I am because we are._

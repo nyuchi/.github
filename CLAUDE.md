@@ -141,8 +141,9 @@ that would change them.
 - **No prohibited dependencies:** no Flutter, no Couchbase.
 - **Post-quantum migration path required** for every new cryptographic
   primitive adopted by the platform.
-- **Locked counts:** 17 Mukoko mini-apps, 7 Nyuchi Enterprise products,
-  7 data layers, 40 interest categories. Do not mutate via PR.
+- **Locked counts:** 17 Mukoko mini-apps, 7 data layers, 40 interest
+  categories. Do not mutate via PR. **Nyuchi Enterprise products are
+  not a locked count** — that line grows; do not treat it as fixed.
 
 ---
 
