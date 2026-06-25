@@ -95,6 +95,8 @@ At **Settings → Actions → General**:
   aquasecurity/trivy-action@*,
   sigstore/cosign-installer@*,
   opentofu/setup-opentofu@*,
+  hashicorp/setup-terraform@*,
+  terraform-linters/setup-tflint@*,
   actions/attest-build-provenance@*
   ```
 
@@ -366,8 +368,10 @@ specific repositories, branches, and environments.
 ### Cloudflare example
 
 ```yaml
+# Resolve the SHA before use:
+# gh api repos/cloudflare/cloudflare-action/git/refs/tags/<tag> --jq '.object.sha'
 - name: Authenticate to Cloudflare via OIDC
-  uses: cloudflare/cloudflare-action@v1   # pin to SHA per NA-03 §7.1.1
+  uses: cloudflare/cloudflare-action@<40-char-sha>  # vX.Y.Z — per NA-03 §7.1.1
   with:
     api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}  # narrow-scope token
 ```
