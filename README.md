@@ -61,6 +61,7 @@ not define its own equivalent file.
 
 | Path                                       | Purpose                                                                                                                                                             | Status |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `GOVERNANCE.md`                            | Navigational index linking to the three governance documents (NA-01, NA-02, NA-03). Entry point for readers arriving at the repo root who want the governance overview. |   ✅   |
 | `ORG_SETTINGS.md`                          | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning). Rulesets in `github-rulesets/`. Audit quarterly. |   ✅   |
 | `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                |   ✅   |
 | `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                          |   ✅   |
@@ -96,6 +97,7 @@ reusable by commit SHA rather than `@main`.
 | Path                                                | Purpose                                                                                                                                                                                      | Status |
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
 | `.github/workflows/reusable-ci-typescript.yml`      | TypeScript CI for non-monorepo projects (pnpm, tsc, Vitest/Jest, ESLint/Biome). Inputs: `node-version-file`, `typecheck-script`, `lint-script`, `test-script`, `build-script`, `skip-build`. |   ✅   |
+| `.github/workflows/reusable-ci-typescript-lib.yml`  | TypeScript library / package CI with path-based change detection and `working-directory` support. For standalone packages and pnpm workspaces that are not Turborepo monorepos. Inputs: `node-version-file`, `skip-build`, `working-directory`. |   ✅   |
 | `.github/workflows/reusable-ci-nextjs-monorepo.yml` | Turborepo + pnpm CI. Inputs: `tasks`, `node-version-file`. Secrets: `TURBO_TOKEN`, `TURBO_TEAM`.                                                                                             |   ✅   |
 | `.github/workflows/reusable-ci-rust-monorepo.yml`   | Cargo workspace CI. Input: `toolchain` (default `stable`).                                                                                                                                   |   ✅   |
 | `.github/workflows/reusable-ci-python-monorepo.yml` | uv workspace CI. Convention-based, no inputs.                                                                                                                                                |   ✅   |
@@ -112,7 +114,9 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-ci-solidity.yml`        | Foundry CI for smart contracts. Jobs: `forge fmt`, `forge build`, `forge test`, `forge coverage` (≥60% line coverage). NA-03 §6.1, §10.4.                                                    |   ✅   |
 | `.github/workflows/reusable-openssf-scorecard.yml`  | OpenSSF Scorecard analysis. Runs supply-chain security checks and uploads SARIF results to the GitHub Security tab. Inputs: `publish-results`.                                               |   ✅   |
 | `.github/workflows/reusable-ci-container.yml`       | Docker / OCI CI. Jobs: Trivy vulnerability scan, multi-platform build + push (linux/amd64 + arm64), cosign keyless signing. Inputs: `image-name`, `push`, `sign`.                            |   ✅   |
+| `.github/workflows/reusable-ci-docker.yml`          | Docker CI gate (CI-only, no push/sign). Jobs: hadolint Dockerfile lint, `docker build`, Trivy CVE scan with SARIF upload. Lighter alternative to `reusable-ci-container.yml` when push is not needed. Inputs: `dockerfile`, `context`, `image-name`, `trivy-severity`. |   ✅   |
 | `.github/workflows/reusable-ci-opentofu.yml`        | OpenTofu / Terraform IaC CI. Jobs: `tofu fmt --check`, `tofu validate`, Trivy IaC scan, `tofu plan` (PR comment). Inputs: `working-directory`, `tofu-version`.                               |   ✅   |
+| `.github/workflows/reusable-ci-terraform.yml`       | Terraform CI (CI-only, no apply or plan). Jobs: `terraform fmt --check`, `terraform validate`, `tflint`. Lighter complement to `reusable-ci-opentofu.yml` for repos using the HashiCorp Terraform CLI. Inputs: `working-directory`, `terraform-version`, `tflint-version`. |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 

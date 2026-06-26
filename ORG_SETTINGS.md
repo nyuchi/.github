@@ -95,6 +95,8 @@ At **Settings → Actions → General**:
   aquasecurity/trivy-action@*,
   sigstore/cosign-installer@*,
   opentofu/setup-opentofu@*,
+  hashicorp/setup-terraform@*,
+  terraform-linters/setup-tflint@*,
   actions/attest-build-provenance@*
   ```
 

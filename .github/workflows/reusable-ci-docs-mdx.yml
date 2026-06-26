@@ -83,4 +83,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Guard against injection via inputs.build-command.
+          # Allow: alphanumeric, space, and safe script characters (._:/-).
+          # Block: shell metacharacters (; & | > < ` $ ( ) { } \).
+          if [[ "$BUILD_COMMAND" =~ [;&|><\`\$\(\)\{\}\\] ]]; then
+            echo "::error::build-command '$BUILD_COMMAND' must not contain shell metacharacters (; & | > < \` \$ () {} \\)."
+            exit 1
+          fi
+          if [[ ! "$BUILD_COMMAND" =~ ^[a-zA-Z0-9_\ \.:/-]+$ ]]; then
+            echo "::error::build-command '$BUILD_COMMAND' must only contain alphanumeric characters, spaces, and [_.:/- ]."
+            exit 1
+          fi
           bash -c "$BUILD_COMMAND"
