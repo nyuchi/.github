@@ -95,7 +95,9 @@ At **Settings → Actions → General**:
   aquasecurity/trivy-action@*,
   sigstore/cosign-installer@*,
   opentofu/setup-opentofu@*,
-  actions/attest-build-provenance@*
+  actions/attest-build-provenance@*,
+  hashicorp/setup-terraform@*,
+  terraform-linters/setup-tflint@*
   ```
 
   To audit drift against what's actually referenced in the

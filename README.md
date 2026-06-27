@@ -113,6 +113,9 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-openssf-scorecard.yml`  | OpenSSF Scorecard analysis. Runs supply-chain security checks and uploads SARIF results to the GitHub Security tab. Inputs: `publish-results`.                                               |   ✅   |
 | `.github/workflows/reusable-ci-container.yml`       | Docker / OCI CI. Jobs: Trivy vulnerability scan, multi-platform build + push (linux/amd64 + arm64), cosign keyless signing. Inputs: `image-name`, `push`, `sign`.                            |   ✅   |
 | `.github/workflows/reusable-ci-opentofu.yml`        | OpenTofu / Terraform IaC CI. Jobs: `tofu fmt --check`, `tofu validate`, Trivy IaC scan, `tofu plan` (PR comment). Inputs: `working-directory`, `tofu-version`.                               |   ✅   |
+| `.github/workflows/reusable-ci-docker.yml`          | Docker / Dockerfile CI (lint + build + scan only; no push). Jobs: `hadolint`, `docker build`, Trivy vulnerability scan, SARIF upload to GitHub Security tab. Inputs: `dockerfile`, `context`, `image-name`, `trivy-severity`, `hadolint-version`. |   ✅   |
+| `.github/workflows/reusable-ci-typescript-lib.yml`  | TypeScript library / package CI for standalone packages and pnpm workspaces (non-monorepo). Jobs: `tsc --noEmit`, `lint`, `test`, `build`. Inputs: `node-version-file`, `skip-build`, `working-directory`. |   ✅   |
+| `.github/workflows/reusable-ci-terraform.yml`       | Terraform (HashiCorp) IaC CI. Jobs: `terraform fmt --check`, `terraform validate`, `tflint`. Inputs: `working-directory`, `terraform-version`, `tflint-version`. Use `reusable-ci-opentofu.yml` for OpenTofu (preferred per NA-03 §6.1). |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 
