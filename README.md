@@ -112,7 +112,10 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-ci-solidity.yml`        | Foundry CI for smart contracts. Jobs: `forge fmt`, `forge build`, `forge test`, `forge coverage` (≥60% line coverage). NA-03 §6.1, §10.4.                                                    |   ✅   |
 | `.github/workflows/reusable-openssf-scorecard.yml`  | OpenSSF Scorecard analysis. Runs supply-chain security checks and uploads SARIF results to the GitHub Security tab. Inputs: `publish-results`.                                               |   ✅   |
 | `.github/workflows/reusable-ci-container.yml`       | Docker / OCI CI. Jobs: Trivy vulnerability scan, multi-platform build + push (linux/amd64 + arm64), cosign keyless signing. Inputs: `image-name`, `push`, `sign`.                            |   ✅   |
+| `.github/workflows/reusable-ci-docker.yml`          | Docker CI gate (PR/push only — no registry push). Jobs: hadolint lint, `docker build`, Trivy image scan + SARIF upload. Inputs: `dockerfile`, `context`, `image-name`, `trivy-severity`.    |   ✅   |
 | `.github/workflows/reusable-ci-opentofu.yml`        | OpenTofu / Terraform IaC CI. Jobs: `tofu fmt --check`, `tofu validate`, Trivy IaC scan, `tofu plan` (PR comment). Inputs: `working-directory`, `tofu-version`.                               |   ✅   |
+| `.github/workflows/reusable-ci-terraform.yml`       | Terraform CI (fmt, init, validate, tflint). No plan or apply. Per NA-03 §6.1 (Cloudflare / Fly.io IaC). Inputs: `working-directory`, `terraform-version`, `tflint-version`.                 |   ✅   |
+| `.github/workflows/reusable-ci-typescript-lib.yml`  | TypeScript library / package CI (pnpm, tsc --noEmit, lint, test, build). For standalone packages and pnpm workspaces that are not Next.js apps. Inputs: `node-version-file`, `skip-build`.   |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 
