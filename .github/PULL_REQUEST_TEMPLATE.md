@@ -91,9 +91,10 @@ Closes #
 - [ ] **Schema.org compliance** — new database tables, columns, or API fields
       map to Schema.org types, or the PR description justifies any deviation.
 - [ ] **Locked counts respected** — no change to the platform's locked counts
-      (17 mini-apps · 7 Enterprise products · 7 data layers · 7 covenants ·
-      40 interest categories · 12 manifesto sections · 3 sources of truth)
+      (17 mini-apps · 7 data layers · 7 covenants · 40 interest categories ·
+      12 manifesto sections · 3 sources of truth)
       without Founder approval documented in the PR description.
+      Note: Nyuchi Enterprise products are **not** a locked count — see NA-03 §3.3.
 - [ ] **Frontier defaults** — for user-facing or infrastructure work:
       offline / local-first behaviour has been considered; any new
       cryptographic primitive has a documented post-quantum migration path;
