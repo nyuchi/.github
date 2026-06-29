@@ -1,3 +1,24 @@
+# DEPRECATED — use reusable-ci-opentofu.yml instead.
+#
+# This workflow is superseded by reusable-ci-opentofu.yml, which adds:
+#   - Trivy IaC security scan with SARIF upload (NA-03 §7.3)
+#   - tofu plan output posted as a PR comment
+#   - First-class support for HCP Terraform / Terraform Cloud backends
+#
+# Migration (drop-in for OpenTofu users):
+#   uses: nyuchi/.github/.github/workflows/reusable-ci-opentofu.yml@main
+#   with:
+#     working-directory: infra/
+#
+# Note: hashicorp/setup-terraform and terraform-linters/setup-tflint are
+# NOT in the org Actions allow-list. Consuming repos that have not yet
+# migrated must add them to their own allow-list or migrate to the OpenTofu
+# reusable, which uses opentofu/setup-opentofu (already in the allow-list).
+#
+# This file is kept for backwards-compatibility only. No new consumers
+# should call it. It will be removed in a future release cycle.
+#
+# ---------------------------------------------------------------------------
 # Reusable workflow: Terraform / OpenTofu CI.
 #
 # Runs format-check, init, validate, and tflint on Terraform code.
@@ -57,7 +78,7 @@ jobs:
     outputs:
       terraform: ${{ steps.filter.outputs.terraform }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
         with:
           fetch-depth: 0
       - id: filter
@@ -76,7 +97,7 @@ jobs:
     if: needs.changes.outputs.terraform == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
         with:
           terraform_version: ${{ inputs.terraform-version }}
@@ -99,7 +120,7 @@ jobs:
     if: needs.changes.outputs.terraform == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
         with:
           terraform_version: ${{ inputs.terraform-version }}
@@ -128,7 +149,7 @@ jobs:
     if: needs.changes.outputs.terraform == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       - uses: terraform-linters/setup-tflint@b480b8fcdaa6f2c577f8e4fa799e89e756bb7c93  # v6.2.2
         with:
           tflint_version: ${{ inputs.tflint-version }}

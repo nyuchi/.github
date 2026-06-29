@@ -95,8 +95,15 @@ At **Settings → Actions → General**:
   aquasecurity/trivy-action@*,
   sigstore/cosign-installer@*,
   opentofu/setup-opentofu@*,
-  actions/attest-build-provenance@*
+  actions/attest-build-provenance@*,
+  hashicorp/setup-terraform@*,
+  terraform-linters/setup-tflint@*
   ```
+
+  Note: `hashicorp/setup-terraform` and `terraform-linters/setup-tflint` are
+  required only by the **deprecated** `reusable-ci-terraform.yml`. Repos that
+  have migrated to `reusable-ci-opentofu.yml` do not need these two entries.
+  They will be removed from this list once the legacy workflow is deleted.
 
   To audit drift against what's actually referenced in the
   reusables:
