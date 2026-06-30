@@ -62,11 +62,12 @@ contexts:
 
 ## Model selection
 
-| Task                                                       | Model                         |
-| ---------------------------------------------------------- | ----------------------------- |
-| Routine edits, bug fixes, refactoring                      | `claude-sonnet-4-6` (default) |
-| Architecture, security review, complex multi-step planning | `claude-opus-4-8`             |
-| Quick lookups, summaries, simple one-liners                | `claude-haiku-4-5-20251001`   |
+| Task                                                                       | Model                         |
+| -------------------------------------------------------------------------- | ----------------------------- |
+| Routine edits, bug fixes, refactoring                                      | `claude-sonnet-4-6` (default) |
+| Architecture, security review, complex multi-step planning                 | `claude-opus-4-8`             |
+| Maximum-depth analysis: novel attack surfaces, cross-repo audit sweeps     | `claude-fable-5`              |
+| Quick lookups, summaries, simple one-liners                                | `claude-haiku-4-5-20251001`   |
 
 Sub-agents inherit the parent model unless there is a specific reason to
 override.
@@ -79,8 +80,8 @@ Honour a repo's declared check commands over these defaults:
 
 | Stack                | Install           | Full check                                                                                                                                                                  |
 | -------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TypeScript / Next.js | `pnpm install`    | `pnpm lint && pnpm typecheck && pnpm test && pnpm build`                                                                                                                    |
-| TypeScript library   | `pnpm install`    | `pnpm typecheck && pnpm lint && pnpm test`                                                                                                                                  |
+| TypeScript / Next.js | `pnpm install`    | `pnpm audit --audit-level=moderate && pnpm lint && pnpm typecheck && pnpm test && pnpm build`                                                                               |
+| TypeScript library   | `pnpm install`    | `pnpm audit --audit-level=moderate && pnpm typecheck && pnpm lint && pnpm test`                                                                                             |
 | Rust                 | (Cargo workspace) | `cargo fmt --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo nextest run --workspace --all-features && cargo test --workspace --doc` |
 | Python (uv)          | `uv sync`         | `uv run ruff check . && uv run ruff format --check . && uv run mypy packages && uv run pytest`                                                                              |
 | Solidity (Foundry)   | `forge install`   | `forge fmt --check && forge build --sizes && forge test -vvv`                                                                                                               |
@@ -141,9 +142,10 @@ that would change them.
 - **No prohibited dependencies:** no Flutter, no Couchbase.
 - **Post-quantum migration path required** for every new cryptographic
   primitive adopted by the platform.
-- **Locked counts:** 17 Mukoko mini-apps, 7 data layers, 40 interest
-  categories. Do not mutate via PR. **Nyuchi Enterprise products are
-  not a locked count** — that line grows; do not treat it as fixed.
+- **Locked counts:** 17 Mukoko mini-apps · 7 data layers · 7 covenants ·
+  40 interest categories · 12 manifesto sections · 3 sources of truth.
+  Do not mutate via PR. **Nyuchi Enterprise products are not a locked
+  count** — that line grows; do not treat it as fixed.
 
 ---
 
