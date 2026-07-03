@@ -45,7 +45,9 @@ contexts:
 ## Branch and PR workflow
 
 - **Branch prefix:** `claude/<short-kebab-description>`, ≤50 characters total.
-- Open all PRs as **draft**. The human promotes to ready-for-review.
+- Open all PRs as **draft**. The human promotes to ready-for-review, unless
+  this is a recurring maintenance routine covered by the auto-merge rules
+  below.
 - Keep diffs under ~400 lines. Stack larger work into reviewable PRs.
 - **DCO sign-off:** `git commit -s`, using the human operator's identity —
   never fabricate a `Signed-off-by:` trailer.
@@ -57,6 +59,39 @@ contexts:
   types: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`,
   `chore`, `revert`, `style`. Subject starts lowercase, imperative verb,
   no trailing period.
+
+### Recurring/scheduled maintenance routines
+
+Applies only to unattended sessions that run on a schedule (cron-style
+"keep the repo up to date" runs), not to human-initiated feature work.
+
+- **Before opening a new PR, check for an existing open one from this same
+  routine** (branch prefix `claude/`, author is this agent). If one exists,
+  push fixes to that branch instead of opening another. Never let more
+  than one open PR from the routine exist at a time — a growing pile of
+  near-duplicate drafts is a bug in the routine, not a sign it's working.
+- **Don't hand-chase third-party GitHub Action version/SHA pins.**
+  `dependabot.yml` already owns that job on a weekly cadence (see the
+  grouped `github-actions` update) and resolves it consistently. Treat
+  Dependabot's PRs as the authoritative source for dependency SHAs, and
+  merge them (see below) rather than re-deriving pins by hand — hand
+  resolution has repeatedly flip-flopped the same action between SHAs
+  because a fast-moving action ships new patches faster than once a day.
+  Only touch an action pin yourself to fix a genuine _internal_
+  inconsistency (the same action pinned to two different SHAs across
+  files in this repo right now), not to chase upstream's latest patch.
+- **Run the repo's own formatters before committing** (`prettier --write`,
+  etc. — see Stack commands below) so the `Lint` check passes on the
+  first push, not the third.
+- **Once required status checks are green and the change is a routine,
+  mechanical fix** (dependency/version alignment, doc drift, lint
+  fixes), mark the PR ready for review and merge it (squash) instead of
+  leaving it as an open draft indefinitely. This repo's branch protection
+  requires 0 approving reviews — green required checks are the actual
+  merge gate here, so leaving a green PR unmerged serves no purpose.
+- If a check fails for a reason that isn't a simple mechanical fix — it
+  looks like a real design or architecture question — leave the PR as a
+  draft, do not merge, and say so explicitly rather than guessing.
 
 ---
 
