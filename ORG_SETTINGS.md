@@ -95,7 +95,9 @@ At **Settings → Actions → General**:
   aquasecurity/trivy-action@*,
   sigstore/cosign-installer@*,
   opentofu/setup-opentofu@*,
-  actions/attest-build-provenance@*
+  actions/attest-build-provenance@*,
+  hashicorp/setup-terraform@*,
+  terraform-linters/setup-tflint@*
   ```
 
   To audit drift against what's actually referenced in the
@@ -265,12 +267,12 @@ tokens.
   in this repo:
 
   - `main-branch-protection.json` — applied to `nyuchi/.github`
-    (2-approver, 5 lint checks).
+    (0-approver pre-scale posture per the table above, 5 lint checks).
   - `release-tag-protection.json` — applied to `nyuchi/.github`
     (protects `v*.*.*` tags).
   - `org-wide-main-protection.json` — applied at the org level to
-    all repos except `sandbox-*` and `archive-*` (1-approver, 5 lint
-    checks).
+    all repos except `sandbox-*` and `archive-*` (0-approver
+    pre-scale posture, 5 lint checks).
 
   Apply or update via:
 
