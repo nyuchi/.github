@@ -88,7 +88,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
 
       - name: Setup OpenTofu
-        uses: opentofu/setup-opentofu@847eaa4afeb791b06daa46e8eafa8b1b68d7cfb4  # v2.0.1
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4  # v2.0.2
         with:
           tofu_version: ${{ inputs.tofu-version }}
 
@@ -132,7 +132,7 @@ jobs:
 
       - name: Upload Trivy IaC SARIF to GitHub Security tab
         if: always()
-        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e  # v4
+        uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9  # v4
         with:
           sarif_file: trivy-iac.sarif
           category: trivy-iac
@@ -152,7 +152,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
 
       - name: Setup OpenTofu
-        uses: opentofu/setup-opentofu@847eaa4afeb791b06daa46e8eafa8b1b68d7cfb4  # v2.0.1
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4  # v2.0.2
         with:
           tofu_version: ${{ inputs.tofu-version }}
           tofu_wrapper: true  # captures stdout/stderr for the plan comment
