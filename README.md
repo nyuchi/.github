@@ -96,6 +96,7 @@ reusable by commit SHA rather than `@main`.
 | Path                                                | Purpose                                                                                                                                                                                      | Status |
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
 | `.github/workflows/reusable-ci-typescript.yml`      | TypeScript CI for non-monorepo projects (pnpm, tsc, Vitest/Jest, ESLint/Biome). Inputs: `node-version-file`, `typecheck-script`, `lint-script`, `test-script`, `build-script`, `skip-build`. |   ✅   |
+| `.github/workflows/reusable-ci-typescript-lib.yml`  | TypeScript library/package CI (non-Next.js). Jobs: `tsc --noEmit`, `lint`, `test`, `build`. Inputs: `node-version-file`, `skip-build`, `working-directory`.                                  |   ✅   |
 | `.github/workflows/reusable-ci-nextjs-monorepo.yml` | Turborepo + pnpm CI. Inputs: `tasks`, `node-version-file`. Secrets: `TURBO_TOKEN`, `TURBO_TEAM`.                                                                                             |   ✅   |
 | `.github/workflows/reusable-ci-rust-monorepo.yml`   | Cargo workspace CI. Input: `toolchain` (default `stable`).                                                                                                                                   |   ✅   |
 | `.github/workflows/reusable-ci-python-monorepo.yml` | uv workspace CI. Convention-based, no inputs.                                                                                                                                                |   ✅   |
@@ -113,6 +114,8 @@ reusable by commit SHA rather than `@main`.
 | `.github/workflows/reusable-openssf-scorecard.yml`  | OpenSSF Scorecard analysis. Runs supply-chain security checks and uploads SARIF results to the GitHub Security tab. Inputs: `publish-results`.                                               |   ✅   |
 | `.github/workflows/reusable-ci-container.yml`       | Docker / OCI CI. Jobs: Trivy vulnerability scan, multi-platform build + push (linux/amd64 + arm64), cosign keyless signing. Inputs: `image-name`, `push`, `sign`.                            |   ✅   |
 | `.github/workflows/reusable-ci-opentofu.yml`        | OpenTofu / Terraform IaC CI. Jobs: `tofu fmt --check`, `tofu validate`, Trivy IaC scan, `tofu plan` (PR comment). Inputs: `working-directory`, `tofu-version`.                               |   ✅   |
+| `.github/workflows/reusable-ci-terraform.yml`       | HashiCorp Terraform CI (fmt, validate, tflint) for repos not using OpenTofu. Inputs: `working-directory`, `terraform-version`, `tflint-version`.                                             |   ✅   |
+| `.github/workflows/reusable-ci-docker.yml`          | Dockerfile CI gate: hadolint, image build, Trivy vulnerability scan (SARIF to Security tab). No registry push. Inputs: `dockerfile`, `context`, `image-name`, `trivy-severity`.              |   ✅   |
 
 Legend: ✅ shipped · ⏳ planned
 
