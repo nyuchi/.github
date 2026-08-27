@@ -6,10 +6,10 @@ economies — in the open.**
 _Ubuntu — I am because we are._
 _Ndiri nekuti tiri._
 
-[services.nyuchi.com](https://services.nyuchi.com) ·
+[services.nyuchi.com](https://nyuchi.com/service) ·
 [mukoko.com](https://mukoko.com) ·
 [nyuchi.com](https://www.nyuchi.com) ·
-[design.nyuchi.com](https://design.nyuchi.com)
+[mzizi.dev](https://mzizi.dev)
 
 [Governance](./governance/) · [Contributing](../CONTRIBUTING.md) ·
 [Security](../SECURITY.md) · [Support](../SUPPORT.md)
