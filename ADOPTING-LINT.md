@@ -111,7 +111,8 @@ pip install yamllint==1.38.0
 # actionlint 1.7.12
 
 actionlint .github/workflows/*.yml
-prettier --check --ignore-path .prettierignore "**/*.{md,mdx,json,jsonc}"
+prettier --check --config .prettierrc --ignore-path .prettierignore \
+  "**/*.{md,mdx,json,jsonc}"
 markdownlint-cli2 "**/*.md" "!**/node_modules/**"
 yamllint -s .
 ```
@@ -137,6 +138,14 @@ Two traps this gate has already been bitten by, both now fixed here:
   action silently enabled `MD060`, which failed in CI and passed
   locally. The reusable now installs a pinned `markdownlint-cli2`
   instead, so the version is a number you can copy.
+- **Prettier resolves a nested `.prettierrc` per file.** A sub-app with
+  its own config that names a plugin — `nyuchi-identity`'s
+  `apps/auth-ui` declares `prettier-plugin-svelte` — killed the entire
+  job, not just that subtree, because the gate installs prettier globally
+  and never runs `npm ci`. The reusable now passes `--config .prettierrc`
+  so only the repo-root config governs the gate. A sub-app keeps its own
+  `.prettierrc` for its own scripts and editors; it just cannot redefine
+  the org gate from a subdirectory. Files under it are still linted.
 - **Prettier 3 reads `.gitignore` as an ignore file.** `mukoko-home`'s
   `.gitignore` contained `claude.md`, which silently exempted the
   tracked `CLAUDE.md` from `prettier --check` - a green gate that never

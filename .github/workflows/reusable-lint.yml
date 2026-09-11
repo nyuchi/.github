@@ -23,8 +23,10 @@
 # Each consuming repo MUST ship .prettierrc, .prettierignore,
 # .yamllint.yaml and .markdownlint.jsonc at its root - copy them
 # verbatim from nyuchi/.github. Prettier is invoked with an explicit
-# --ignore-path .prettierignore, so .prettierignore is the ONLY ignore
-# file that applies; the others auto-discover from the repo root.
+# --config .prettierrc --ignore-path .prettierignore, so those two files
+# at the repo ROOT are the only ones that apply - a nested .prettierrc in
+# a sub-app cannot redefine the org gate, and .gitignore cannot hide a
+# file from it. The other tools auto-discover from the repo root.
 #
 # CROSS-ORG USE: this repo is public, and a public reusable workflow can
 # be called from any repository, including a private one in a different
@@ -281,16 +283,40 @@ jobs:
             echo "No tracked file is shadowed by .gitignore."
           fi
       - name: prettier --check
-        # --ignore-path is passed EXPLICITLY so that .gitignore is not
-        # consulted. Without it Prettier 3 silently skips any tracked file
-        # that .gitignore happens to match, which turns this gate into a
-        # no-op for exactly the files someone tried to hide.
+        # BOTH --config and --ignore-path are passed EXPLICITLY, and for the
+        # same reason: this job must use the ORG's prettier settings, not
+        # whatever it happens to auto-discover.
+        #
+        # --ignore-path, because Prettier 3 also reads .gitignore, and a
+        # tracked file matching a .gitignore pattern was silently skipped -
+        # a no-op gate for exactly the files someone tried to hide.
+        #
+        # --config, because prettier resolves a NESTED .prettierrc per file.
+        # nyuchi-identity's apps/auth-ui is a SvelteKit app whose own
+        # .prettierrc names prettier-plugin-svelte. This job installs
+        # prettier globally and never runs `npm ci`, so that plugin is not
+        # installed, and walking into that directory killed the ENTIRE job -
+        # not just the subtree. Any monorepo with a per-app prettier config
+        # naming a plugin does the same.
+        #
+        # Pinning the root config also means one markdown/JSON dialect per
+        # repo, which is the whole point. An app keeps its own .prettierrc
+        # for its own scripts and editors; it just does not get to redefine
+        # the org gate from a subdirectory.
         env:
           PRETTIER_GLOB: ${{ inputs.prettier-glob }}
         shell: bash
         run: |
           set -euo pipefail
-          prettier --check --ignore-path .prettierignore "$PRETTIER_GLOB"
+          if [ ! -f .prettierrc ]; then
+            echo "::error::.prettierrc is missing from the repo root."
+            echo "Copy it from nyuchi/.github - see ADOPTING-LINT.md step 2."
+            exit 1
+          fi
+          prettier --check \
+            --config .prettierrc \
+            --ignore-path .prettierignore \
+            "$PRETTIER_GLOB"
 
   markdownlint:
     name: markdownlint
