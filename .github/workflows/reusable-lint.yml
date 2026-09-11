@@ -98,6 +98,10 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
       - name: Validate every *.json file
+        # `-type f` is load-bearing: framework routers create DIRECTORIES
+        # whose name ends in .json (e.g. a Next.js App Router segment
+        # `app/.well-known/mcp/server-card.json/route.ts`). Without it
+        # json.load() raises IsADirectoryError and this job can never pass.
         run: |
           set -euo pipefail
           status=0
@@ -106,7 +110,8 @@ jobs:
               echo "::error file=$file::invalid JSON"
               status=1
             fi
-          done < <(find . -name '*.json' -not -path './node_modules/*' -print0)
+          done < <(find . -type f -name '*.json' \
+            -not -path './node_modules/*' -not -path './.git/*' -print0)
           exit "$status"
 
   prettier:
