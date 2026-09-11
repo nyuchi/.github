@@ -83,6 +83,25 @@ Copy these four files from this repository's root into yours, unchanged:
 
 `.editorconfig` is recommended but not required by the gate.
 
+## `.jsonlintignore` (rare, and visible)
+
+`lint / JSON validity` parses every `.json` and `.jsonc` file. If your
+repo contains files that are **not** single JSON documents and should not
+be - NDJSON, gzipped fixtures with a `.json` name, deliberately
+malformed test inputs - list them in a repo-root `.jsonlintignore`,
+gitignore-style. Absent by default; most repos never need one.
+
+It is deliberately hard to hide behind. The file is printed **verbatim**
+in every run, the log always reports `checked N ... skipped M`, and if
+the patterns exclude _every_ JSON file the job fails outright with
+"a gate that inspects nothing cannot fail". That is not a tunable
+threshold - it is the difference between a check and a decoration.
+`nhimbe` shipped a `.prettierignore` containing only `*` for months, and
+its `lint / prettier` passed every time without opening a file.
+
+Use it for fixtures you do not own. Do not use it to silence a file you
+could fix.
+
 ## The five contexts
 
 The job must be named `lint` and must _call_ the reusable workflow. A

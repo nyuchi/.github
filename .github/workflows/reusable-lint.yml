@@ -136,7 +136,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'VALIDATE_JSON'
-          import json, os, sys
+          import json, os, re, sys
 
           # Filenames that are JSONC by specification, not by accident.
           JSONC_NAMES = {"devcontainer.json", ".eslintrc.json"}
@@ -209,8 +209,81 @@ jobs:
               # `{ "a": true, /* note */ }`.
               return scan(scan(text, drop_comments), drop_trailing_commas)
 
+          # ---- .jsonlintignore -------------------------------------------
+          # Every other check in this gate has an ignore mechanism: actionlint
+          # takes paths, prettier reads .prettierignore, markdownlint takes
+          # globs, yamllint has its own `ignore:`. JSON validity had none, so a
+          # repo with legitimately non-conformant JSON had nowhere to say so
+          # except by editing the caller - which breaks the one rule that the
+          # caller is byte-identical everywhere.
+          #
+          # siafudb-kuzu is the case: a vendored KuzuDB fork whose test corpus
+          # holds Delta Lake `_delta_log/*.json` transaction logs, which are
+          # newline-delimited BY SPECIFICATION, gzipped `.gz.metadata.json`
+          # Iceberg fixtures, and a file named `newline-delimited.json` that
+          # exists to test an NDJSON reader. For several of those, being
+          # invalid as a single JSON document IS the fixture's purpose.
+          #
+          # Absent by default, so the other 74 repos are unaffected. The file
+          # is printed verbatim and a skip count reported on EVERY run, so an
+          # over-broad pattern is visible in the log rather than hidden - which
+          # is exactly how a `.prettierignore` containing only `*` survived in
+          # nhimbe and made that gate incapable of failing.
+          def load_ignore(path=".jsonlintignore"):
+              if not os.path.isfile(path):
+                  print("No .jsonlintignore; every JSON file is checked.")
+                  return []
+              raw = open(path, encoding="utf-8").read()
+              print("::group::.jsonlintignore (verbatim)")
+              print(raw.rstrip("\n"))
+              print("::endgroup::")
+              pats = []
+              for line in raw.splitlines():
+                  line = line.strip()
+                  if line and not line.startswith("#"):
+                      pats.append(line)
+              return pats
+
+          def pat_to_re(pat):
+              neg = pat.startswith("!")
+              if neg:
+                  pat = pat[1:]
+              anchored = pat.startswith("/")
+              pat = pat.lstrip("/")
+              dironly = pat.endswith("/")
+              pat = pat.rstrip("/")
+              out, i, n = [], 0, len(pat)
+              while i < n:
+                  c = pat[i]
+                  if pat.startswith("**/", i):
+                      out.append("(?:.*/)?"); i += 3
+                  elif pat.startswith("**", i):
+                      out.append(".*"); i += 2
+                  elif c == "*":
+                      out.append("[^/]*"); i += 1
+                  elif c == "?":
+                      out.append("[^/]"); i += 1
+                  else:
+                      out.append(re.escape(c)); i += 1
+              body = "".join(out)
+              prefix = "" if anchored else "(?:.*/)?"
+              tail = "/.*" if dironly else "(?:/.*)?"
+              return neg, re.compile("^" + prefix + body + tail + "$")
+
+          def make_matcher(pats):
+              rules = [pat_to_re(p) for p in pats]
+              def ignored(rel):
+                  hit = False
+                  for neg, rx in rules:
+                      if rx.match(rel):
+                          hit = not neg
+                  return hit
+              return ignored
+
+          ignored = make_matcher(load_ignore())
+
           status = 0
-          checked = jsonc_count = 0
+          checked = jsonc_count = skipped = 0
           for root, dirs, files in os.walk("."):
               dirs[:] = [d for d in dirs if d not in (".git", "node_modules")]
               for name in sorted(files):
@@ -221,8 +294,11 @@ jobs:
                   # files, but a symlink to one lands here - so still check.
                   if not os.path.isfile(path):
                       continue
+                  rel = os.path.relpath(path, ".").replace(os.sep, "/")
+                  if ignored(rel):
+                      skipped += 1
+                      continue
                   checked += 1
-                  rel = os.path.relpath(path, ".")
                   try:
                       raw = open(path, encoding="utf-8-sig").read()
                   except UnicodeDecodeError as exc:
@@ -238,8 +314,22 @@ jobs:
                       print("::error file=%s,line=%d::invalid %s: %s"
                             % (rel, exc.lineno, "JSONC" if jsonc else "JSON", exc.msg))
                       status = 1
-          print("Checked %d JSON files (%d parsed as JSONC by specification)."
-                % (checked, jsonc_count))
+          print("Checked %d JSON files (%d parsed as JSONC by specification); "
+                "skipped %d via .jsonlintignore." % (checked, jsonc_count, skipped))
+
+          # A .jsonlintignore that leaves NOTHING to check has turned this job
+          # into a no-op that reports success - the exact shape of nhimbe's
+          # `.prettierignore` containing only `*`, which made that gate
+          # incapable of failing for months. This is not a tunable threshold;
+          # there is nothing to tune. Either the check checks something, or it
+          # is not a check. A repo with no JSON files at all is fine, because
+          # then nothing was skipped either.
+          if checked == 0 and skipped > 0:
+              print("::error::.jsonlintignore excluded every JSON file in the "
+                    "repository (%d skipped, 0 checked). A gate that inspects "
+                    "nothing cannot fail. Narrow the patterns." % skipped)
+              status = 1
+
           sys.exit(status)
           VALIDATE_JSON
   prettier:
