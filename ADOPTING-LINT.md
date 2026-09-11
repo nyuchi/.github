@@ -164,6 +164,18 @@ fine, so rewrite an affected comment as a run of single-line
 `{/* ... */}` comments: same text, valid MDX, prettier leaves it alone.
 Always diff an `.mdx` file after `--write`.
 
+**A file with a `.md` extension that is not Markdown will be silently
+corrupted.** `mzizi-registry` ships
+`components/registry/n8-assurance/accessibility-audit.md`, which is
+actually SQL - it is installed into consumers as documentation. Its
+`/* ... */` banner parses as Markdown emphasis, so MD037 fires and
+`prettier --write` rewrites `/*` to `/_` and `*/` to `_/`. The autofix
+does not fail the gate: it rewrites a shipped artifact into invalid SQL
+and then passes green. The fix is to wrap the body in a fenced code
+block, which leaves the content byte-for-byte unchanged, satisfies both
+tools, and makes the installed document render as code. Before running
+`--fix` over a repo, look at what its `.md` files actually contain.
+
 **A `.md` file containing MDX comments cannot satisfy both toolchains,
 and `--fix` will corrupt it.** Mintlify starters leave `{/* ... */}` in a
 file named `AGENTS.md`. Mintlify parses that file as MDX, where an HTML
