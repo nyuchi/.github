@@ -1,0 +1,6 @@
+{
+  "name": "Org lint gate",
+  "description": "The five lint contexts required by org-wide-main-protection. Calls nyuchi/.github reusable-lint.yml. Drop in unchanged.",
+  "iconName": "octicon check-circle",
+  "categories": ["Code Quality"]
+}

@@ -20,10 +20,20 @@
 # `markdownlint-cli2 --fix`, manual yamllint fix) and pushes
 # the corrected commit.
 #
-# Each consuming repo should ship its own .prettierrc,
-# .prettierignore, .yamllint.yaml, and .markdownlint.jsonc -
-# copy them from nyuchi/.github as a starting point.
-# These tools all auto-discover their config from the repo root.
+# Each consuming repo MUST ship .prettierrc, .prettierignore,
+# .yamllint.yaml and .markdownlint.jsonc at its root - copy them
+# verbatim from nyuchi/.github. Prettier is invoked with an explicit
+# --ignore-path .prettierignore, so .prettierignore is the ONLY ignore
+# file that applies; the others auto-discover from the repo root.
+#
+# CROSS-ORG USE: this repo is public, and a public reusable workflow can
+# be called from any repository, including a private one in a different
+# org. That is proven in production - private bundu-labs/marketing calls
+# this file and publishes all five contexts green. So there is exactly
+# ONE copy of the org lint policy, at nyuchi/.github, for all five orgs
+# (nyuchi, mzizi-dev, shamwari-ai, mukoko-dev, bundu-labs). Do not fork
+# it into the other .github repos - divergent copies are the problem
+# this file exists to end.
 #
 # The caller must grant `contents: read` (the workflow default).
 
@@ -56,6 +66,15 @@ on:
       yamllint-version:
         type: string
         default: "1.38.0"
+      markdownlint-version:
+        description: >-
+          markdownlint-cli2 version. PINNED ON PURPOSE: the
+          markdownlint-cli2-action floats its bundled ruleset, so a newer
+          rule (MD060) fired in CI while local installs stayed quiet.
+          Pin the same version in your repo's devDependencies so
+          `npx markdownlint-cli2` locally and CI agree exactly.
+        type: string
+        default: "0.23.2"
 
 permissions:
   contents: read
@@ -134,22 +153,79 @@ jobs:
             exit 1
           fi
           npm install --global "prettier@$PRETTIER_VERSION"
-      - name: prettier --check
+      - name: Audit .gitignore for shadowed lint targets
+        # Prettier 3 reads BOTH .gitignore and .prettierignore by default.
+        # mukoko-home's .gitignore contained `claude.md`, which silently
+        # exempted the tracked CLAUDE.md from `prettier --check` - the job
+        # went green without ever looking at the file. We defeat that below
+        # by passing --ignore-path explicitly; this step makes the
+        # near-miss visible instead of leaving it as folklore.
         env:
           PRETTIER_GLOB: ${{ inputs.prettier-glob }}
         shell: bash
         run: |
           set -euo pipefail
-          prettier --check "$PRETTIER_GLOB"
+          shadowed=$(git ls-files | git check-ignore --no-index --stdin || true)
+          if [ -n "$shadowed" ]; then
+            echo "::notice::These tracked files match a .gitignore pattern."
+            echo "They ARE linted, because --ignore-path below is explicit."
+            printf '%s\n' "$shadowed"
+          else
+            echo "No tracked file is shadowed by .gitignore."
+          fi
+      - name: prettier --check
+        # --ignore-path is passed EXPLICITLY so that .gitignore is not
+        # consulted. Without it Prettier 3 silently skips any tracked file
+        # that .gitignore happens to match, which turns this gate into a
+        # no-op for exactly the files someone tried to hide.
+        env:
+          PRETTIER_GLOB: ${{ inputs.prettier-glob }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          prettier --check --ignore-path .prettierignore "$PRETTIER_GLOB"
 
   markdownlint:
     name: markdownlint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
-      - uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25  # v24.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
-          globs: ${{ inputs.markdownlint-globs }}
+          node-version: '24'
+      - name: Install markdownlint-cli2
+        # Deliberately NOT markdownlint-cli2-action. The action pins its
+        # own bundled markdownlint-cli2, so bumping the action changed the
+        # active ruleset underneath us and MD060 started failing in CI
+        # while `npx markdownlint-cli2` locally still passed. Installing an
+        # explicit version makes "what CI runs" a number a developer can
+        # copy into their own devDependencies.
+        env:
+          MARKDOWNLINT_VERSION: ${{ inputs.markdownlint-version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$MARKDOWNLINT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]]; then
+            echo "::error::Invalid markdownlint-version '$MARKDOWNLINT_VERSION' - expected semver."
+            exit 1
+          fi
+          npm install --global "markdownlint-cli2@$MARKDOWNLINT_VERSION"
+          echo "markdownlint-cli2 $(markdownlint-cli2 --version 2>&1 | head -n 1)"
+      - name: markdownlint-cli2
+        env:
+          MARKDOWNLINT_GLOBS: ${{ inputs.markdownlint-globs }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          globs=()
+          while IFS= read -r glob; do
+            [ -n "$glob" ] && globs+=("$glob")
+          done <<< "$MARKDOWNLINT_GLOBS"
+          if [ ${#globs[@]} -eq 0 ]; then
+            echo "::error::markdownlint-globs resolved to nothing."
+            exit 1
+          fi
+          markdownlint-cli2 "${globs[@]}"
 
   yamllint:
     name: yamllint
