@@ -94,6 +94,21 @@ markdownlint-cli2 "**/*.md" "!**/node_modules/**"
 yamllint -s .
 ```
 
+`lint / JSON validity` parses `.json` with **two** parsers, chosen by
+filename. Ordinary `.json` files are parsed strictly. Files that are JSONC
+_by specification_ are parsed as JSONC, because they are allowed to carry
+comments and trailing commas and a strict parser is simply the wrong tool
+for them:
+
+- `tsconfig*.json`, `jsconfig*.json`
+- `.vscode/*.json`
+- `devcontainer.json`, `.eslintrc.json`
+- anything named `*.jsonc`
+
+A genuine syntax error in one of those still fails the job - nothing is
+exempted. Do **not** delete a comment from a `tsconfig.json` to make this
+check pass; that was never the bug.
+
 Two traps this gate has already been bitten by, both now fixed here:
 
 - **`markdownlint-cli2-action` floats its bundled ruleset.** Bumping the

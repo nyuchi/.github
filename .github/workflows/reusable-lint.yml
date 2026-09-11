@@ -116,23 +116,130 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
-      - name: Validate every *.json file
+      - name: Validate every JSON and JSONC file
+        # Two parsers, chosen by filename, because ".json" is two formats.
+        #
         # `-type f` is load-bearing: framework routers create DIRECTORIES
         # whose name ends in .json (e.g. a Next.js App Router segment
         # `app/.well-known/mcp/server-card.json/route.ts`). Without it
         # json.load() raises IsADirectoryError and this job can never pass.
+        #
+        # Some filenames ending in .json are JSONC *by specification* -
+        # TypeScript documents and supports `//` comments in tsconfig.json,
+        # as do VS Code's settings files and devcontainer.json. Parsing
+        # those with strict JSON is simply the wrong parser, and "fixing"
+        # it by deleting the comments destroys real information. They are
+        # parsed as JSONC instead. A genuine syntax error in a tsconfig
+        # still fails - nothing is exempted, the gate got wider.
         run: |
           set -euo pipefail
-          status=0
-          while IFS= read -r -d '' file; do
-            if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$file"; then
-              echo "::error file=$file::invalid JSON"
-              status=1
-            fi
-          done < <(find . -type f -name '*.json' \
-            -not -path './node_modules/*' -not -path './.git/*' -print0)
-          exit "$status"
+          python3 - <<'VALIDATE_JSON'
+          import json, os, sys
 
+          # Filenames that are JSONC by specification, not by accident.
+          JSONC_NAMES = {"devcontainer.json", ".eslintrc.json"}
+          JSONC_PREFIXES = ("tsconfig", "jsconfig")
+
+          def is_jsonc(path):
+              base = os.path.basename(path)
+              if base.endswith(".jsonc") or base in JSONC_NAMES:
+                  return True
+              if base.endswith(".json") and base.startswith(JSONC_PREFIXES):
+                  return True
+              parts = path.replace(os.sep, "/").split("/")
+              return ".vscode" in parts and base.endswith(".json")
+
+          def scan(text, handler):
+              """Walk text, calling handler outside string literals only."""
+              out = []
+              i, n = 0, len(text)
+              in_str = esc = False
+              while i < n:
+                  c = text[i]
+                  if in_str:
+                      out.append(c)
+                      if esc:
+                          esc = False
+                      elif c == "\\":
+                          esc = True
+                      elif c == '"':
+                          in_str = False
+                      i += 1
+                      continue
+                  if c == '"':
+                      in_str = True
+                      out.append(c)
+                      i += 1
+                      continue
+                  i = handler(text, i, out, n)
+              return "".join(out)
+
+          def drop_comments(text, i, out, n):
+              c = text[i]
+              if c == "/" and i + 1 < n and text[i + 1] == "/":
+                  while i < n and text[i] not in "\r\n":
+                      i += 1
+                  return i
+              if c == "/" and i + 1 < n and text[i + 1] == "*":
+                  i += 2
+                  while i + 1 < n and not (text[i] == "*" and text[i + 1] == "/"):
+                      if text[i] in "\r\n":
+                          out.append(text[i])  # keep line numbers honest
+                      i += 1
+                  return i + 2
+              out.append(c)
+              return i + 1
+
+          def drop_trailing_commas(text, i, out, n):
+              if text[i] == ",":
+                  j = i + 1
+                  while j < n and text[j] in " \t\r\n":
+                      j += 1
+                  if j < n and text[j] in "}]":
+                      out.append(" ")
+                      return i + 1
+              out.append(text[i])
+              return i + 1
+
+          def parse_jsonc(text):
+              # Comments MUST go first: a trailing comma may be separated
+              # from its closing brace by a comment, as in
+              # `{ "a": true, /* note */ }`.
+              return scan(scan(text, drop_comments), drop_trailing_commas)
+
+          status = 0
+          checked = jsonc_count = 0
+          for root, dirs, files in os.walk("."):
+              dirs[:] = [d for d in dirs if d not in (".git", "node_modules")]
+              for name in sorted(files):
+                  if not (name.endswith(".json") or name.endswith(".jsonc")):
+                      continue
+                  path = os.path.join(root, name)
+                  # os.walk lists a DIRECTORY named *.json under dirs, not
+                  # files, but a symlink to one lands here - so still check.
+                  if not os.path.isfile(path):
+                      continue
+                  checked += 1
+                  rel = os.path.relpath(path, ".")
+                  try:
+                      raw = open(path, encoding="utf-8-sig").read()
+                  except UnicodeDecodeError as exc:
+                      print("::error file=%s::not valid UTF-8: %s" % (rel, exc))
+                      status = 1
+                      continue
+                  jsonc = is_jsonc(path)
+                  if jsonc:
+                      jsonc_count += 1
+                  try:
+                      json.loads(parse_jsonc(raw) if jsonc else raw)
+                  except json.JSONDecodeError as exc:
+                      print("::error file=%s,line=%d::invalid %s: %s"
+                            % (rel, exc.lineno, "JSONC" if jsonc else "JSON", exc.msg))
+                      status = 1
+          print("Checked %d JSON files (%d parsed as JSONC by specification)."
+                % (checked, jsonc_count))
+          sys.exit(status)
+          VALIDATE_JSON
   prettier:
     name: prettier
     runs-on: ubuntu-latest
