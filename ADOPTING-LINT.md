@@ -31,6 +31,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  merge_group:
   workflow_dispatch:
 
 concurrency:
@@ -44,6 +45,20 @@ jobs:
   lint:
     uses: nyuchi/.github/.github/workflows/reusable-lint.yml@main
 ```
+
+Two things in that trigger list are load-bearing and must not be edited
+per repo:
+
+- **`pull_request:` carries no `branches:` filter.** That filter matches
+  the PR's _base_ branch, so adding one silently stops the gate emitting
+  in any repo whose default branch is not `main` - `shamwari-core`,
+  `shamwari-gateway`, `shamwari-web` (`scaffold`) and `siafudb-kuzu`
+  (`master`).
+- **`merge_group:`** is what makes the gate work in a repo whose ruleset
+  uses a merge queue. Required checks must report on the
+  `gh-readonly-queue/**` ref and only `merge_group` produces that;
+  without it a queued PR stalls for the full `check_response_timeout`
+  and nothing can land. Harmless where there is no queue.
 
 It is also offered in the GitHub UI under **Actions -> New workflow ->
 Org lint gate**, from `workflow-templates/lint.yml`.
