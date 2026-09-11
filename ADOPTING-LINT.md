@@ -30,7 +30,7 @@ name: Lint
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, master, scaffold]
   merge_group:
   workflow_dispatch:
 
@@ -54,6 +54,13 @@ per repo:
   in any repo whose default branch is not `main` - `shamwari-core`,
   `shamwari-gateway`, `shamwari-web` (`scaffold`) and `siafudb-kuzu`
   (`master`).
+- **The `push:` branch list names every default branch in the estate.**
+  68 repos use `main`, `siafudb-kuzu` uses `master`, and
+  `shamwari-core`/`-gateway`/`-web` use `scaffold`. Drop a name and
+  merging to that repo's default branch fires nothing, so the contexts
+  never land on the default-branch head. It is a list rather than a bare
+  `push:` because unfiltered push would run the gate on every
+  feature-branch push in 74 repos and bill it twice per PR.
 - **`merge_group:`** is what makes the gate work in a repo whose ruleset
   uses a merge queue. Required checks must report on the
   `gh-readonly-queue/**` ref and only `merge_group` produces that;
@@ -147,6 +154,18 @@ formatter actively breaks the file. Single-line comments round-trip
 fine, so rewrite an affected comment as a run of single-line
 `{/* ... */}` comments: same text, valid MDX, prettier leaves it alone.
 Always diff an `.mdx` file after `--write`.
+
+**A `.md` file containing MDX comments cannot satisfy both toolchains,
+and `--fix` will corrupt it.** Mintlify starters leave `{/* ... */}` in a
+file named `AGENTS.md`. Mintlify parses that file as MDX, where an HTML
+comment is a parse error; markdownlint and Prettier read the same file as
+Markdown, where the asterisks are emphasis - MD037 fires and Prettier
+rewrites the marker to `_`. No spelling satisfies both. Worse,
+`markdownlint-cli2 --fix` pairs the asterisks across adjacent comment
+lines and emits `{/*Add product-specific terms and preferred usage _/}`,
+which is neither valid MDX nor what anyone wrote. Decide which toolchain
+owns the file: add it to `.mintignore` and use ordinary HTML comments, or
+rename it to `.mdx`.
 
 **`markdownlint-cli2 --fix` will not fix MD036.** Emphasis used as a
 heading needs a judgement call, not a rewrite. A bold line introducing a
