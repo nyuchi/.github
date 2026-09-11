@@ -138,6 +138,23 @@ Two traps this gate has already been bitten by, both now fixed here:
   file that applies, and it prints any tracked file `.gitignore` would
   have hidden.
 
+## Fixing violations: two things that will bite you
+
+**Never run `prettier --write` blind on `.mdx`.** Prettier 3.9.4's mdx
+parser rewrites a multi-line `{/* ... */}` comment into `{/_ ... _/}` -
+it reads the `*` as markdown emphasis and emits invalid MDX. The
+formatter actively breaks the file. Single-line comments round-trip
+fine, so rewrite an affected comment as a run of single-line
+`{/* ... */}` comments: same text, valid MDX, prettier leaves it alone.
+Always diff an `.mdx` file after `--write`.
+
+**`markdownlint-cli2 --fix` will not fix MD036.** Emphasis used as a
+heading needs a judgement call, not a rewrite. A bold line introducing a
+subsection should become a real heading one level below its parent; a
+sign-off or attribution in italics is not a heading at all and should
+become a blockquote. Converting the second kind into a heading produces
+a correct linter and a wrong document.
+
 ## Language-specific CI
 
 This gate is the shared baseline that every repository can satisfy.
