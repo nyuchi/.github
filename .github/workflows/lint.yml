@@ -25,12 +25,5 @@ permissions:
   contents: read
 
 jobs:
-  bogus:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          nonexistent-input: yes
-      - run: echo ${{ github.event.issue.title }}
   lint:
     uses: ./.github/workflows/reusable-lint.yml
