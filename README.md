@@ -59,14 +59,15 @@ not define its own equivalent file.
 
 ### Operational docs
 
-| Path                                       | Purpose                                                                                                                                                             | Status |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
-| `ORG_SETTINGS.md`                          | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning). Rulesets in `github-rulesets/`. Audit quarterly. |   ✅   |
-| `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                |   ✅   |
-| `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                          |   ✅   |
-| `profile/governance/NA-03_ENGINEERING.md`  | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.              |   ✅   |
-| `.editorconfig`                            | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                   |   ✅   |
-| `.github/FUNDING.yml`                      | GitHub Sponsors / funding button configuration.                                                                                                                     |   ✅   |
+| Path                                       | Purpose                                                                                                                                                               | Status |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `ORG_SETTINGS.md`                          | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning). Rulesets in `github-rulesets/`. Audit quarterly.   |   ✅   |
+| `README-STANDARD.md`                       | The estate-wide README standard — the shape every repo's README takes, the branding facts to state, and the lint gates markdown must pass. Applies to all seven orgs. |   ✅   |
+| `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                  |   ✅   |
+| `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                            |   ✅   |
+| `profile/governance/NA-03_ENGINEERING.md`  | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.                |   ✅   |
+| `.editorconfig`                            | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                     |   ✅   |
+| `.github/FUNDING.yml`                      | GitHub Sponsors / funding button configuration.                                                                                                                       |   ✅   |
 
 ### Reusable workflows
 
