@@ -14,7 +14,9 @@ configuration must be compared against live settings **once per quarter**.
       **Settings → Actions → General → Allowed actions**. Run the audit
       grep from §Actions permissions to catch new entries.
 - [ ] **Rulesets** — compare JSON in `github-rulesets/` against live
-      **Settings → Rules → Rulesets**. Note any approved drift.
+      **Settings → Rules → Rulesets** in `nyuchi`, `mukoko-dev` and
+      `mzizi-dev`. Check no repo has a branch ruleset other than `repo-ci`,
+      or classic protection on its default branch. Note any approved drift.
 - [ ] **SHA-pinned actions** — confirm every action SHA comment version
       matches the pinned commit; check for any tag-ref (`@v4`) that slipped past
       review, per NA-03 §7.1.1.
@@ -24,7 +26,7 @@ configuration must be compared against live settings **once per quarter**.
       **Settings → Verified & approved domains**.
 - [ ] **Reviewer count** — has the NA-01 Article 10.1 trigger (second engineer
       with merge rights) been met? If yes, update `required_approving_review_count`
-      to 1 in `github-rulesets/` and re-apply via the `gh api` commands in
+      to 1 in `github-rulesets/` and re-apply via the `gh api` command in
       §Enforcement and audit.
 - [ ] **SLSA / OpenSSF posture** — review §Artifact provenance and supply-chain
       security. Confirm GitHub Artifact Attestations are being generated on releases

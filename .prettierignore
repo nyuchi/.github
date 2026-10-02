@@ -23,6 +23,12 @@ CODEOWNERS.example
 # these files.
 profile/governance/
 
+# The canonical v5 documents (Nyuchi Architecture, Mukoko Manifesto, Bundu
+# Order) are the Founder's text, committed byte-for-byte as he wrote them.
+# Reformatting them would change his document, so they are exempt here and
+# from markdownlint (see .markdownlint-cli2.jsonc).
+profile/canonical/
+
 # Lockfiles, generated output
 *-lock.json
 *-lock.yaml
