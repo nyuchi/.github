@@ -81,6 +81,20 @@ on:
           `npx markdownlint-cli2` locally and CI agree exactly.
         type: string
         default: "0.23.2"
+      prettier:
+        description: >-
+          Run the prettier job. Set false only in an org that has moved to
+          reusable-vite-plus.yml AND removed `lint / prettier` from its
+          required checks (MIGRATION in that file). A skipped job reports as
+          skipped, which satisfies nothing new.
+        type: boolean
+        default: true
+      json-validity:
+        description: >-
+          Run the JSON validity job. Same rule as `prettier`: false only
+          after `vite-plus / fmt` is required in the org's ruleset.
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -128,6 +142,7 @@ jobs:
 
   jsonlint:
     name: JSON validity
+    if: ${{ inputs.json-validity }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
@@ -347,6 +362,7 @@ jobs:
           VALIDATE_JSON
   prettier:
     name: prettier
+    if: ${{ inputs.prettier }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
