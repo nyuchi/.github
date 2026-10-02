@@ -130,14 +130,14 @@ Use these when the task calls for them; don't reach for them
 unnecessarily. Prefer dedicated MCP tools over shell commands when both
 would work:
 
-| Server                      | Use for                                                |
-| --------------------------- | ------------------------------------------------------ |
-| `mcp__github__*`            | PRs, issues, code search, CI status, branch management |
-| `mcp__Nyuchi-Design-MCP__*` | Design system, components, design tokens               |
-| `mcp__Supabase__*`          | Database schema, migrations, edge functions            |
-| `mcp__Vercel__*`            | Deployment inspection, runtime logs                    |
-| `mcp__Linear__*`            | Issue tracking, sprint planning, project management    |
-| `mcp__Context7__*`          | Live library and framework documentation               |
+| Server                | Use for                                                |
+| --------------------- | ------------------------------------------------------ |
+| `mcp__github__*`      | PRs, issues, code search, CI status, branch management |
+| Mzizi MCP (`mzizi_*`) | Design system, components, design tokens, doctrine     |
+| `mcp__Supabase__*`    | Database schema, migrations, edge functions            |
+| `mcp__Vercel__*`      | Deployment inspection, runtime logs                    |
+| `mcp__Linear__*`      | Issue tracking, sprint planning, project management    |
+| `mcp__Context7__*`    | Live library and framework documentation               |
 
 ---
 
@@ -165,20 +165,46 @@ Never add an action with a floating tag (`@v4`, `@main`, `@latest`).
 These are not PR-level decisions. Escalate to the human operator for anything
 that would change them.
 
-- **Three sources of truth:** Supabase (relational), ScyllaDB + Cassandra
-  (non-relational), Web3 Pod (sovereign). Sanctioned operational layers
-  (MongoDB, Cloudflare D1) are documented in NA-03 §3.1. No fourth source of
-  truth without Founder approval.
+The canonical source is
+[The Nyuchi Architecture v5.0.0](./profile/canonical/NYUCHI_ARCHITECTURE.md).
+It wins over every other document, including the NA governance documents
+(see [`GOVERNANCE.md`](./GOVERNANCE.md)). Measured reality wins over it: if
+the running system disagrees, the document is wrong — say so, don't "fix"
+the system to match.
+
+- **Status vocabulary:** every component is **Live**, **Building**,
+  **Designed** or **Goal**. Don't describe a Designed or Goal component as
+  if it runs.
+- **Three sources of truth:** Supabase PostgreSQL 17 (relational; four
+  projects: `nyuchi_relational_db` primary, `nyuchi_pay_db`,
+  `shamwari_ai_db`, `mzizi_db`), MongoDB Atlas (non-relational), the
+  Honeycomb Pod (personal sovereign; Goal). No fourth source of truth
+  without Founder approval. The removed Supabase projects (including the
+  former primary `tdcpuzqyoodrdsxldgsh`) must never be referenced.
+- **Only the Nyuchi API connects to a database.** `api.nyuchi.com/v1`
+  ([`nyuchi/api-gateway`](https://github.com/nyuchi/api-gateway)) is the
+  internal API for every Bundu ecosystem app. First-party apps call it with
+  their own client ID and secret. `api.mukoko.com`
+  ([`mukoko-dev/mukoko-api`](https://github.com/mukoko-dev/mukoko-api),
+  Cloudflare Workers) is the public consumer API, organised by namespace
+  (`/v1/weather`, `/v1/news`, …), and has no database access. Don't add a
+  database client to any other service.
+- **Identity is WorkOS AuthKit**, issuer `accounts.mukoko.com`. Stytch is
+  retired; `identity.nyuchi.com` has no DNS.
 - **Schema.org compliance:** every table, column, and API field maps to a
   Schema.org type or justifies the deviation in the PR description.
 - **No fixed MXT supply cap.** MXT has elastic supply governed by the
-  EmissionController smart contract. Correct any fixed-cap reference on sight.
-- **No prohibited dependencies:** no Flutter, no Couchbase.
+  EmissionController. Correct any fixed-cap reference on sight. The token
+  chain is deferred with no timeline; don't assume Polygon.
+- **No prohibited dependencies:** Flutter, Couchbase / Couchbase Capella,
+  Databricks, Cloudflare D1, Capacitor. CouchDB is retired from the
+  architecture.
 - **Post-quantum migration path required** for every new cryptographic
   primitive adopted by the platform.
-- **Locked counts:** 17 Mukoko mini-apps, 7 data layers, 40 interest
-  categories. Do not mutate via PR. **Nyuchi Enterprise products are
-  not a locked count** — that line grows; do not treat it as fixed.
+- **Locked counts** (the Bundu Order's register): 17 Mukoko mini-apps,
+  7 data layers, 3 sources of truth, 4 tokens, 40 interest categories,
+  among others. Do not mutate via PR. **Nyuchi products are not a locked
+  count** — the set is open; do not treat it as fixed.
 
 ---
 
@@ -218,9 +244,12 @@ Stop and ask the human before proceeding when:
   equally to agent-authored PRs.
 - [`SECURITY.md`](./SECURITY.md) — vulnerability reporting workflow; also
   covers prompt-injection escalation.
+- [`profile/canonical/NYUCHI_ARCHITECTURE.md`](./profile/canonical/NYUCHI_ARCHITECTURE.md) —
+  the canonical technical architecture (v5.0.0).
 - [`profile/governance/NA-03_ENGINEERING.md`](./profile/governance/NA-03_ENGINEERING.md) —
   engineering working agreement: frontier defaults, locked commitments,
-  merge-blocker reference.
+  merge-blocker reference. Predates v5; see `GOVERNANCE.md` for where the
+  Architecture overrides it.
 
 ---
 

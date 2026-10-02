@@ -16,8 +16,9 @@
 #   - Tests under test/ (default Foundry layout).
 #   - forge, cast, anvil available after installing the toolchain.
 #
-# Per NA-03 §6.1: Solidity, targeting Polygon, with Foundry for
-# development and testing.
+# Per NA-03 §6.1: Solidity, with Foundry for development and testing.
+# The chain is deferred with no timeline (Nyuchi Architecture v5, §19);
+# NA-03's Polygon target is superseded.
 # Per NA-03 §10.4: comprehensive test coverage is required before
 # any mainnet deployment; the coverage job surfaces the report.
 

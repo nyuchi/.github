@@ -1,0 +1,10 @@
+// markdownlint-cli2 options. Rules stay in .markdownlint.jsonc, which
+// markdownlint-cli2 still reads alongside this file.
+//
+// profile/canonical/ holds the Founder's canonical v5 documents (Nyuchi
+// Architecture, Mukoko Manifesto, Bundu Order), committed byte-for-byte as
+// he wrote them. Linting them would mean editing his text, so they are
+// skipped. The same path is in .prettierignore.
+{
+  "ignores": ["profile/canonical/**"],
+}
