@@ -237,6 +237,12 @@ jobs:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
           node-version: '24'
+          # Node is only a runtime for a globally installed tool here; the
+          # repo's dependencies are never installed. Without this, a repo
+          # whose package.json pins packageManager to npm but has no
+          # lockfile fails the job: setup-node turns on its npm cache and
+          # finds nothing to key it on.
+          package-manager-cache: false
       - name: Install the oxfmt that Vite+ bundles
         id: install
         env:
