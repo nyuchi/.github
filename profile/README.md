@@ -87,11 +87,11 @@ status is in [the Architecture, §12](./canonical/NYUCHI_ARCHITECTURE.md#12-nyuc
 | [`shamwari-ai`](https://github.com/shamwari-ai) | Shamwari, the AI layer.                                                                                                                                 |
 | `nyuchi` (here)                                 | The platform, the Nyuchi products and tools. Client work sits further down the repository list.                                                         |
 
-The Mukoko app repositories still in this organisation
-(`mukoko-news`, `mukoko-news-gateway`, `mukoko-ingestion-pipeline`,
-`mukoko-weather`, `mukoko-weather-mobile`, `mukoko-events-admin`,
-`mukoko-events-mcp`) and `nyuchi-identity` are planned to move to
-`mukoko-dev`.
+The Mukoko app repositories (`mukoko-news`, `mukoko-news-gateway`,
+`mukoko-ingestion-pipeline`, `mukoko-weather`, `mukoko-weather-mobile`,
+`mukoko-events-admin`, `mukoko-events-mcp`, `bushtrade`) and
+`nyuchi-identity` have moved to
+[`mukoko-dev`](https://github.com/mukoko-dev).
 
 ## How we work
 
