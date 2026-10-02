@@ -20,9 +20,13 @@
 # `markdownlint-cli2 --fix`, manual yamllint fix) and pushes
 # the corrected commit.
 #
-# Each consuming repo MUST ship .prettierrc, .prettierignore,
+# Each consuming repo SHOULD ship .prettierrc, .prettierignore,
 # .yamllint.yaml and .markdownlint.jsonc at its root - copy them
-# verbatim from nyuchi/.github. Prettier is invoked with an explicit
+# verbatim from nyuchi/.github. A repo's own config always wins. Where
+# one is missing, each job fetches the canonical copy from nyuchi/.github
+# at the same commit as this workflow (job.workflow_sha) and says
+# so in a ::notice::, so a repo covered only by an org-required workflow
+# still lints against the org standard. Prettier is invoked with an explicit
 # --config .prettierrc --ignore-path .prettierignore, so those two files
 # at the repo ROOT are the only ones that apply - a nested .prettierrc in
 # a sub-app cannot redefine the org gate, and .gitignore cannot hide a
@@ -346,6 +350,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+      - name: Fall back to the org prettier config
+        # Only the ROOT .prettierrc counts: the check below passes --config
+        # .prettierrc explicitly, so a prettier.config.js is not a substitute.
+        env:
+          # job.workflow_sha is the commit of THIS reusable workflow (not the
+          # caller's - that is github.workflow_sha). actionlint 1.7.12 does
+          # not know the property yet, so it is read through
+          # fromJSON(toJSON(job)); an empty or malformed value falls back to
+          # main below.
+          ORG_CONFIG_REF: ${{ fromJSON(toJSON(job)).workflow_sha }}
+          # One line per config: the file to fetch, then any other names
+          # the tool also reads. If ANY of them exists, the repo's own
+          # config is used and nothing is fetched.
+          ORG_CONFIGS: |
+            .prettierrc
+            .prettierignore
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${ORG_CONFIG_REF:-}"
+          if [[ ! "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+            ref=main
+          fi
+          while read -r canonical alternates; do
+            [ -n "$canonical" ] || continue
+            own=""
+            # Intentional word-splitting: $alternates is a space-separated list.
+            # shellcheck disable=SC2086
+            for f in "$canonical" $alternates; do
+              if [ -e "$f" ]; then own="$f"; break; fi
+            done
+            if [ -n "$own" ]; then
+              echo "Using the repo's own $own."
+              continue
+            fi
+            curl --fail --silent --show-error --location \
+              --retry 3 --retry-delay 2 \
+              "https://raw.githubusercontent.com/nyuchi/.github/$ref/$canonical" \
+              --output "$canonical"
+            echo "::notice::$canonical is missing from the repo root; using the canonical copy from nyuchi/.github@$ref."
+          done <<< "$ORG_CONFIGS"
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
           node-version: '24'
@@ -422,6 +467,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+      - name: Fall back to the org markdownlint config
+        env:
+          # job.workflow_sha is the commit of THIS reusable workflow (not the
+          # caller's - that is github.workflow_sha). actionlint 1.7.12 does
+          # not know the property yet, so it is read through
+          # fromJSON(toJSON(job)); an empty or malformed value falls back to
+          # main below.
+          ORG_CONFIG_REF: ${{ fromJSON(toJSON(job)).workflow_sha }}
+          # One line per config: the file to fetch, then any other names
+          # the tool also reads. If ANY of them exists, the repo's own
+          # config is used and nothing is fetched.
+          # Folded (>-), so these names are ONE line: one config, many names.
+          ORG_CONFIGS: >-
+            .markdownlint.jsonc
+            .markdownlint-cli2.jsonc .markdownlint-cli2.yaml
+            .markdownlint-cli2.cjs .markdownlint-cli2.mjs
+            .markdownlint.json .markdownlint.yaml .markdownlint.yml
+            .markdownlint.cjs .markdownlint.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${ORG_CONFIG_REF:-}"
+          if [[ ! "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+            ref=main
+          fi
+          while read -r canonical alternates; do
+            [ -n "$canonical" ] || continue
+            own=""
+            # Intentional word-splitting: $alternates is a space-separated list.
+            # shellcheck disable=SC2086
+            for f in "$canonical" $alternates; do
+              if [ -e "$f" ]; then own="$f"; break; fi
+            done
+            if [ -n "$own" ]; then
+              echo "Using the repo's own $own."
+              continue
+            fi
+            curl --fail --silent --show-error --location \
+              --retry 3 --retry-delay 2 \
+              "https://raw.githubusercontent.com/nyuchi/.github/$ref/$canonical" \
+              --output "$canonical"
+            echo "::notice::$canonical is missing from the repo root; using the canonical copy from nyuchi/.github@$ref."
+          done <<< "$ORG_CONFIGS"
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
           node-version: '24'
@@ -464,6 +552,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+      - name: Fall back to the org yamllint config
+        env:
+          # job.workflow_sha is the commit of THIS reusable workflow (not the
+          # caller's - that is github.workflow_sha). actionlint 1.7.12 does
+          # not know the property yet, so it is read through
+          # fromJSON(toJSON(job)); an empty or malformed value falls back to
+          # main below.
+          ORG_CONFIG_REF: ${{ fromJSON(toJSON(job)).workflow_sha }}
+          # One line per config: the file to fetch, then any other names
+          # the tool also reads. If ANY of them exists, the repo's own
+          # config is used and nothing is fetched.
+          ORG_CONFIGS: |
+            .yamllint.yaml .yamllint .yamllint.yml
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${ORG_CONFIG_REF:-}"
+          if [[ ! "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+            ref=main
+          fi
+          while read -r canonical alternates; do
+            [ -n "$canonical" ] || continue
+            own=""
+            # Intentional word-splitting: $alternates is a space-separated list.
+            # shellcheck disable=SC2086
+            for f in "$canonical" $alternates; do
+              if [ -e "$f" ]; then own="$f"; break; fi
+            done
+            if [ -n "$own" ]; then
+              echo "Using the repo's own $own."
+              continue
+            fi
+            curl --fail --silent --show-error --location \
+              --retry 3 --retry-delay 2 \
+              "https://raw.githubusercontent.com/nyuchi/.github/$ref/$canonical" \
+              --output "$canonical"
+            echo "::notice::$canonical is missing from the repo root; using the canonical copy from nyuchi/.github@$ref."
+          done <<< "$ORG_CONFIGS"
       - name: Install yamllint
         env:
           YAMLLINT_VERSION: ${{ inputs.yamllint-version }}
