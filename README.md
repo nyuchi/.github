@@ -13,15 +13,16 @@ not define its own equivalent file.
 
 ### Repo basics
 
-| Path                         | Purpose                                                                                                                                                                                                                                   | Status |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
-| `LICENSE`                    | MIT. Declares the terms every other file in this repo ships under, so downstream consumers copying a workflow template or CODEOWNERS example know their obligations.                                                                      |   ✅   |
-| `.github/workflows/lint.yml` | Strict lint CI for _this_ repo. Five **blocking** jobs: `actionlint`, `JSON validity`, `prettier`, `markdownlint`, `yamllint`. CI does not auto-fix; the developer fixes locally and pushes. All five names go in required status checks. |   ✅   |
-| `.yamllint.yaml`             | yamllint config, relaxed for GitHub Actions (`on:` truthy disabled, line-length warns at 120).                                                                                                                                            |   ✅   |
-| `.markdownlint.jsonc`        | markdownlint-cli2 config, relaxed for inline HTML and long prose lines.                                                                                                                                                                   |   ✅   |
-| `.prettierrc`                | Prettier config: `printWidth: 80`, `proseWrap: preserve`, LF endings.                                                                                                                                                                     |   ✅   |
-| `.prettierignore`            | Excludes YAML (handled by yamllint/actionlint), `LICENSE`, CODEOWNERS files, and the governance and canonical documents.                                                                                                                  |   ✅   |
-| `.markdownlint-cli2.jsonc`   | Skips `profile/canonical/`, the Founder's documents committed byte-for-byte. Rules stay in `.markdownlint.jsonc`.                                                                                                                         |   ✅   |
+| Path                             | Purpose                                                                                                                                                                                                                                                                        | Status |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :----: |
+| `LICENSE`                        | MIT. Declares the terms every other file in this repo ships under, so downstream consumers copying a workflow template or CODEOWNERS example know their obligations.                                                                                                           |   ✅   |
+| `.github/workflows/lint.yml`     | Strict lint CI for _this_ repo. Five **blocking** jobs: `actionlint`, `JSON validity`, `prettier`, `markdownlint`, `yamllint`. CI does not auto-fix; the developer fixes locally and pushes. All five names go in required status checks.                                      |   ✅   |
+| `.github/workflows/org-lint.yml` | **Org-required lint.** The `nyuchi` org ruleset's "Require workflows to pass" rule runs it on every pull request in every repo, so no repo needs its own `lint.yml` or lint configs (the reusable falls back to the configs here). Each org's `.github` repo has its own copy. |   ✅   |
+| `.yamllint.yaml`                 | yamllint config, relaxed for GitHub Actions (`on:` truthy disabled, line-length warns at 120).                                                                                                                                                                                 |   ✅   |
+| `.markdownlint.jsonc`            | markdownlint-cli2 config, relaxed for inline HTML and long prose lines.                                                                                                                                                                                                        |   ✅   |
+| `.prettierrc`                    | Prettier config: `printWidth: 80`, `proseWrap: preserve`, LF endings.                                                                                                                                                                                                          |   ✅   |
+| `.prettierignore`                | Excludes YAML (handled by yamllint/actionlint), `LICENSE`, CODEOWNERS files, and the governance and canonical documents.                                                                                                                                                       |   ✅   |
+| `.markdownlint-cli2.jsonc`       | Skips `profile/canonical/`, the Founder's documents committed byte-for-byte. Rules stay in `.markdownlint.jsonc`.                                                                                                                                                              |   ✅   |
 
 ### Org profile
 
@@ -63,16 +64,16 @@ not define its own equivalent file.
 
 ### Operational docs
 
-| Path                                       | Purpose                                                                                                                                                                                         | Status |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
-| `ORG_SETTINGS.md`                          | Source of truth for intended org and repo settings, including the branch-protection standard shared by `nyuchi`, `mukoko-dev` and `mzizi-dev`. Rulesets in `github-rulesets/`. Audit quarterly. |   ✅   |
-| `GOVERNANCE.md`                            | Index of the canonical documents and NA governance, the order of authority, and where the NA documents predate v5.                                                                              |   ✅   |
-| `README-STANDARD.md`                       | The estate-wide README standard — the shape every repo's README takes, the branding facts to state, and the lint gates markdown must pass. Applies to all seven orgs.                           |   ✅   |
-| `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                                            |   ✅   |
-| `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                                                      |   ✅   |
-| `profile/governance/NA-03_ENGINEERING.md`  | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.                                          |   ✅   |
-| `.editorconfig`                            | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                                               |   ✅   |
-| `.github/FUNDING.yml`                      | GitHub Sponsors / funding button configuration.                                                                                                                                                 |   ✅   |
+| Path                                       | Purpose                                                                                                                                                                              | Status |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :----: |
+| `ORG_SETTINGS.md`                          | Source of truth for intended org and repo settings, including the branch-protection standard shared by every org in the enterprise. Rulesets in `github-rulesets/`. Audit quarterly. |   ✅   |
+| `GOVERNANCE.md`                            | Index of the canonical documents and NA governance, the order of authority, and where the NA documents predate v5.                                                                   |   ✅   |
+| `README-STANDARD.md`                       | The estate-wide README standard — the shape every repo's README takes, the branding facts to state, and the lint gates markdown must pass. Applies to all seven orgs.                |   ✅   |
+| `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                                 |   ✅   |
+| `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                                           |   ✅   |
+| `profile/governance/NA-03_ENGINEERING.md`  | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.                               |   ✅   |
+| `.editorconfig`                            | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                                    |   ✅   |
+| `.github/FUNDING.yml`                      | GitHub Sponsors / funding button configuration.                                                                                                                                      |   ✅   |
 
 ### Reusable workflows
 
@@ -98,6 +99,11 @@ jobs:
 
 Repos with stricter supply-chain requirements should reference the
 reusable by commit SHA rather than `@main`.
+
+Lint is the exception: it is already required org-wide through
+`org-lint.yml` (see [`ADOPTING-LINT.md`](./ADOPTING-LINT.md) and
+[`ORG_SETTINGS.md`](./ORG_SETTINGS.md)), so a repo does not add a
+`lint.yml` caller of its own.
 
 | Path                                                | Purpose                                                                                                                                                                                      | Status |
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |

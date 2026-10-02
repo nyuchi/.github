@@ -156,18 +156,28 @@ These should hold for **every public repo** under
 
 ### Branch protection for `main`
 
-One standard covers `nyuchi`, `mukoko-dev` and `mzizi-dev`. It has
-three layers:
+One standard covers every org in the enterprise: `nyuchi`,
+`mukoko-dev`, `mzizi-dev`, `shamwari-ai`, `bundu-labs`, `openNTL` and
+`siafuDB`. It has four layers:
 
-1. **One org ruleset per org**, `org-wide-main-protection`, identical
-   in all three. Its JSON is
+1. **One enterprise ruleset**, `enterprise-main-protection`, set on the
+   `bundu-labs` enterprise and **active** on the default branch of every
+   repo in every org (except `sandbox-*` and `archive-*`). It holds the
+   floor: pull request required with **0** approvals, linear history, no
+   force pushes, no deletion. It carries no status checks.
+2. **One org ruleset per org**, `org-wide-main-protection`, the same in
+   every org. It repeats the floor and adds what the enterprise does
+   not: the five required lint status checks and a "Require workflows to
+   pass" rule naming that org's
+   `<org>/.github/.github/workflows/org-lint.yml`. Its JSON (as applied
+   to `nyuchi`) is
    [`github-rulesets/org-wide-main-protection.json`](./github-rulesets/org-wide-main-protection.json).
-2. **At most one repo ruleset per repo**, named `repo-ci`, holding only
+3. **At most one repo ruleset per repo**, named `repo-ci`, holding only
    that repo's own CI checks (and a `merge_queue` rule where one
    already exists). A repo ruleset never repeats the org's rules and
    never sets reviews or merge methods, because a narrower repo-level
    list silently overrides the org's.
-3. **No classic branch protection** on any default branch. Rulesets
+4. **No classic branch protection** on any default branch. Rulesets
    are the single source of truth.
 
 The org ruleset (**Settings → Rules → Rulesets**):
@@ -188,6 +198,7 @@ The org ruleset (**Settings → Rules → Rulesets**):
 | Require conversation resolution before merging                   | **Enabled**                                                         |
 | Allowed merge methods                                            | **Squash, rebase**                                                  |
 | Require status checks to pass                                    | **Enabled** — the five lint checks below                            |
+| Require workflows to pass                                        | **Enabled** — `<org>/.github/.github/workflows/org-lint.yml`        |
 | Require branches to be up to date before merging                 | **Enabled**                                                         |
 | Require signed commits                                           | **Not a ruleset rule.** Signing is policy (see `CONTRIBUTING.md`).  |
 
@@ -215,8 +226,15 @@ names take the form `<caller-job-name> / <reusable-job-name>`. By
 convention, every repo names its caller job after the workflow
 purpose so the contexts read sensibly.
 
-**Lint — required on every repo, no exceptions.** From a caller
-named `lint:` calling `reusable-lint.yml`:
+**Lint — required on every repo, no exceptions.** Lint is an
+**org-required workflow**: each org ruleset's "Require workflows to
+pass" rule names `<org>/.github/.github/workflows/org-lint.yml`, so
+GitHub runs it on every pull request in every repo of the org. A repo
+needs **no `lint.yml` of its own and no lint config files**: the
+org-lint job calls `nyuchi/.github`'s `reusable-lint.yml`, which uses a
+repo's own `.prettierrc`, `.prettierignore`, `.markdownlint.jsonc` or
+`.yamllint.yaml` where present and falls back to the canonical copies in
+this repository where not. Its job is named `lint`, so it publishes:
 
 - `lint / actionlint`
 - `lint / JSON validity`
@@ -287,8 +305,8 @@ tokens.
   in [`github-rulesets/`](./github-rulesets/) in this repo:
 
   - `org-wide-main-protection.json` — the org ruleset described in
-    §Branch protection for `main`, identical in `nyuchi`,
-    `mukoko-dev` and `mzizi-dev`.
+    §Branch protection for `main`, the same in every org apart from
+    the `workflows` rule's repository id.
   - `release-tag-protection.json` — applied to `nyuchi/.github`
     (protects `v*.*.*` tags). Tag and push rulesets are outside the
     branch standard and are left as they are.
@@ -299,7 +317,7 @@ tokens.
   standard, and the live copy is deleted when the standard is
   applied.
 
-  The standard is applied across the three orgs by the owner's
+  The standard is applied across the orgs by the owner's
   rollout script (dry run by default), which also removes duplicate
   repo rulesets and classic protection. To update one org ruleset by
   hand, PUT the JSON to the existing ruleset's id:
@@ -310,9 +328,16 @@ tokens.
     --input github-rulesets/org-wide-main-protection.json
   ```
 
-  An `enterprise-main-protection` ruleset also reaches all three orgs
-  from the enterprise. It is in **evaluate** mode and blocks nothing;
-  keep it consistent with this standard if it is ever made active.
+  The org ruleset JSON names `nyuchi/.github` by `repository_id` in its
+  `workflows` rule. Each org's live ruleset points at its own
+  `<org>/.github` repository instead, so swap the id before applying the
+  file to another org.
+
+  The `enterprise-main-protection` ruleset is set on the `bundu-labs`
+  enterprise (**Enterprise settings → Policies → Code → Rulesets**) and
+  is **active** across every org. It holds pull request (0 approvals),
+  linear history, no force push and no deletion; status checks and the
+  required lint workflow live only in each org ruleset.
 
 - **In progress — infrastructure as code:** migrating org and repo
   configuration to OpenTofu (the open-source Terraform fork) using

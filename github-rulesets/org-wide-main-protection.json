@@ -50,6 +50,19 @@
           { "context": "lint / yamllint" }
         ]
       }
+    },
+    {
+      "type": "workflows",
+      "parameters": {
+        "do_not_enforce_on_create": false,
+        "workflows": [
+          {
+            "repository_id": 1116531720,
+            "path": ".github/workflows/org-lint.yml",
+            "ref": "refs/heads/main"
+          }
+        ]
+      }
     }
   ]
 }
