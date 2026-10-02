@@ -101,8 +101,9 @@ The Mukoko app repositories still in this organisation
   Check the `LICENSE` file in the repository you are working with.
 - **Conventional Commits.** Every commit and PR title follows
   [conventionalcommits.org](https://www.conventionalcommits.org).
-- **CI is the source of truth.** The org ruleset requires the five
-  lint checks on every default branch — see the
+- **CI is the source of truth.** Lint is an org-required workflow:
+  every org ruleset runs its `.github` repo's `org-lint.yml` on every
+  pull request and requires the five lint checks — see the
   [reusable workflows](https://github.com/nyuchi/.github/tree/main/.github/workflows)
   that power it.
 - **Agents have rules too.**
