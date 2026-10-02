@@ -241,9 +241,11 @@ gh pr create --fill
 gh pr merge --rebase --auto
 ```
 
-**Rebase-only, estate-wide.** All 75 live repos have `allow_rebase_merge:
-true` with squash and merge-commit disabled, and auto-merge enabled. Never
-use `--admin`.
+**Squash or rebase.** The branch standard in
+[`ORG_SETTINGS.md`](./ORG_SETTINGS.md) allows both, with linear history and
+no merge commits. On 2 October 2026 most repos still had squash switched off
+in their own settings, so `--rebase` is the method that works everywhere until
+the standard is rolled out. Auto-merge is enabled. Never use `--admin`.
 
 > `mzizi-dev/.github/ORG_STANDARDS.md` describes a merge-commit-only
 > convention. That was true when it was written on 2026-09-11 and is not true

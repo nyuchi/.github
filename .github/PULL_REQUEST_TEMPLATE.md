@@ -86,15 +86,16 @@ Closes #
 - [ ] **Secret hygiene** — I confirmed no API keys, tokens, `.env` contents,
       private keys, or credentials appear anywhere in the diff.
 - [ ] **Prohibited dependencies** — this PR introduces no Flutter,
-      Couchbase, or CouchDB-as-datastore dependency, and contains no
-      reference to a fixed 10-billion MXT supply cap.
+      Couchbase, Databricks, Cloudflare D1 or Capacitor dependency, no
+      database connection outside the Nyuchi API, and no reference to a
+      fixed 10-billion MXT supply cap.
 - [ ] **Schema.org compliance** — new database tables, columns, or API fields
       map to Schema.org types, or the PR description justifies any deviation.
 - [ ] **Locked counts respected** — no change to the platform's locked counts
       (17 mini-apps · 7 data layers · 7 covenants · 40 interest categories ·
       12 manifesto sections · 3 sources of truth) without Founder approval
-      documented in the PR description. Nyuchi Enterprise products are
-      **not** a locked count (NA-03 §3.3) — do not re-add a count for them.
+      documented in the PR description. Nyuchi products are **not** a
+      locked count (the Bundu Order) — do not re-add a count for them.
 - [ ] **Frontier defaults** — for user-facing or infrastructure work:
       offline / local-first behaviour has been considered; any new
       cryptographic primitive has a documented post-quantum migration path;

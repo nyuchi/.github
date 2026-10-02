@@ -1,8 +1,10 @@
 # nyuchi/.github
 
 This repository holds **organization-wide defaults** for every repo
-under [Nyuchi Africa](https://github.com/nyuchi) — the parent company
-behind Nyuchi Web Services and the Mukoko super app.
+under [Nyuchi Africa](https://github.com/nyuchi) — the company that
+operates the infrastructure under Mukoko, the Nyuchi products and the
+Bundu commons — and the canonical
+[Nyuchi Architecture](./profile/canonical/NYUCHI_ARCHITECTURE.md).
 
 Anything here is inherited by every repository in the org that does
 not define its own equivalent file.
@@ -18,13 +20,15 @@ not define its own equivalent file.
 | `.yamllint.yaml`             | yamllint config, relaxed for GitHub Actions (`on:` truthy disabled, line-length warns at 120).                                                                                                                                            |   ✅   |
 | `.markdownlint.jsonc`        | markdownlint-cli2 config, relaxed for inline HTML and long prose lines.                                                                                                                                                                   |   ✅   |
 | `.prettierrc`                | Prettier config: `printWidth: 80`, `proseWrap: preserve`, LF endings.                                                                                                                                                                     |   ✅   |
-| `.prettierignore`            | Excludes YAML (handled by yamllint/actionlint), `LICENSE`, and CODEOWNERS files.                                                                                                                                                          |   ✅   |
+| `.prettierignore`            | Excludes YAML (handled by yamllint/actionlint), `LICENSE`, CODEOWNERS files, and the governance and canonical documents.                                                                                                                  |   ✅   |
+| `.markdownlint-cli2.jsonc`   | Skips `profile/canonical/`, the Founder's documents committed byte-for-byte. Rules stay in `.markdownlint.jsonc`.                                                                                                                         |   ✅   |
 
 ### Org profile
 
-| Path                | Purpose                                            | Status |
-| ------------------- | -------------------------------------------------- | :----: |
-| `profile/README.md` | Landing page shown at <https://github.com/nyuchi>. |   ✅   |
+| Path                                       | Purpose                                                                                                                                  | Status |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `profile/README.md`                        | Landing page shown at <https://github.com/nyuchi>.                                                                                       |   ✅   |
+| `profile/canonical/NYUCHI_ARCHITECTURE.md` | **The Nyuchi Architecture v5.0.0** — the canonical technical architecture. Wins over every other document. The Founder's text, unedited. |   ✅   |
 
 ### Community health files (org-wide defaults)
 
@@ -59,15 +63,16 @@ not define its own equivalent file.
 
 ### Operational docs
 
-| Path                                       | Purpose                                                                                                                                                               | Status |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
-| `ORG_SETTINGS.md`                          | Source of truth for intended org and repo settings (branch protection, required checks, signing, secret scanning). Rulesets in `github-rulesets/`. Audit quarterly.   |   ✅   |
-| `README-STANDARD.md`                       | The estate-wide README standard — the shape every repo's README takes, the branding facts to state, and the lint gates markdown must pass. Applies to all seven orgs. |   ✅   |
-| `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                  |   ✅   |
-| `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                            |   ✅   |
-| `profile/governance/NA-03_ENGINEERING.md`  | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.                |   ✅   |
-| `.editorconfig`                            | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                     |   ✅   |
-| `.github/FUNDING.yml`                      | GitHub Sponsors / funding button configuration.                                                                                                                       |   ✅   |
+| Path                                       | Purpose                                                                                                                                                                                         | Status |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `ORG_SETTINGS.md`                          | Source of truth for intended org and repo settings, including the branch-protection standard shared by `nyuchi`, `mukoko-dev` and `mzizi-dev`. Rulesets in `github-rulesets/`. Audit quarterly. |   ✅   |
+| `GOVERNANCE.md`                            | Index of the canonical documents and NA governance, the order of authority, and where the NA documents predate v5.                                                                              |   ✅   |
+| `README-STANDARD.md`                       | The estate-wide README standard — the shape every repo's README takes, the branding facts to state, and the lint gates markdown must pass. Applies to all seven orgs.                           |   ✅   |
+| `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                                            |   ✅   |
+| `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                                                      |   ✅   |
+| `profile/governance/NA-03_ENGINEERING.md`  | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.                                          |   ✅   |
+| `.editorconfig`                            | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                                               |   ✅   |
+| `.github/FUNDING.yml`                      | GitHub Sponsors / funding button configuration.                                                                                                                                                 |   ✅   |
 
 ### Reusable workflows
 

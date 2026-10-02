@@ -32,6 +32,16 @@ Agents must read, in order:
 
 **Do not propose changes to code you have not read.**
 
+For anything that touches architecture, data, identity, APIs or naming,
+also read
+[The Nyuchi Architecture v5.0.0](./profile/canonical/NYUCHI_ARCHITECTURE.md).
+It is the canonical technical reference and wins over every other
+document, including the NA governance documents; measured reality wins
+over it. The other two canonical documents are
+[The Mukoko Manifesto](https://github.com/mukoko-dev/.github/blob/main/profile/canonical/MUKOKO_MANIFESTO.md)
+and [The Bundu Order](https://github.com/bundu-labs/.github/blob/main/profile/canonical/BUNDU_ORDER.md).
+Agents never edit any of the three; they are changed only by the Founder.
+
 ---
 
 ## Commit and PR conventions

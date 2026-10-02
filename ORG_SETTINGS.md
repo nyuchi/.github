@@ -144,41 +144,57 @@ These should hold for **every public repo** under
 
 ### Pull requests and merge settings
 
-| Setting                             | Value                                                       |
-| ----------------------------------- | ----------------------------------------------------------- |
-| Allow merge commits                 | **Disabled**                                                |
-| Allow squash merging                | **Enabled** (default)                                       |
-| Allow rebase merging                | Disabled (enable per-repo for release-train workflows only) |
-| Default commit message for squash   | _Pull request title and description_                        |
-| Always suggest updating PR branches | **Enabled**                                                 |
-| Allow auto-merge                    | **Enabled**                                                 |
-| Automatically delete head branches  | **Enabled**                                                 |
+| Setting                             | Value                                |
+| ----------------------------------- | ------------------------------------ |
+| Allow merge commits                 | **Disabled**                         |
+| Allow squash merging                | **Enabled** (default)                |
+| Allow rebase merging                | **Enabled**                          |
+| Default commit message for squash   | _Pull request title and description_ |
+| Always suggest updating PR branches | **Enabled**                          |
+| Allow auto-merge                    | **Enabled**                          |
+| Automatically delete head branches  | **Enabled**                          |
 
 ### Branch protection for `main`
 
-At **Settings → Rules → Rulesets** (preferred) or **Settings →
-Branches → Branch protection rules** (legacy):
+One standard covers `nyuchi`, `mukoko-dev` and `mzizi-dev`. It has
+three layers:
 
-| Rule                                                             | Value                                            |
-| ---------------------------------------------------------------- | ------------------------------------------------ |
-| Restrict deletions                                               | **Enabled**                                      |
-| Require linear history                                           | **Enabled**                                      |
-| Require signed commits                                           | **Enabled**                                      |
-| Require a pull request before merging                            | **Enabled**                                      |
-| Required approving reviews                                       | **0** (pre-scale solo-developer phase)           |
-| Dismiss stale pull request approvals when new commits are pushed | **Enabled**                                      |
-| Require review from Code Owners                                  | _Deferred_ until ≥ 2 engineers with merge rights |
-| Require approval of the most recent reviewable push              | _Deferred_ until ≥ 2 engineers with merge rights |
-| Require conversation resolution before merging                   | **Enabled**                                      |
-| Require status checks to pass                                    | **Enabled**                                      |
-| Require branches to be up to date before merging                 | **Enabled**                                      |
-| Block force pushes                                               | **Enabled**                                      |
-| Do not allow bypass                                              | **Applied to admins too**                        |
+1. **One org ruleset per org**, `org-wide-main-protection`, identical
+   in all three. Its JSON is
+   [`github-rulesets/org-wide-main-protection.json`](./github-rulesets/org-wide-main-protection.json).
+2. **At most one repo ruleset per repo**, named `repo-ci`, holding only
+   that repo's own CI checks (and a `merge_queue` rule where one
+   already exists). A repo ruleset never repeats the org's rules and
+   never sets reviews or merge methods, because a narrower repo-level
+   list silently overrides the org's.
+3. **No classic branch protection** on any default branch. Rulesets
+   are the single source of truth.
+
+The org ruleset (**Settings → Rules → Rulesets**):
+
+| Rule                                                             | Value                                                               |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Target                                                           | The default branch of every repo except `sandbox-*` and `archive-*` |
+| Bypass                                                           | Organisation admins, always                                         |
+| Restrict deletions                                               | **Enabled**                                                         |
+| Block force pushes                                               | **Enabled**                                                         |
+| Require linear history                                           | **Enabled**                                                         |
+| Require a pull request before merging                            | **Enabled**                                                         |
+| Required approving reviews                                       | **0** (pre-scale solo-developer phase)                              |
+| Dismiss stale pull request approvals when new commits are pushed | **Disabled**                                                        |
+| Require review from Code Owners                                  | _Deferred_ until ≥ 2 engineers with merge rights                    |
+| Require approval of the most recent reviewable push              | _Deferred_ until ≥ 2 engineers with merge rights                    |
+| Require approval for unattributed changes                        | **Disabled** (it asks for an approval a solo owner cannot give)     |
+| Require conversation resolution before merging                   | **Enabled**                                                         |
+| Allowed merge methods                                            | **Squash, rebase**                                                  |
+| Require status checks to pass                                    | **Enabled** — the five lint checks below                            |
+| Require branches to be up to date before merging                 | **Enabled**                                                         |
+| Require signed commits                                           | **Not a ruleset rule.** Signing is policy (see `CONTRIBUTING.md`).  |
 
 > **Pre-scale reviewer posture.** The reviewer count is **0**
 > during the solo-developer phase, per NA-01 Article 4.2 (flat
 > structure, pre-scale reality). Every PR still goes through the
-> pull-request flow, CI gates, signed commits, DCO sign-off, and
+> pull-request flow, CI gates, DCO sign-off and
 > conversation-resolution gates — just without an external
 > reviewer because there isn't one yet. As soon as a second
 > engineer with merge rights joins the org, the ruleset flips
@@ -186,6 +202,11 @@ Branches → Branch protection rules** (legacy):
 > security, and infra repositories rising to `2` per the original
 > design. The trigger is documented in NA-01 Article 10.1 (the
 > transition to formal divisional structure).
+
+**Squash is required for release PRs.** A release PR built by
+merging `origin/main` into a release branch contains a merge
+commit. Under linear history it cannot be rebase-merged; it must
+be squash-merged. That is why the org allows both methods.
 
 #### Required status checks
 
@@ -261,27 +282,37 @@ tokens.
 
 ## Enforcement and audit
 
-- **Rulesets (in place):** branch and tag protection is enforced via
-  GitHub Rulesets, not legacy per-repo branch-protection rules. The
-  three ruleset definitions live in [`github-rulesets/`](./github-rulesets/)
-  in this repo:
+- **Rulesets:** branch and tag protection is enforced via GitHub
+  Rulesets, not legacy branch-protection rules. The definitions live
+  in [`github-rulesets/`](./github-rulesets/) in this repo:
 
-  - `main-branch-protection.json` — applied to `nyuchi/.github`
-    (0-approver pre-scale posture per the table above, 5 lint checks).
+  - `org-wide-main-protection.json` — the org ruleset described in
+    §Branch protection for `main`, identical in `nyuchi`,
+    `mukoko-dev` and `mzizi-dev`.
   - `release-tag-protection.json` — applied to `nyuchi/.github`
-    (protects `v*.*.*` tags).
-  - `org-wide-main-protection.json` — applied at the org level to
-    all repos except `sandbox-*` and `archive-*` (0-approver
-    pre-scale posture, 5 lint checks).
+    (protects `v*.*.*` tags). Tag and push rulesets are outside the
+    branch standard and are left as they are.
 
-  Apply or update via:
+  There is no per-repo copy of the org rules. The former
+  `main-branch-protection.json` repeated them for `nyuchi/.github`
+  and narrowed merges to rebase only; it is removed from the
+  standard, and the live copy is deleted when the standard is
+  applied.
+
+  The standard is applied across the three orgs by the owner's
+  rollout script (dry run by default), which also removes duplicate
+  repo rulesets and classic protection. To update one org ruleset by
+  hand, PUT the JSON to the existing ruleset's id:
 
   ```sh
-  gh api --method POST /repos/nyuchi/.github/rulesets \
-    --input github-rulesets/main-branch-protection.json
-  gh api --method POST /orgs/nyuchi/rulesets \
+  gh api orgs/nyuchi/rulesets --jq '.[] | [.id, .name] | @tsv'
+  gh api --method PUT /orgs/nyuchi/rulesets/<id> \
     --input github-rulesets/org-wide-main-protection.json
   ```
+
+  An `enterprise-main-protection` ruleset also reaches all three orgs
+  from the enterprise. It is in **evaluate** mode and blocks nothing;
+  keep it consistent with this standard if it is ever made active.
 
 - **In progress — infrastructure as code:** migrating org and repo
   configuration to OpenTofu (the open-source Terraform fork) using
@@ -330,7 +361,7 @@ The organisation targets the following OpenSSF / SLSA milestones:
 | OIDC federation for cloud credentials | **Required** — see §Secrets and tokens below             |
 | Dependency review on every PR         | **Enforced** — `reusable-dependency-review.yml`          |
 | Secret scanning (all patterns)        | **Enabled** — org-wide                                   |
-| Signed commits on `main`              | **Enforced** — rulesets                                  |
+| Signed commits on `main`              | **Policy** — not enforced by a ruleset                   |
 | OpenSSF Scorecard                     | **Available** — `reusable-openssf-scorecard.yml`         |
 | SLSA L3 (hermetic builds)             | Planned — requires isolated build runners                |
 

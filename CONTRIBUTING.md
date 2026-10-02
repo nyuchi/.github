@@ -24,7 +24,7 @@ If you are reading this for the first time, also read:
 1. **Fork** the repo (external) or **branch** it (member).
 2. Work on a branch that matches our [branch-naming rules](#branch-naming).
 3. Open a PR with a [Conventional Commits][cc] title, signed commits,
-   and a DCO sign-off. Green CI + at least one approving review and
+   and a DCO sign-off. Green CI and resolved review threads, and
    we'll merge it.
 
 ---
@@ -90,8 +90,9 @@ package or module name (`feat(ui): …`, `fix(ntl/transport): …`).
 ## Signed commits (required)
 
 Every commit merged to `main` on every repo **must be signed and
-verified by GitHub**. Branch protection enforces this — unsigned
-commits cannot be merged.
+verified by GitHub**. This is policy, not a ruleset: the org ruleset
+(see [`ORG_SETTINGS.md`](https://github.com/nyuchi/.github/blob/main/ORG_SETTINGS.md))
+has no `required_signatures` rule, so reviewers check it.
 
 Either **GPG** or **SSH** signing is accepted. Configure once:
 
@@ -186,24 +187,29 @@ pytest`, etc.) and make sure they pass.
 
 ### Before merging
 
-All of the following must be true — enforced by branch protection:
+All of the following must be true. The org ruleset enforces the
+required checks, resolved conversations and an up-to-date branch;
+the rest is policy:
 
 - [x] Conventional Commits PR title (lint passes).
 - [x] All commits signed and verified.
 - [x] DCO sign-off on every commit.
-- [x] All required CI checks green.
-- [x] At least **1 approving review** from an org maintainer
-      (2 for security-sensitive or cross-repo infra changes).
+- [x] All required CI checks green (the five `lint / …` checks, plus
+      any `repo-ci` checks the repository adds).
 - [x] No unresolved review comments.
 - [x] Up to date with the base branch.
 
+Required approving reviews are **0** during the solo-developer
+phase (see [`ORG_SETTINGS.md`](https://github.com/nyuchi/.github/blob/main/ORG_SETTINGS.md)).
+That rises to 1 when a second engineer with merge rights joins.
+
 ### Merge strategy
 
-- **Squash-merge is the default** on every repo. The PR title becomes
-  the commit message.
-- Merge commits and rebase-merges are disabled by default. Repos that
-  legitimately need one (e.g., release-train branches) may enable it
-  in their settings with maintainer approval.
+- **Squash or rebase.** The org ruleset allows both and requires
+  linear history. Squash is the default; the PR title becomes the
+  commit message. A release PR that contains a merge commit must be
+  squash-merged.
+- Merge commits are disabled.
 
 ---
 
@@ -255,9 +261,10 @@ grouped PR per ecosystem). When you see a Dependabot PR:
    workflow files. These are safe to merge once CI is green — the SHA
    comment shows the new version.
 5. **Never approve a Dependabot PR that introduces a prohibited
-   dependency** (see [NA-03 §3.5][na03] — Flutter, Couchbase).
-   MongoDB and Cloudflare D1 are **not** prohibited; they are
-   sanctioned operational layers governed by [NA-03 §3.1][na03].
+   dependency**: Flutter, Couchbase / Couchbase Capella, Databricks,
+   Cloudflare D1 or Capacitor (the
+   [Nyuchi Architecture, §16][arch]). MongoDB is **not** prohibited;
+   it is the non-relational source of truth.
 
 ---
 
@@ -331,4 +338,5 @@ here is possible because someone else contributed first.
 [ssh]: https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key
 [dco]: https://developercertificate.org/
 [na03]: https://github.com/nyuchi/.github/blob/main/profile/governance/NA-03_ENGINEERING.md
+[arch]: https://github.com/nyuchi/.github/blob/main/profile/canonical/NYUCHI_ARCHITECTURE.md#16-dependency-sovereignty-register
 [ga-template]: https://github.com/nyuchi/.github/blob/main/.github/ISSUE_TEMPLATE/governance_amendment.yml

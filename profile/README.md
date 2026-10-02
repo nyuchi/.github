@@ -1,16 +1,18 @@
-# Nyuchi Web Services by Nyuchi Africa (PVT) Ltd
+# Nyuchi Africa (Pvt) Ltd
 
-**A frontier infrastructure company building for Africa's unique
-economies — in the open.**
+**The infrastructure under Mukoko, the Nyuchi products and the Bundu
+commons.**
 
 _Ubuntu — I am because we are._
 _Ndiri nekuti tiri._
 
-[services.nyuchi.com](https://services.nyuchi.com) ·
-[mukoko.com](https://mukoko.com) ·
 [nyuchi.com](https://www.nyuchi.com) ·
-[design.nyuchi.com](https://design.nyuchi.com)
+[services.nyuchi.com](https://services.nyuchi.com) ·
+[docs.nyuchi.com](https://docs.nyuchi.com) ·
+[mukoko.com](https://www.mukoko.com) ·
+[bundu.org](https://www.bundu.org)
 
+[The Nyuchi Architecture](./canonical/NYUCHI_ARCHITECTURE.md) ·
 [Governance](./governance/) · [Contributing](../CONTRIBUTING.md) ·
 [Security](../SECURITY.md) · [Support](../SUPPORT.md)
 
@@ -18,83 +20,89 @@ _Ndiri nekuti tiri._
 
 ## What we are
 
-We're a **frontier infrastructure company**. The apps and platforms
-you see in this organisation are proof-of-concept and production
-expressions of that infrastructure — real problems, solved on
-largely open-source foundations, in the open.
+Nyuchi Africa operates everything that runs: identity, the API
+gateway, the databases, the pipelines, the edge and the Console.
+**Nyuchi is the infrastructure.**
 
-Our apps bring people together. Our platforms provide access. The
-infrastructure underneath is what we're actually building, and what
-we're committed to for the long run.
+The ecosystem stands on three pillars:
 
-## The three frontiers
+| Pillar               | Role                                                                                                                                                         | Canonical document                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| **Bundu Foundation** | Owns the IP (standards, doctrine, the Seven Minerals, the documentation system) and governs. A Zimbabwe company limited by guarantee; incorporation pending. | [The Bundu Order](https://github.com/bundu-labs/.github/blob/main/profile/canonical/BUNDU_ORDER.md)           |
+| **Nyuchi Africa**    | Operates the infrastructure and builds the Nyuchi products.                                                                                                  | [The Nyuchi Architecture](./canonical/NYUCHI_ARCHITECTURE.md)                                                 |
+| **Mukoko**           | The consumer surface, and the first tenant of Nyuchi's infrastructure.                                                                                       | [The Mukoko Manifesto](https://github.com/mukoko-dev/.github/blob/main/profile/canonical/MUKOKO_MANIFESTO.md) |
 
-- **Web2 → Web3 → quantum.** Open-source infrastructure that spans
-  today's web, the decentralised web, and the quantum era. Our
-  cryptographic and networking primitives are designed with a
-  post-quantum migration path from day one.
-- **On-device, local-first, edge.** Compute and storage that work
-  where the people are — resilient under low connectivity, private
-  by default, ready for the world of AGI and beyond. The cloud is
-  a cache. The device is where truth lives first.
-- **Built for communities.** Platforms shaped by Ubuntu philosophy —
-  collaboration, transparency, and shared ownership over
-  extraction. Sovereignty is structural, not aspirational.
+**The Nyuchi Architecture v5.0.0 (October 2026) is the canonical
+technical reference.** Where it disagrees with any other document in
+this organisation, it wins; where the running system disagrees with
+it, the system is right and the document gets fixed. Every component
+in it is marked **Live**, **Building**, **Designed** or **Goal**.
 
-## Where that shows up in code
+## The platform
 
-### Frontier infrastructure
+- **The Nyuchi API** — `api.nyuchi.com/v1`, FastAPI on Fly.io
+  ([`nyuchi/api-gateway`](https://github.com/nyuchi/api-gateway),
+  private). It is the internal API for every app in the Bundu
+  ecosystem and **the only thing that connects to a database**. Every
+  database is reached through it. First-party Mukoko apps and the
+  Nyuchi products call it directly, each with its own client ID and
+  secret. **Live.**
+- **Data infrastructure** — deploy config for the self-hosted data
+  services (Doris, Flink, Redpanda, CouchDB, archived Supabase
+  migrations) lives in
+  [`nyuchi/data-infra`](https://github.com/nyuchi/data-infra)
+  (private). Only the Nyuchi API connects to any of them.
+- **The Mukoko API** — `api.mukoko.com`
+  ([`mukoko-dev/mukoko-api`](https://github.com/mukoko-dev/mukoko-api)),
+  Cloudflare Workers, no database access. The public consumer API:
+  each Mukoko app's public API lives there by namespace, for example
+  `api.mukoko.com/v1/weather` rather than `weather.mukoko.com/api`.
+  **Building.**
+- **Identity** — WorkOS AuthKit, issuer `accounts.mukoko.com`,
+  branded as Mukoko Account. Stytch is retired. **Live.**
+- **Data** — Supabase PostgreSQL 17 in four projects
+  (`nyuchi_relational_db` is the primary; `nyuchi_pay_db`,
+  `shamwari_ai_db`, `mzizi_db`) and MongoDB Atlas for everything
+  non-relational. **Live.**
+- **The Console** — `platform.nyuchi.com`
+  ([`nyuchi/nyuchi-platform`](https://github.com/nyuchi/nyuchi-platform),
+  private). **Live.**
 
-- **[`ntl`](https://github.com/nyuchi/ntl)** — Nyuchi Transfer
-  Layer. Signal-based data transfer for decentralised networks,
-  replacing traditional APIs with neural propagation. Built for AI
-  workloads, Web3-compatible, post-quantum ready. Rust reference
-  implementation, Apache 2.0.
-- **[`siafudb`](https://github.com/nyuchi/siafudb)** — embedded
-  property graph database for device, edge, and Web3. Graph-native
-  storage with built-in sync, privacy transformations, and
-  offline-first design. Pure Rust, Apache 2.0. _The army ant
-  carries the graph._
-- **[`siafudb-kuzu`](https://github.com/nyuchi/siafudb-kuzu)** —
-  the C++ ancestor, forked from KuzuDB v0.11.3 and relicensed
-  Apache 2.0 permanently. Cypher queries, vector search, WASM-ready.
-  Named after the African army ant — small, embedded, but the
-  ecosystem collapses without it.
+## Nyuchi products
 
-### Platforms that bring people together
+An open set, not a fixed number: the market decides which doors earn a
+place. Today they are the API Platform, Web Services, Learning,
+Medical, Logistics, Tools, Pay, Masasa and StationKit. Each one's
+status is in [the Architecture, §12](./canonical/NYUCHI_ARCHITECTURE.md#12-nyuchi-products--an-open-set).
 
-- **[Mukoko](https://mukoko.com)** — a privacy-first social super
-  app. _"Your data stays yours, your identity is sovereign, and the
-  algorithm works for you."_ Seventeen mini-apps — Campfire, Pulse,
-  News, Bytes, Circles, Novels, Nhimbe, BushTrade, Places,
-  Transport, Planner, Lingo, Weather, Wallet, Jobs, Health, and
-  Mukoko ID — all powered by _Your Honey_, a personalisation
-  algorithm designed to serve you, not exploit you.
-- **[`learning`](https://github.com/nyuchi/learning)** — digital
-  learning experiences for Africa, built around African knowledge
-  systems.
-- **[`shamwari-ai`](https://github.com/nyuchi/shamwari-ai)** — a
-  localised AI model and platform purpose-built for the African
-  continent.
+## Where the rest of the ecosystem lives
 
-### Design, in the open
+| Organisation                                    | What it holds                                                                                                                                           |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`bundu-labs`](https://github.com/bundu-labs)   | The Bundu Foundation enterprise: open-source defaults, `zimbabwe-information`, `bundu-docs`.                                                            |
+| [`openNTL`](https://github.com/openNTL)         | [`ntl`](https://github.com/openNTL/ntl), the Neural Transfer Layer. Apache 2.0.                                                                         |
+| [`siafuDB`](https://github.com/siafuDB)         | [`siafudb`](https://github.com/siafuDB/siafudb) and [`siafudb-kuzu`](https://github.com/siafuDB/siafudb-kuzu), the embedded graph database. Apache 2.0. |
+| [`mzizi-dev`](https://github.com/mzizi-dev)     | Mzizi, the Bundu Foundation's open frontend architecture and design system ([mzizi.dev](https://mzizi.dev)).                                            |
+| [`mukoko-dev`](https://github.com/mukoko-dev)   | Mukoko, the consumer super app, and `mukoko-api`.                                                                                                       |
+| [`shamwari-ai`](https://github.com/shamwari-ai) | Shamwari, the AI layer.                                                                                                                                 |
+| `nyuchi` (here)                                 | The platform, the Nyuchi products and tools. Client work sits further down the repository list.                                                         |
 
-Our design system lives at
-**[design.nyuchi.com](https://design.nyuchi.com)** —
-shadcn-compatible components, the _Five African Minerals_ palette,
-and APCA Lc 90+ contrast targets. The source is
-[`design-portal`](https://github.com/nyuchi/design-portal).
+The Mukoko app repositories still in this organisation
+(`mukoko-news`, `mukoko-news-gateway`, `mukoko-ingestion-pipeline`,
+`mukoko-weather`, `mukoko-weather-mobile`, `mukoko-events-admin`,
+`mukoko-events-mcp`) and `nyuchi-identity` are planned to move to
+`mukoko-dev`.
 
 ## How we work
 
-- **Open source first.** Public by default, private only when
-  necessary. MIT, Apache 2.0, and occasionally GPL — always check
-  the `LICENSE` file in the specific repository.
+- **Most of what we write is open; not everything we run is.** Public
+  by default, private only when necessary. Every repository declares
+  an open licence, source-visible (all rights reserved), or private.
+  Check the `LICENSE` file in the repository you are working with.
 - **Conventional Commits.** Every commit and PR title follows
   [conventionalcommits.org](https://www.conventionalcommits.org).
-- **Signed commits.** All merges to `main` are signed and verified.
-- **CI is the source of truth.** Required status checks gate every
-  merge — see the
+- **CI is the source of truth.** The org ruleset requires the five
+  lint checks on every default branch — see the
   [reusable workflows](https://github.com/nyuchi/.github/tree/main/.github/workflows)
   that power it.
 - **Agents have rules too.**
@@ -107,19 +115,19 @@ before opening a PR.
 
 ## Governance
 
-The company's governance is published in the open. Three documents
-describe how Nyuchi Web Services is organised, how we license our
-work, and how our engineers build:
+Three documents describe how Nyuchi Africa is organised, how we
+licence our work and how our engineers build. They predate v5; where
+they disagree with the Architecture, the Architecture wins (see
+[`GOVERNANCE.md`](../GOVERNANCE.md)).
 
 - **[NA-01 Constitution](./governance/NA-01_CONSTITUTION.md)** —
-  internal corporate governance, decision rights, and the
-  relationship with the Bundu Foundation.
+  corporate governance, decision rights, and the relationship with
+  the Bundu Foundation.
 - **[NA-02 Open Source & Contribution Governance](./governance/NA-02_OPEN_SOURCE.md)** —
-  licensing posture, contribution process, and sovereignty
+  licensing posture, contribution process and sovereignty
   commitments.
 - **[NA-03 Engineering Working Agreement](./governance/NA-03_ENGINEERING.md)** —
-  frontier-first engineering principles: post-quantum by default,
-  local-first by default, edge-native by default.
+  engineering principles and merge blockers.
 
 ## Get involved
 
@@ -134,6 +142,10 @@ work, and how our engineers build:
 
 ## Licence
 
-Our projects use a mix of **MIT**, **Apache 2.0**, and occasionally
-**GPL**, depending on the component. Always check the `LICENSE`
-file in the specific repository you're working with.
+Our open projects use **MIT**, **Apache 2.0**, and occasionally
+**GPL** or **AGPL**, depending on the component; some public
+repositories are source-visible with all rights reserved. Always check
+the `LICENSE` file in the specific repository.
+
+_Operated by Nyuchi Africa · Governed by the Bundu Foundation · Mukoko
+is the first tenant._
