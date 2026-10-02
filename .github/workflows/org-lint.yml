@@ -1,0 +1,29 @@
+# Org-required lint. The nyuchi org ruleset names this file in a
+# "Require workflows to pass" rule, so GitHub runs it on every pull request
+# in every repo in the org — no per-repo .github/workflows/lint.yml needed.
+#
+# The job is called `lint` and calls nyuchi/.github's reusable workflow, so
+# its checks publish as the same five contexts as the per-repo caller:
+#   lint / actionlint, lint / JSON validity, lint / prettier,
+#   lint / markdownlint, lint / yamllint
+#
+# A repo's own .prettierrc, .prettierignore, .markdownlint.jsonc and
+# .yamllint.yaml at its root always win. Where one is missing, the reusable
+# workflow falls back to the canonical copy in nyuchi/.github.
+
+name: Org lint
+
+on:
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: org-lint-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    uses: nyuchi/.github/.github/workflows/reusable-lint.yml@main
