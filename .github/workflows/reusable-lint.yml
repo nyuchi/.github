@@ -109,9 +109,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Expand the glob list ourselves: a repo whose only lint comes from the
+          # org-required workflow may have no workflow files at all, and a literal
+          # unmatched glob makes actionlint fail. Nothing to lint is a pass.
+          shopt -s nullglob
           # Intentional word-splitting: $ACTIONLINT_PATHS is a space-separated glob list.
-          # shellcheck disable=SC2086
-          "$ACTIONLINT_BIN" -color $ACTIONLINT_PATHS
+          # shellcheck disable=SC2206
+          files=($ACTIONLINT_PATHS)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::notice::No workflow files match '$ACTIONLINT_PATHS'; nothing for actionlint to check."
+            exit 0
+          fi
+          "$ACTIONLINT_BIN" -color "${files[@]}"
 
   jsonlint:
     name: JSON validity
