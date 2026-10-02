@@ -1,0 +1,499 @@
+# Reusable workflow: Vite+ (the org's standard format, check, test and build).
+#
+# Call it from an org-required workflow (`<org>/.github/.github/workflows/
+# org-lint.yml`) next to the existing lint job, or from a repo's own caller:
+#
+#   jobs:
+#     lint:
+#       uses: nyuchi/.github/.github/workflows/reusable-lint.yml@main
+#     vite-plus:
+#       uses: nyuchi/.github/.github/workflows/reusable-vite-plus.yml@main
+#
+# With the caller job keyed `vite-plus`, the contexts are:
+#
+#   vite-plus / fmt     every repo: oxfmt over tracked .md/.mdx/.json/.jsonc
+#   vite-plus / check   JS/TS repos: `vp check` (oxfmt + oxlint + tsgolint)
+#   vite-plus / test    JS/TS repos: the repo's test script, or `vp test`
+#   vite-plus / build   JS/TS repos: the repo's build script, if it has one
+#
+# All four ALWAYS report, in every repo. A repo with no package.json at its
+# root passes check/test/build with a ::notice:: saying there was nothing to
+# do. That is deliberate: these contexts are meant to be org-required, and a
+# required context that never reports blocks the PR forever.
+#
+# This is the successor to mzizi-dev/mzizi-registry's
+# reusable-ci-vite-plus.yml. It lives here because nyuchi/.github is now the
+# one shared home for org CI (see reusable-lint.yml: one copy, called
+# cross-org, never forked). The registry file is a thin pointer to this one.
+#
+# WHAT VITE+ IS
+#
+# Vite+ (https://viteplus.dev, VoidZero) ships one `vp` binary bundling
+# Rolldown, Vitest, oxlint, oxfmt and tsgolint. `vp check` replaces prettier +
+# eslint + tsc, `vp test` replaces vitest, `vp build` replaces per-framework
+# build commands. Pinned to vite-plus 1.0.0 (oxfmt 0.70.0, oxlint 1.85.0,
+# vitest 5.0.1), verified 2026-10-03.
+#
+# WHY `fmt` RUNS OXFMT DIRECTLY, NOT `vp fmt`
+#
+# `vp` refuses to run outside a JS package: in a repo with no package.json,
+# `vp fmt --check` exits 1 with "Package not found in workspace" (verified
+# against vite-plus 1.0.0). Half this estate is Rust, MDX, YAML or prose. So
+# the fmt job installs vite-plus and runs the oxfmt binary IT bundles - the
+# exact formatter `vp fmt` would run, at the exact version - with an explicit
+# config. One input (vite-plus-version) moves both.
+#
+# `fmt` replaces two lint contexts:
+#   lint / prettier       oxfmt is a Prettier-compatible formatter.
+#   lint / JSON validity  oxfmt cannot format JSON it cannot parse: a broken
+#                         file fails the job ("Expected `,` or `}`"). tsconfig
+#                         and friends are parsed as JSONC, as before.
+# Measured before rollout: the canonical .oxfmtrc.json passes every tracked
+# .md/.mdx/.json/.jsonc file in all 11 mzizi-dev repos and nyuchi/.github that
+# prettier 3.9.4 already passed - a like-for-like swap, not a reformat.
+#
+# Three behaviours carried over from reusable-lint.yml's prettier job,
+# because each one was a real gate that silently checked nothing:
+#
+# - Files are passed as EXPLICIT paths from `git ls-files`, never a glob.
+#   With a glob, oxfmt honours .gitignore even when --ignore-path is given
+#   (verified): a tracked CLAUDE.md matching a .gitignore pattern would be
+#   skipped, which is the mukoko-home bug prettier had. Explicit paths are
+#   still subject to --ignore-path, so .prettierignore keeps working.
+# - --config and --ignore-path are explicit, so only the ROOT .oxfmtrc.json
+#   and .prettierignore apply. Where the repo lacks either, the canonical copy
+#   from nyuchi/.github (at this workflow's own commit) is used, with a
+#   ::notice::. oxfmt reads .prettierignore natively; there is no rename.
+# - A .jsonlintignore, if present, is honoured as a second ignore file (the
+#   siafudb-kuzu NDJSON fixtures), printed verbatim. If the ignore files
+#   exclude EVERY tracked file, oxfmt exits 2 ("Expected at least one target
+#   file") and the job fails: a gate that inspects nothing cannot pass.
+#
+# WHAT VITE+ DOES NOT COVER, AND CANNOT
+#
+# YAML: `vp fmt` on a .yml file reports "Expected at least one target file"
+# and leaves it untouched. `lint / actionlint` and `lint / yamllint` stay -
+# actionlint is what catches script injection in workflow files.
+# Markdown RULES: oxfmt normalises Markdown, but markdownlint enforces rules
+# (heading increments, inline HTML, MD060) that formatting does not.
+# `lint / markdownlint` stays.
+#
+# TYPE CHECKING IS OPT-IN, PER REPO
+#
+#   // vite.config.ts
+#   import { defineConfig } from "vite-plus";
+#   export default defineConfig({
+#     lint: { options: { typeAware: true, typeCheck: true } },
+#   });
+#
+# Without that block `vp check` runs oxlint only and PASSES a file containing
+# `const x: number = "nope"`. The check job looks for `typeCheck: true` in the
+# root vite.config.* and raises a ::warning:: when it is missing, so a repo
+# that has quietly stopped type checking says so on every PR.
+#
+# CommonJS packages are a known gap: their config must be vite.config.mts
+# (many Vite plugins are ESM-only), and the Vite+ lint config loader does not
+# read .mts. Those packages need `tsc --noEmit &&` in front of their own check
+# script until that is fixed upstream. The tell is timing - ~20ms means the
+# type check did not run.
+#
+# FORMAT SETTINGS MUST AGREE
+#
+# `vp check` does NOT read .oxfmtrc.json - it reads only the `fmt` block in
+# vite.config.ts, and without one it uses oxfmt's defaults (printWidth 100,
+# sortPackageJson on). The fmt job uses .oxfmtrc.json (printWidth 80). Two
+# formatters with different settings on the same file can never both pass, so
+# a JS/TS repo's vite.config.ts carries a `fmt` block with the same values as
+# nyuchi/.github/.oxfmtrc.json.
+#
+# THE REPO'S SCRIPT CONTRACT (package.json at the repo root)
+#
+#   check  vp check              (CI always runs the built-in `vp check`)
+#   test   vp test               (CI runs `ci:test` if defined, else `test`,
+#                                 else `vp test --passWithNoTests`)
+#   build  vp build / framework  (CI runs `ci:build` if defined, else
+#                                 `build`, else passes with a notice)
+#   lint   vp lint
+#   fmt    vp fmt
+#   ci:prepare  optional - run before check, test and build (generated
+#               sources a type check needs, for example)
+#
+# `ci:test` / `ci:build` exist for repos whose everyday script needs a
+# toolchain this job does not install (mzizi-console's build compiles Rust to
+# WASM first). The package manager comes from `packageManager` or the
+# lockfile; voidzero-dev/setup-vp installs Node, the package manager, vite-plus
+# (the repo's own version if it declares one, else vite-plus-version) and the
+# dependencies.
+#
+# ADVISORY MODE
+#
+# `enforce: false` runs everything but turns failures into ::warning::s and a
+# job summary, and the job goes green. An org-required workflow fails the PR
+# if ANY of its jobs fails, so this is how the jobs are switched on in an org
+# before every repo passes them. Flip to `enforce: true` (the default) once
+# the warnings are gone.
+#
+# MIGRATION - the order is load-bearing (per org)
+#
+#   1. Add a `vite-plus` job calling this file to <org>/.github org-lint.yml
+#      with `enforce: false`. Old and new run side by side; nothing blocks.
+#   2. Land one PR per JS/TS repo adopting the script contract and the
+#      vite.config.ts above. Read the warnings off real PR runs until none
+#      are left.
+#   3. Set `enforce: true` in org-lint.yml.
+#   4. Add `vite-plus / fmt`, `vite-plus / check`, `vite-plus / test` and
+#      `vite-plus / build` to the org ruleset's required status checks.
+#   5. Remove `lint / prettier` and `lint / JSON validity` from the ruleset,
+#      and pass `prettier: false` and `json-validity: false` to the lint job
+#      in org-lint.yml so the retired jobs stop running.
+#   6. Only when EVERY org has done 1-5: delete the prettier and JSON validity
+#      jobs from reusable-lint.yml.
+#
+# Doing 6 before 4 in any org blocks every PR in that org - the ruleset would
+# still require contexts that no longer report.
+#
+# The caller must grant `contents: read` (the workflow default).
+
+name: Reusable / Vite+
+
+on:
+  workflow_call:
+    inputs:
+      enforce:
+        description: >-
+          true fails the job on any finding. false (advisory) reports
+          findings as warnings and passes - for switching the jobs on in an
+          org-required workflow before every repo is clean.
+        type: boolean
+        default: true
+      vite-plus-version:
+        description: >-
+          vite-plus version for the fmt job, and for check/test/build in a
+          repo that does not declare vite-plus itself. A repo that declares
+          it gets its own version (resolved from the lockfile).
+        type: string
+        default: "1.0.0"
+      fmt-pathspecs:
+        description: Space-separated git pathspecs the fmt job checks.
+        type: string
+        default: "*.md *.mdx *.json *.jsonc"
+
+permissions:
+  contents: read
+
+jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+        with:
+          persist-credentials: false
+      - name: Fall back to the org format config
+        env:
+          # job.workflow_sha is the commit of THIS reusable workflow. See
+          # reusable-lint.yml for why it is read through fromJSON(toJSON()).
+          ORG_CONFIG_REF: ${{ fromJSON(toJSON(job)).workflow_sha }}
+          # One line per config: the file to fetch, then any other names
+          # that count as the repo's own.
+          ORG_CONFIGS: |
+            .oxfmtrc.json .oxfmtrc.jsonc
+            .prettierignore
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${ORG_CONFIG_REF:-}"
+          if [[ ! "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+            ref=main
+          fi
+          while read -r canonical alternates; do
+            [ -n "$canonical" ] || continue
+            own=""
+            # Intentional word-splitting: $alternates is a space-separated list.
+            # shellcheck disable=SC2086
+            for f in "$canonical" $alternates; do
+              if [ -e "$f" ]; then own="$f"; break; fi
+            done
+            if [ -n "$own" ]; then
+              echo "Using the repo's own $own."
+              continue
+            fi
+            curl --fail --silent --show-error --location \
+              --retry 3 --retry-delay 2 \
+              "https://raw.githubusercontent.com/nyuchi/.github/$ref/$canonical" \
+              --output "$canonical"
+            echo "::notice::$canonical is missing from the repo root; using the canonical copy from nyuchi/.github@$ref."
+          done <<< "$ORG_CONFIGS"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '24'
+      - name: Install the oxfmt that Vite+ bundles
+        id: install
+        env:
+          VITE_PLUS_VERSION: ${{ inputs.vite-plus-version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$VITE_PLUS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]]; then
+            echo "::error::Invalid vite-plus-version '$VITE_PLUS_VERSION' - expected semver."
+            exit 1
+          fi
+          prefix="$RUNNER_TEMP/vite-plus"
+          mkdir -p "$prefix"
+          npm install --prefix "$prefix" --no-audit --no-fund \
+            "vite-plus@$VITE_PLUS_VERSION"
+          oxfmt="$prefix/node_modules/.bin/oxfmt"
+          test -x "$oxfmt" || { echo "::error::vite-plus@$VITE_PLUS_VERSION did not install an oxfmt binary."; exit 1; }
+          echo "vite-plus $VITE_PLUS_VERSION bundles oxfmt $("$oxfmt" --version | tr -d '\n')"
+          echo "oxfmt=$oxfmt" >> "$GITHUB_OUTPUT"
+      - name: oxfmt --check
+        id: run
+        continue-on-error: ${{ !inputs.enforce }}
+        env:
+          OXFMT: ${{ steps.install.outputs.oxfmt }}
+          PATHSPECS: ${{ inputs.fmt-pathspecs }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          read -ra specs <<< "$PATHSPECS"
+          files=()
+          while IFS= read -r -d '' f; do
+            files+=("$f")
+          done < <(git ls-files -z -- "${specs[@]}")
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::notice::No tracked files match '$PATHSPECS'; nothing to format-check."
+            exit 0
+          fi
+          config=.oxfmtrc.json
+          [ -e "$config" ] || config=.oxfmtrc.jsonc
+          ignores=(--ignore-path .prettierignore)
+          if [ -f .jsonlintignore ]; then
+            echo "::group::.jsonlintignore (verbatim, used as a second ignore file)"
+            cat .jsonlintignore
+            echo "::endgroup::"
+            ignores+=(--ignore-path .jsonlintignore)
+          fi
+          echo "Checking ${#files[@]} tracked files with $config."
+          "$OXFMT" --check --config "$config" "${ignores[@]}" "${files[@]}"
+      - name: Advisory result
+        if: ${{ !inputs.enforce && steps.run.outcome == 'failure' }}
+        shell: bash
+        run: |
+          msg="vite-plus / fmt found problems (advisory: not failing)."
+          msg+=" Format with oxfmt (or 'vp fmt' in a JS repo) and commit."
+          echo "::warning::$msg"
+          echo "### vite-plus / fmt would have FAILED (advisory mode)" >> "$GITHUB_STEP_SUMMARY"
+
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+        with:
+          persist-credentials: false
+      - name: Detect a JS/TS repo
+        id: detect
+        continue-on-error: ${{ !inputs.enforce }}
+        env:
+          JOB: check
+          VITE_PLUS_VERSION: ${{ inputs.vite-plus-version }}
+        shell: bash
+        run: &detect |
+          set -euo pipefail
+          if [ ! -f package.json ]; then
+            msg="No package.json at the repository root: nothing for"
+            msg+=" 'vite-plus / $JOB' to do. Passing, because this context"
+            msg+=" must report in every repo."
+            echo "::notice::$msg"
+            echo "js=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ ! "$VITE_PLUS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]]; then
+            echo "::error::Invalid vite-plus-version '$VITE_PLUS_VERSION' - expected semver."
+            exit 1
+          fi
+          python3 - <<'DETECT' >> "$GITHUB_OUTPUT"
+          import json, os
+          job = os.environ["JOB"]
+          pkg = json.load(open("package.json", encoding="utf-8"))
+          deps = {}
+          for key in ("dependencies", "devDependencies"):
+              deps.update(pkg.get(key) or {})
+          scripts = pkg.get("scripts") or {}
+          print("js=true")
+          # A repo that declares vite-plus gets its own version: setup-vp
+          # resolves it from package.json and the lockfile when version is "".
+          print("vp-version=%s" % ("" if "vite-plus" in deps else os.environ["VITE_PLUS_VERSION"]))
+          for f in (".nvmrc", ".node-version", ".tool-versions"):
+              if os.path.isfile(f):
+                  print("node-version-file=%s" % f)
+                  break
+          locks = ("pnpm-lock.yaml", "package-lock.json", "yarn.lock", "bun.lock", "bun.lockb")
+          print("lockfile=%s" % ("true" if any(os.path.isfile(f) for f in locks) else "false"))
+          print("prepare=%s" % ("true" if "ci:prepare" in scripts else "false"))
+          script = ""
+          if job in ("test", "build"):
+              for name in ("ci:" + job, job):
+                  if name in scripts:
+                      script = name
+                      break
+          print("script=%s" % script)
+          DETECT
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f  # v1.21.1
+        id: setup
+        if: ${{ steps.detect.outputs.js == 'true' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        with:
+          version: ${{ steps.detect.outputs.vp-version }}
+          node-version-file: ${{ steps.detect.outputs.node-version-file }}
+          cache: ${{ steps.detect.outputs.lockfile }}
+          run-install: true
+      - name: ci:prepare
+        id: prepare
+        if: ${{ steps.setup.outcome == 'success' && steps.detect.outputs.prepare == 'true' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        shell: bash
+        run: vp run ci:prepare
+      - name: Is type checking on?
+        if: ${{ steps.detect.outputs.js == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          configs=(vite.config.ts vite.config.mts vite.config.js vite.config.mjs vite.config.cts vite.config.cjs)
+          found=()
+          for c in "${configs[@]}"; do [ -f "$c" ] && found+=("$c"); done
+          if [ "${#found[@]}" -gt 0 ] && grep -Eq 'typeCheck:[[:space:]]*true' "${found[@]}"; then
+            echo "Type checking is on (typeCheck: true in ${found[*]})."
+          else
+            msg="vp check is NOT type checking this repo: no 'typeCheck: true'"
+            msg+=" in a root vite.config.*. Add lint: { options: { typeAware:"
+            msg+=" true, typeCheck: true } } - without it a type error passes."
+            echo "::warning::$msg"
+          fi
+      - name: vp check
+        id: run
+        if: ${{ steps.setup.outcome == 'success' && steps.prepare.outcome != 'failure' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        shell: bash
+        run: vp check
+      - name: Advisory result
+        if: >-
+          ${{ !inputs.enforce && (steps.detect.outcome == 'failure'
+          || steps.setup.outcome == 'failure' || steps.prepare.outcome == 'failure'
+          || steps.run.outcome == 'failure') }}
+        shell: bash
+        run: &advisory |
+          echo "::warning::vite-plus / $GITHUB_JOB would have failed (advisory mode: passing). See the failed step above."
+          echo "### vite-plus / $GITHUB_JOB would have FAILED (advisory mode)" >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+        with:
+          persist-credentials: false
+      - name: Detect a JS/TS repo
+        id: detect
+        continue-on-error: ${{ !inputs.enforce }}
+        env:
+          JOB: test
+          VITE_PLUS_VERSION: ${{ inputs.vite-plus-version }}
+        shell: bash
+        run: *detect
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f  # v1.21.1
+        id: setup
+        if: ${{ steps.detect.outputs.js == 'true' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        with:
+          version: ${{ steps.detect.outputs.vp-version }}
+          node-version-file: ${{ steps.detect.outputs.node-version-file }}
+          cache: ${{ steps.detect.outputs.lockfile }}
+          run-install: true
+      - name: ci:prepare
+        id: prepare
+        if: ${{ steps.setup.outcome == 'success' && steps.detect.outputs.prepare == 'true' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        shell: bash
+        run: vp run ci:prepare
+      - name: Test
+        id: run
+        if: ${{ steps.setup.outcome == 'success' && steps.prepare.outcome != 'failure' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        env:
+          SCRIPT: ${{ steps.detect.outputs.script }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$SCRIPT" ]; then
+            echo "Running the repo's '$SCRIPT' script."
+            vp run "$SCRIPT"
+          else
+            echo "No 'ci:test' or 'test' script; running the built-in vp test."
+            vp test --passWithNoTests
+          fi
+      - name: Advisory result
+        if: >-
+          ${{ !inputs.enforce && (steps.detect.outcome == 'failure'
+          || steps.setup.outcome == 'failure' || steps.prepare.outcome == 'failure'
+          || steps.run.outcome == 'failure') }}
+        shell: bash
+        run: *advisory
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v6
+        with:
+          persist-credentials: false
+      - name: Detect a JS/TS repo
+        id: detect
+        continue-on-error: ${{ !inputs.enforce }}
+        env:
+          JOB: build
+          VITE_PLUS_VERSION: ${{ inputs.vite-plus-version }}
+        shell: bash
+        run: *detect
+      - name: No build script
+        if: ${{ steps.detect.outputs.js == 'true' && steps.detect.outputs.script == '' }}
+        shell: bash
+        run: echo "::notice::No 'ci:build' or 'build' script in package.json; nothing to build. Passing."
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f  # v1.21.1
+        id: setup
+        if: ${{ steps.detect.outputs.js == 'true' && steps.detect.outputs.script != '' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        with:
+          version: ${{ steps.detect.outputs.vp-version }}
+          node-version-file: ${{ steps.detect.outputs.node-version-file }}
+          cache: ${{ steps.detect.outputs.lockfile }}
+          run-install: true
+      - name: ci:prepare
+        id: prepare
+        if: ${{ steps.setup.outcome == 'success' && steps.detect.outputs.prepare == 'true' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        shell: bash
+        run: vp run ci:prepare
+      - name: Build
+        id: run
+        if: ${{ steps.setup.outcome == 'success' && steps.prepare.outcome != 'failure' }}
+        continue-on-error: ${{ !inputs.enforce }}
+        env:
+          SCRIPT: ${{ steps.detect.outputs.script }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Running the repo's '$SCRIPT' script."
+          vp run "$SCRIPT"
+      - name: Advisory result
+        if: >-
+          ${{ !inputs.enforce && (steps.detect.outcome == 'failure'
+          || steps.setup.outcome == 'failure' || steps.prepare.outcome == 'failure'
+          || steps.run.outcome == 'failure') }}
+        shell: bash
+        run: *advisory

@@ -219,3 +219,21 @@ a correct linter and a wrong document.
 This gate is the shared baseline that every repository can satisfy.
 Rust, typecheck, build, test and deploy jobs stay in the repository's
 own `ci.yml`. Do not add them here.
+
+## Moving to Vite+ (in progress, one org at a time)
+
+[`reusable-vite-plus.yml`](.github/workflows/reusable-vite-plus.yml) is
+the successor to the `prettier` and `JSON validity` jobs. It publishes
+`vite-plus / fmt` (oxfmt over tracked `.md`, `.mdx`, `.json` and `.jsonc`
+files, in every repo) and, for repositories with a root `package.json`,
+`vite-plus / check`, `vite-plus / test` and `vite-plus / build`. A repo
+without a `package.json` still reports all four, as passes.
+
+`.oxfmtrc.json` is the canonical format config, with the same settings
+as `.prettierrc`. `actionlint`, `yamllint` and `markdownlint` are not
+replaced: Vite+ does not read YAML, and formatting is not a rule set.
+
+Each org moves in the order in that file's MIGRATION section. The
+`prettier` and `json-validity` inputs of this lint workflow let an org
+that has finished stop running the retired jobs; leave them at their
+default until the org's ruleset requires the `vite-plus /` contexts.

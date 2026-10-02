@@ -27,3 +27,8 @@ permissions:
 jobs:
   lint:
     uses: ./.github/workflows/reusable-lint.yml
+  # Dogfoods reusable-vite-plus.yml by LOCAL path, so a PR changing it runs
+  # the changed copy. This repo has no package.json, so it exercises the fmt
+  # job and the no-JS pass path of check/test/build.
+  vite-plus:
+    uses: ./.github/workflows/reusable-vite-plus.yml
