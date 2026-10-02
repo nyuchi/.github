@@ -2,14 +2,23 @@
 # "Require workflows to pass" rule, so GitHub runs it on every pull request
 # in every repo in the org — no per-repo .github/workflows/lint.yml needed.
 #
-# The job is called `lint` and calls nyuchi/.github's reusable workflow, so
-# its checks publish as the same five contexts as the per-repo caller:
-#   lint / actionlint, lint / JSON validity, lint / prettier,
-#   lint / markdownlint, lint / yamllint
+# Two jobs, both calling reusable workflows in nyuchi/.github:
 #
-# A repo's own .prettierrc, .prettierignore, .markdownlint.jsonc and
-# .yamllint.yaml at its root always win. Where one is missing, the reusable
-# workflow falls back to the canonical copy in nyuchi/.github.
+#   lint       lint / actionlint, lint / JSON validity, lint / prettier,
+#              lint / markdownlint, lint / yamllint
+#   vite-plus  vite-plus / fmt, vite-plus / check, vite-plus / test,
+#              vite-plus / build
+#
+# The vite-plus job runs ADVISORY (`enforce: false`) while each repo adopts
+# Vite+: findings are warnings and the job passes, so nothing blocks. It is
+# switched to enforced, and the `vite-plus /` contexts made required in the
+# org ruleset, once every repo passes it. The full order is the MIGRATION
+# section of nyuchi/.github/.github/workflows/reusable-vite-plus.yml.
+#
+# A repo's own .prettierrc, .prettierignore, .markdownlint.jsonc,
+# .yamllint.yaml and .oxfmtrc.json at its root always win. Where one is
+# missing, the reusable workflows fall back to the canonical copy in
+# nyuchi/.github.
 
 name: Org lint
 
@@ -27,3 +36,7 @@ permissions:
 jobs:
   lint:
     uses: nyuchi/.github/.github/workflows/reusable-lint.yml@main
+  vite-plus:
+    uses: nyuchi/.github/.github/workflows/reusable-vite-plus.yml@main
+    with:
+      enforce: false
