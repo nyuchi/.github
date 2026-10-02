@@ -108,7 +108,8 @@
 #
 # THE REPO'S SCRIPT CONTRACT (package.json at the repo root)
 #
-#   check  vp check              (CI always runs the built-in `vp check`)
+#   check  vp check              (CI runs the built-in `vp check`, unless
+#                                 the transitional `ci:check` is defined)
 #   test   vp test               (CI runs `ci:test` if defined, else `test`,
 #                                 else `vp test --passWithNoTests`)
 #   build  vp build / framework  (CI runs `ci:build` if defined, else
@@ -117,6 +118,14 @@
 #   fmt    vp fmt
 #   ci:prepare  optional - run before check, test and build (generated
 #               sources a type check needs, for example)
+#
+# `ci:check` is TRANSITIONAL, for a repo whose root cannot pass `vp check`
+# yet: a workspace whose packages each carry their own tsconfig and run
+# `vp check` per package (agent-tools), or a repo whose TypeScript has never
+# been through a formatter (mzizi-registry: ~630 files). It names whatever
+# that repo gates on today, so the context reports something real rather than
+# nothing, and the job raises a ::warning:: on every run while it is in use.
+# Delete it when the repo's root passes `vp check`.
 #
 # `ci:test` / `ci:build` exist for repos whose everyday script needs a
 # toolchain this job does not install (mzizi-console's build compiles Rust to
@@ -334,6 +343,8 @@ jobs:
           print("lockfile=%s" % ("true" if any(os.path.isfile(f) for f in locks) else "false"))
           print("prepare=%s" % ("true" if "ci:prepare" in scripts else "false"))
           script = ""
+          if job == "check":
+              script = "ci:check" if "ci:check" in scripts else ""
           if job in ("test", "build"):
               for name in ("ci:" + job, job):
                   if name in scripts:
@@ -358,9 +369,18 @@ jobs:
         run: vp run ci:prepare
       - name: Is type checking on?
         if: ${{ steps.detect.outputs.js == 'true' }}
+        env:
+          SCRIPT: ${{ steps.detect.outputs.script }}
         shell: bash
         run: |
           set -euo pipefail
+          if [ -n "$SCRIPT" ]; then
+            msg="This repo runs its transitional '$SCRIPT' script instead of"
+            msg+=" 'vp check'. Remove '$SCRIPT' once the repo root passes"
+            msg+=" 'vp check' with typeCheck on."
+            echo "::warning::$msg"
+            exit 0
+          fi
           shopt -s nullglob
           configs=(vite.config.ts vite.config.mts vite.config.js vite.config.mjs vite.config.cts vite.config.cjs)
           found=()
@@ -377,8 +397,17 @@ jobs:
         id: run
         if: ${{ steps.setup.outcome == 'success' && steps.prepare.outcome != 'failure' }}
         continue-on-error: ${{ !inputs.enforce }}
+        env:
+          SCRIPT: ${{ steps.detect.outputs.script }}
         shell: bash
-        run: vp check
+        run: |
+          set -euo pipefail
+          if [ -n "$SCRIPT" ]; then
+            echo "Running the repo's transitional '$SCRIPT' script."
+            vp run "$SCRIPT"
+          else
+            vp check
+          fi
       - name: Advisory result
         if: >-
           ${{ !inputs.enforce && (steps.detect.outcome == 'failure'
