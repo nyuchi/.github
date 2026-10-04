@@ -106,6 +106,10 @@ The Mukoko app repositories (`mukoko-news`, `mukoko-news-gateway`,
   pull request and requires the five lint checks — see the
   [reusable workflows](https://github.com/nyuchi/.github/tree/main/.github/workflows)
   that power it.
+- **Versions follow the branch.** A merge into `staging` (the live
+  beta) is a patch, a release to `main` is a minor, and a major is only
+  ever made by hand. See
+  [Versioning](https://github.com/nyuchi/.github/blob/main/CONTRIBUTING.md#versioning).
 - **Agents have rules too.**
   [`AGENTS.md`](https://github.com/nyuchi/.github/blob/main/AGENTS.md)
   governs AI-assisted contributions.

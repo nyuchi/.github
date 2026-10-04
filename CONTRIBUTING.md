@@ -213,6 +213,27 @@ That rises to 1 when a second engineer with merge rights joins.
 
 ---
 
+## Versioning
+
+Every release follows the org policy
+([#80](https://github.com/nyuchi/.github/issues/80)):
+
+- **A merge into `staging` is a PATCH** (x.y.z → x.y.z+1). It is tagged
+  automatically and deployed to the repo's live beta.
+- **Releasing `staging` to `main` is a MINOR** (x.y.z → x.y+1.0).
+- **A MAJOR is manual only**: the owner runs the release workflow with
+  `bump: major`. Automation never makes one.
+- Each segment holds 0–999. Patch 999 rolls into the next minor; minor
+  999 stops and asks for a manual major.
+- `workflow_dispatch` on a release workflow takes
+  `bump: patch|minor|major` as a manual override.
+
+There are no version labels. Released versions are never renumbered.
+The calculator is
+[`.github/actions/next-version`](./.github/actions/next-version).
+
+---
+
 ## Code style and quality
 
 Every repo ships its own formatter/linter config (Prettier/Biome,

@@ -214,6 +214,36 @@ If a repo disagrees with this table, the repo wins.
 
 ---
 
+## Versioning
+
+Owner decision, 2026-10-04 ([#80](https://github.com/nyuchi/.github/issues/80)).
+The branch decides the bump. Nobody labels a PR, and agents add nothing
+to a PR to choose a version:
+
+| Event                                        | Bump  | Example         |
+| -------------------------------------------- | ----- | --------------- |
+| A PR merged into `staging` (the live beta)   | PATCH | 0.27.3 → 0.27.4 |
+| `staging` released to `main`                 | MINOR | 0.27.4 → 0.28.0 |
+| A person runs the release with `bump: major` | MAJOR | 0.28.0 → 1.0.0  |
+
+- Each segment holds 0–999. Patch 999 rolls into the next minor; minor
+  999 never rolls into a major on its own. The release fails and asks
+  for a manual major.
+- **Agents never release a major** and never hand-edit a version to one.
+  A major is the owner's call, made from the Actions tab.
+- In a repo whose version lives in a file (`package.json`,
+  `Cargo.toml`, ...), a PR that releases sets it to the next version
+  the policy allows. CI refuses anything else and names the right
+  version.
+- Released versions are never renumbered.
+
+The rules live in one place, the
+[`next-version`](./.github/actions/next-version) action, which
+`reusable-staging-release.yml`, `reusable-auto-tag.yml` and every repo's
+release flow pin by SHA.
+
+---
+
 ## Repo-level overrides
 
 A repo can extend or override this file by shipping its own
