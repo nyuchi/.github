@@ -12,7 +12,7 @@ on:
       - ".github/actions/**"
       - ".github/workflows/test-actions.yml"
   push:
-    branches: [main]
+    branches: [main, staging]
     paths:
       - ".github/actions/**"
       - ".github/workflows/test-actions.yml"
