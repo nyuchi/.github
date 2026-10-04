@@ -38,6 +38,10 @@
 # The secret is passed explicitly, not with `secrets: inherit`, so callers in
 # other orgs (mukoko-dev, bundu-labs, ...) can use this workflow too.
 #
+# Callers that hold a release token pin this workflow to a commit SHA
+# (`reusable-auto-tag.yml@<40-hex>  # main, <date>`), not `@main`, so a change
+# here cannot reach their token until they bump the pin.
+#
 # Inputs
 # ------
 # version-command  Shell command that prints the version, e.g.
@@ -106,7 +110,7 @@ jobs:
       tag: ${{ steps.v.outputs.tag }}
       created: ${{ steps.push.outputs.created }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
           token: ${{ secrets.token || github.token }}

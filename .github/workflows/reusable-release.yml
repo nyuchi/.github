@@ -129,7 +129,7 @@ jobs:
   sbom:
     name: Generate SBOM
     needs: validate-tag
-    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@main
+    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@70d4404ed841e1119056f1ffd0cd2273e4549a98  # main, 2026-10-04 (bump with the sbom workflow)
     permissions:
       contents: read
       packages: read
@@ -148,7 +148,7 @@ jobs:
     outputs:
       hashes: ${{ steps.checksums.outputs.hashes }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
           ref: ${{ needs.validate-tag.outputs.tag }}
