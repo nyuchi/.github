@@ -113,7 +113,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
-          token: ${{ secrets.token || github.token }}
+          # No credential is kept: the version command runs after this. The
+          # token reaches only the step that writes, through env.
+          persist-credentials: false
 
       - name: Read the version
         id: v
@@ -135,13 +137,15 @@ jobs:
         id: push
         env:
           GH_TOKEN: ${{ secrets.token || github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ steps.v.outputs.tag }}
           VERSION: ${{ steps.v.outputs.version }}
           CREATE_RELEASE: ${{ inputs.create-release }}
         run: |
           set -euo pipefail
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git"
           # Ask the remote: a tag from an earlier run need not be in this checkout.
-          if git ls-remote --tags --refs origin "refs/tags/$TAG" | grep -q .; then
+          if git ls-remote --tags --refs "$remote" "refs/tags/$TAG" | grep -q .; then
             echo "Tag $TAG already exists; nothing to release."
             echo "created=false" >> "$GITHUB_OUTPUT"
             exit 0
@@ -151,7 +155,7 @@ jobs:
           # Annotated, and pushed by name: a lightweight tag is skipped by
           # --follow-tags and would never reach the remote.
           git tag -a "$TAG" -m "$TAG"
-          git push origin "refs/tags/$TAG"
+          git push "$remote" "refs/tags/$TAG"
           echo "created=true" >> "$GITHUB_OUTPUT"
           echo "Pushed $TAG at $(git rev-parse HEAD)."
 
