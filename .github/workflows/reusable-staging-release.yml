@@ -49,6 +49,10 @@
 # bump            Override the patch: minor or major ('' on push runs). A
 #                 major is accepted only when a person started the run.
 # tag-prefix      Prefix of version tags (default: v).
+# current         The version to bump from. Empty (default) = the highest
+#                 version tag. Set it when the repo carries a stray tag above
+#                 its real line (a legacy v4.0.1 above v0.27.0, say) that
+#                 cannot be deleted under the tag ruleset.
 # ref             Commit to tag (default: the commit that started the run).
 # create-release  Also create a GitHub pre-release with generated notes, so
 #                 the beta build is visible without marking it latest
@@ -74,6 +78,10 @@ on:
         description: Prefix for the tag name.
         type: string
         default: v
+      current:
+        description: Version to bump from. Empty = the highest version tag.
+        type: string
+        default: ""
       ref:
         description: Commit to tag. Defaults to the commit that started the run.
         type: string
@@ -127,6 +135,7 @@ jobs:
           bump: ${{ inputs.bump }}
           manual: ${{ github.event_name == 'workflow_dispatch' }}
           tag-prefix: ${{ inputs.tag-prefix }}
+          current: ${{ inputs.current }}
 
       - name: Push the tag and pre-release
         id: push
