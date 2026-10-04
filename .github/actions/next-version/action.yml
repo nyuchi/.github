@@ -1,0 +1,124 @@
+# Composite action: the org's versioning policy.
+#
+#   Merge into `staging`       PATCH  x.y.z -> x.y.(z+1)
+#   Release `staging` -> main  MINOR  x.y.z -> x.(y+1).0
+#   MAJOR                      manual only: workflow_dispatch with bump: major
+#
+# Each segment holds 0..999. Patch 999 rolls into the next minor; minor 999
+# is refused, with a message asking for a manual major. The rules live in
+# next-version.mjs beside this file, with its tests.
+#
+# Two modes:
+#
+#   next   (no `proposed`)  Read the highest released tag and print the next
+#                           version for `channel`, or for `bump` when a
+#                           person overrides it.
+#   check  (`proposed` set) The version is written in the repo (package.json,
+#                           Cargo.toml, ...). Pass it, and the step fails
+#                           unless it is the version the policy allows next.
+#
+# Usage, pinned to a commit like every org action:
+#
+#   - id: v
+#     uses: nyuchi/.github/.github/actions/next-version@<40-hex>  # main, <date>
+#     with:
+#       channel: main
+#       bump: ${{ inputs.bump }}                 # '' on automatic runs
+#       manual: ${{ github.event_name == 'workflow_dispatch' }}
+#   - run: echo "${{ steps.v.outputs.version }}"
+#
+# Reads tags through the API with `token` (default: the run's GITHUB_TOKEN,
+# which needs only contents: read). Needs no checkout and writes nothing.
+
+name: Next version
+description: Compute or check the next version under the org versioning policy.
+
+inputs:
+  channel:
+    description: "'staging' (patch) or 'main' (minor)."
+    required: true
+  bump:
+    description: "Override: patch, minor or major. Empty takes the channel's default."
+    required: false
+    default: ""
+  manual:
+    description: "'true' when a person started the run. Required for a major."
+    required: false
+    default: "false"
+  proposed:
+    description: Version written in the repo. Set it to check instead of compute.
+    required: false
+    default: ""
+  current:
+    description: Highest released version. Empty reads it from the repo's tags.
+    required: false
+    default: ""
+  tag-prefix:
+    description: Prefix of the version tags.
+    required: false
+    default: v
+  repository:
+    description: owner/repo whose tags are read.
+    required: false
+    default: ${{ github.repository }}
+  token:
+    description: Token that can read the repo's tags.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  current:
+    description: Highest released version before this one (0.0.0 if none).
+    value: ${{ steps.run.outputs.current }}
+  version:
+    description: The next version (next mode) or the checked version (check mode).
+    value: ${{ steps.run.outputs.version }}
+  tag:
+    description: tag-prefix + version.
+    value: ${{ steps.run.outputs.tag }}
+
+runs:
+  using: composite
+  steps:
+    - id: run
+      shell: bash
+      env:
+        CHANNEL: ${{ inputs.channel }}
+        BUMP: ${{ inputs.bump }}
+        MANUAL: ${{ inputs.manual }}
+        PROPOSED: ${{ inputs.proposed }}
+        CURRENT: ${{ inputs.current }}
+        PREFIX: ${{ inputs.tag-prefix }}
+        REPO: ${{ inputs.repository }}
+        GH_TOKEN: ${{ inputs.token }}
+        SCRIPT: ${{ github.action_path }}/next-version.mjs
+      run: |
+        set -euo pipefail
+        current="$CURRENT"
+        refs=""
+        if [ -z "$current" ]; then
+          # matching-refs takes a URL-encoded prefix ('@' in npm tags).
+          enc="$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
+          refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$enc" --jq '.[].ref')"
+          current="$(printf '%s\n' "$refs" | node "$SCRIPT" highest --prefix "$PREFIX")"
+        fi
+        echo "current=$current" >> "$GITHUB_OUTPUT"
+
+        if [ -n "$PROPOSED" ] && printf '%s\n' "$refs" | grep -qxF "refs/tags/$PREFIX$PROPOSED"; then
+          # Already released (a merge that did not change the version).
+          echo "Version $PROPOSED is already tagged; nothing to check."
+          version="$PROPOSED"
+        elif [ -n "$PROPOSED" ]; then
+          allow_major=false
+          [ "$MANUAL" = "true" ] && [ "$BUMP" = "major" ] && allow_major=true
+          why="$(node "$SCRIPT" check --current "$current" --proposed "$PROPOSED" \
+            --channel "$CHANNEL" --bump "$BUMP" --allow-major "$allow_major")"
+          version="$PROPOSED"
+          echo "Version $version after $current on $CHANNEL: allowed ($why)."
+        else
+          version="$(node "$SCRIPT" next --current "$current" --channel "$CHANNEL" \
+            --bump "$BUMP" --manual "$MANUAL")"
+          echo "Version $current -> $version on $CHANNEL${BUMP:+ (bump: $BUMP)}."
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "tag=$PREFIX$version" >> "$GITHUB_OUTPUT"
