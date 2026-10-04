@@ -44,12 +44,12 @@ on:
         type: boolean
         default: true
 
-# Top-level ceiling: direct callers with upload-release-assets:true need
-# contents:write to attach the SBOM to a GitHub Release. Sub-workflow
-# callers (e.g. reusable-release.yml) should grant only contents:read.
-permissions:
-  contents: write
-  packages: read
+# No `permissions:` block on purpose: the job runs with exactly what the
+# caller grants. Direct callers with upload-release-assets:true grant
+# contents:write to attach the SBOM to a GitHub Release; reusable-release.yml
+# grants contents:read. A block here asking for contents:write made every
+# contents:read caller fail at startup ("requesting 'contents: write', but is
+# only allowed 'contents: read'"), so no release was ever cut through it.
 
 jobs:
   sbom:
