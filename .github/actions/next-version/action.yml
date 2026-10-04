@@ -95,15 +95,20 @@ runs:
       run: |
         set -euo pipefail
         current="$CURRENT"
+        refs=""
         if [ -z "$current" ]; then
           # matching-refs takes a URL-encoded prefix ('@' in npm tags).
           enc="$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
-          current="$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$enc" \
-            --jq '.[].ref' | node "$SCRIPT" highest --prefix "$PREFIX")"
+          refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$enc" --jq '.[].ref')"
+          current="$(printf '%s\n' "$refs" | node "$SCRIPT" highest --prefix "$PREFIX")"
         fi
         echo "current=$current" >> "$GITHUB_OUTPUT"
 
-        if [ -n "$PROPOSED" ]; then
+        if [ -n "$PROPOSED" ] && printf '%s\n' "$refs" | grep -qxF "refs/tags/$PREFIX$PROPOSED"; then
+          # Already released (a merge that did not change the version).
+          echo "Version $PROPOSED is already tagged; nothing to check."
+          version="$PROPOSED"
+        elif [ -n "$PROPOSED" ]; then
           allow_major=false
           [ "$MANUAL" = "true" ] && [ "$BUMP" = "major" ] && allow_major=true
           why="$(node "$SCRIPT" check --current "$current" --proposed "$PROPOSED" \
