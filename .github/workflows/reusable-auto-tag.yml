@@ -1,0 +1,158 @@
+# Reusable workflow: tag the version a merge carries.
+#
+# Releasing is a version bump merged to main. This reads the version from the
+# repository (any shell command that prints it), and when no tag exists for it
+# yet, pushes an annotated tag and, optionally, a GitHub release. A merge that
+# does not change the version finds its tag already there and does nothing, so
+# the job is safe to run on every push and to re-run.
+#
+# Which token pushes the tag decides what happens next:
+#
+#   RELEASE_BUMP_TOKEN (pass it as the `token` secret): the tag and release
+#     are made by a person's token, so the repo's own `push: tags` or
+#     `release: published` workflows start as usual. Use this in nyuchi,
+#     mukoko-dev and mzizi-dev, which hold the org secret.
+#
+#   GITHUB_TOKEN (pass no secret; the caller grants contents: write): GitHub
+#     starts no workflow from a tag or release made with it, so the caller
+#     must do its publishing in later jobs of the same run, keyed on the
+#     `created` and `tag` outputs. Use this in orgs without the PAT.
+#
+# Usage, with the PAT, after CI passes on main:
+#
+#   on:
+#     workflow_run:
+#       workflows: ["CI"]
+#       types: [completed]
+#       branches: [main]
+#   jobs:
+#     tag:
+#       if: github.event.workflow_run.conclusion == 'success'
+#       uses: nyuchi/.github/.github/workflows/reusable-auto-tag.yml@main
+#       with:
+#         version-command: node -p "require('./package.json').version"
+#         ref: ${{ github.event.workflow_run.head_sha }}
+#       secrets:
+#         token: ${{ secrets.RELEASE_BUMP_TOKEN }}
+#
+# The secret is passed explicitly, not with `secrets: inherit`, so callers in
+# other orgs (mukoko-dev, bundu-labs, ...) can use this workflow too.
+#
+# Inputs
+# ------
+# version-command  Shell command that prints the version, e.g.
+#                  node -p "require('./package.json').version". Required.
+# tag-prefix       Put before the version to make the tag (default: v).
+# ref              Commit to tag (default: the commit that started the run).
+# create-release   Also create a GitHub release with generated notes
+#                  (default: false). Turn it on when the repo publishes on
+#                  `release: published`; leave it off when the repo's
+#                  `push: tags` workflow creates the release itself.
+#
+# Outputs
+# -------
+# version, tag     What was read and what the tag is called.
+# created          'true' when this run created the tag.
+
+name: Reusable / Auto tag
+
+on:
+  workflow_call:
+    inputs:
+      version-command:
+        description: Shell command that prints the version.
+        type: string
+        required: true
+      tag-prefix:
+        description: Prefix for the tag name.
+        type: string
+        default: v
+      ref:
+        description: Commit to tag. Defaults to the commit that started the run.
+        type: string
+        default: ""
+      create-release:
+        description: Also create a GitHub release with generated notes.
+        type: boolean
+        default: false
+    secrets:
+      token:
+        description: A PAT (RELEASE_BUMP_TOKEN) so the tag starts other workflows. Defaults to GITHUB_TOKEN.
+        required: false
+    outputs:
+      version:
+        description: The version read from the repository.
+        value: ${{ jobs.tag.outputs.version }}
+      tag:
+        description: The tag name.
+        value: ${{ jobs.tag.outputs.tag }}
+      created:
+        description: "'true' when this run created the tag."
+        value: ${{ jobs.tag.outputs.created }}
+
+# No `permissions:` block: the job runs with what the caller grants
+# (contents: read with a PAT; contents: write without one).
+
+jobs:
+  tag:
+    name: Tag the version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: auto-tag-${{ github.repository }}
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      created: ${{ steps.push.outputs.created }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          token: ${{ secrets.token || github.token }}
+
+      - name: Read the version
+        id: v
+        env:
+          VERSION_COMMAND: ${{ inputs.version-command }}
+          PREFIX: ${{ inputs.tag-prefix }}
+        run: |
+          set -euo pipefail
+          version="$(bash -c "$VERSION_COMMAND" | tr -d '[:space:]')"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$VERSION_COMMAND' printed '$version', which is not a semantic version."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$PREFIX$version" >> "$GITHUB_OUTPUT"
+          echo "Version $version, tag $PREFIX$version"
+
+      - name: Push the tag and release
+        id: push
+        env:
+          GH_TOKEN: ${{ secrets.token || github.token }}
+          TAG: ${{ steps.v.outputs.tag }}
+          VERSION: ${{ steps.v.outputs.version }}
+          CREATE_RELEASE: ${{ inputs.create-release }}
+        run: |
+          set -euo pipefail
+          # Ask the remote: a tag from an earlier run need not be in this checkout.
+          if git ls-remote --tags --refs origin "refs/tags/$TAG" | grep -q .; then
+            echo "Tag $TAG already exists; nothing to release."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Annotated, and pushed by name: a lightweight tag is skipped by
+          # --follow-tags and would never reach the remote.
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "refs/tags/$TAG"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "Pushed $TAG at $(git rev-parse HEAD)."
+
+          if [ "$CREATE_RELEASE" = "true" ] && ! gh release view "$TAG" >/dev/null 2>&1; then
+            flags=()
+            [[ "$VERSION" == *-* ]] && flags+=(--prerelease)
+            gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes "${flags[@]}"
+          fi
