@@ -37,6 +37,7 @@ This is a major version because v4 described a platform that had been designed, 
 | 16 | Web | Next.js on Vercel | **Astro** for web, with **Rust compiled to WASM** underneath. Live Next.js apps are the current state, not the target. |
 | 17 | Naming | NTL, NST, Barstool unresolved | **NTL = Neural Transfer Layer** (openNTL). **NST = Nyuchi Storage Token.** **Barstool is folded into Mukoko Kweli**; it is no longer a sister brand, and `barstool.co.zw` redirects to `kweli.mukoko.com`. |
 | 18 | GitHub | Five independent orgs | **`bundu-labs` is the enterprise.** `openNTL` and `siafuDB` are their own organisations within it. Astro migration of the live Next.js apps proceeds **incrementally**, one app at a time. |
+| 19 | Events brand | "Nhimbe", a standalone brand at `nhimbe.com` | **Mukoko Events** at `events.mukoko.com` (owner decision, 4 Oct 2026). The *nhimbe* brand is retired; the mineral stays malachite, and `nhimbe` is kept in Mzizi only as a deprecated alias of the `events` canon row. `nhimbe.com` redirects to `events.mukoko.com` once the cutover tracked in mukoko-dev/nhimbe#155 completes. |
 
 ---
 
@@ -209,7 +210,7 @@ The relational layer is now deliberately thin: identity and entity roots, member
 
 | Product | What MongoDB holds |
 |---|---|
-| Nhimbe / Mukoko Events | Events, RSVPs, waitlists, circles, check-ins, reviews (server-side only, writes through Server Actions) |
+| Mukoko Events | Events, RSVPs, waitlists, circles, check-ins, reviews (server-side only, writes through Server Actions) |
 | Mukoko News | Articles and feeds (read via Server Actions; written by the ingestion pipeline) |
 | Mukoko Kweli | The geographic knowledge graph: `places.places` (15k+ documents, 21 countries), `places.placesGeo`, `places.categories`, `entity.entities` |
 | Mukoko Weather | Forecast cache, AI summaries, history, locations, airports, station observations |
@@ -377,9 +378,9 @@ Decision: build native UI per surface over the Rust core now; keep Dioxus under 
 
 | Item | Status |
 |---|---|
-| Next.js apps on Vercel (Nhimbe, News, Weather, Kweli) | Live — current state. Migrating to Astro **incrementally**, one app at a time, each migration its own reviewable change. Order to be set per app. |
+| Next.js apps on Vercel (Mukoko Events, News, Weather, Kweli) | Live — current state. Migrating to Astro **incrementally**, one app at a time, each migration its own reviewable change. Order to be set per app. |
 | Astro sites (docs, Learning) | Live |
-| Installable PWAs (Nhimbe, Weather) | Live |
+| Installable PWAs (Mukoko Events, Weather) | Live |
 | `mukoko-weather-mobile` — Expo SDK 56 / React Native 0.85, Android internal track (draft), not in either store | Building — **interim only**, to be replaced by native clients |
 | Native clients per surface over the Rust core | Designed |
 | Two-tier mini-app model and `@mukoko/bridge` | Designed — to be re-specified against the Rust core |
@@ -391,7 +392,7 @@ Decision: build native UI per surface over the Rust core now; keep Dioxus under 
 | Item | Status |
 |---|---|
 | Inline AI summaries, follow-up chat, AI explore search (Weather) | Live |
-| Event discovery and description writing (Nhimbe) | Live |
+| Event discovery and description writing (Mukoko Events) | Live |
 | Docs Ask-AI (`shamwari-docs-ai` over Cloudflare AI Search) | Live |
 | Shamwari full-viewport chat (Weather) | Paused behind a flag |
 | Retrieval | Atlas Vector Search |
@@ -413,9 +414,9 @@ The count is locked at seventeen. Each operates in Musha, Basa, and Nhaka. Statu
 | 2 | Pulse | Discovery | — | Designed |
 | 3 | Mukoko News | Journalism | `news.mukoko.com` (v4.58.0), MCP at `news.mukoko.dev/mcp` | **Live.** All 54 AU states in scope; live coverage is a measured query, not a constant. |
 | 4 | Bytes | Creator Video | — | Designed. (NewsBytes, a vertical headline feed inside News, is not Bytes.) |
-| 5 | Circles | Community | Inside Nhimbe | **Building.** Community groups live alongside events; no standalone surface. |
+| 5 | Circles | Community | Inside Mukoko Events | **Building.** Community groups live alongside events; no standalone surface. |
 | 6 | Novels | Publishing | — | Designed. Strategy: lead with serialised audio and short vertical drama. |
-| 7 | Nhimbe (Mukoko Events) | Gathering | `events.mukoko.com` (primary), `nhimbe.com`, admin, MCP | **Live.** Clearest near-term revenue path. NFT ticketing dropped. |
+| 7 | Mukoko Events | Gathering | `events.mukoko.com` (`nhimbe.com` is being redirected to it), admin, MCP | **Live.** Clearest near-term revenue path. NFT ticketing dropped. |
 | 8 | BushTrade | Commerce | `bushtrade.co.zw` | Domain live; application state not verified in this pass. |
 | 9 | Places (Mukoko Kweli) | Geography | `kweli.mukoko.com` | **Live.** The Africa Trust Platform: place, organisation and person verification; 15k+ places across 21 countries; sole verification surface. Barstool's hospitality reviews and discovery are folded into Kweli's wider scope. |
 | 10 | Transport | Movement | — | Designed (Harare Metro has no live domain). |
@@ -512,7 +513,7 @@ The `.github` profile states the policy: public by default, private only when ne
 | Licence | Repositories |
 |---|---|
 | **Apache 2.0** | `siafudb`, `siafudb-kuzu`, `ntl`, `mailsense`¹ |
-| **MIT** | `nhimbe`, `mukoko-weather`, `mukoko-weather-mobile`, `workspace-tools`, `mongodb-mcp`, `calendar-landing-page`, `onboarding-with-nyuchi`, `edu-experience`, `stationkit` (specification only), `.github`, `siafuDB/docs`, `campfire` (37signals upstream) |
+| **MIT** | `mukoko-events` (formerly `nhimbe`), `mukoko-weather`, `mukoko-weather-mobile`, `workspace-tools`, `mongodb-mcp`, `calendar-landing-page`, `onboarding-with-nyuchi`, `edu-experience`, `stationkit` (specification only), `.github`, `siafuDB/docs`, `campfire` (37signals upstream) |
 | **GPL** | `nyuchi-travel-addons`, `auto-seo-manager` |
 | **AGPL** | `mcp-ynab` |
 | **CC BY 4.0** | `bundu-labs/zimbabwe-information` |
@@ -544,7 +545,7 @@ Every dependency in the critical path carries a tier and an exit path. Tier assi
 | Fly.io | Proprietary; managed | API gateway, pipelines | Low † | Containers run anywhere |
 | Anthropic Claude | Proprietary model | Shamwari | High † | Localised Shamwari model (Designed); model calls behind the gateway |
 | Tomorrow.io | Proprietary data | Weather primary | Medium † | Open-Meteo fallback is live |
-| MapTiler | Proprietary tiles | Weather maps | Low † | OSM tiles (Nhimbe already uses Leaflet + OSM) |
+| MapTiler | Proprietary tiles | Weather maps | Low † | OSM tiles (Mukoko Events already uses Leaflet + OSM) |
 | Expo / React Native | MIT | Weather mobile client | Interim only | Native UI per surface over the Rust core |
 | Astro | MIT | Web framework (target) | Low | — |
 | Rust toolchain, wasm-bindgen, UniFFI, ohos-rs / ani-rs | MIT / Apache 2.0 | Shared core and its bindings to web, Swift, Kotlin, ArkTS | Low | — |
@@ -603,12 +604,12 @@ All four are issued and governed by the **Bundu Foundation**.
 
 | Live | Building | Designed | Goal |
 |---|---|---|---|
-| Mukoko Account (WorkOS) | Circles (inside Nhimbe) | Campfire | Digital Twin |
+| Mukoko Account (WorkOS) | Circles (inside Mukoko Events) | Campfire | Digital Twin |
 | `api.nyuchi.com` gateway | Wallet / Nyuchi Pay | Pulse, Bytes, Novels | Mukoko Home |
 | Nyuchi Console | Logistics | Transport, Planner | Honeycomb Pod (Layer 1) |
 | Supabase (4 projects) | StationKit hardware | Jobs, Health | On-device sovereign AI |
 | MongoDB Atlas | SiafuDB, SiafuDB-Kuzu, NTL | Layer 4 (NATS, Redpanda, Maestro, SiafuDB sync) | |
-| Mukoko Events / Nhimbe | Weather mobile (Expo, interim) | Layer 6 (SiafuDB on device) | |
+| Mukoko Events | Weather mobile (Expo, interim) | Layer 6 (SiafuDB on device) | |
 | Mukoko News | Edge Durable Objects | Layer 7 (Flink, Doris, analytical system) | |
 | Mukoko Kweli | `api.mukoko.com` | Native shells, Bridge SDK | |
 | Mukoko Weather + Station Console | | | Token contracts and chain (deferred, no timeline) |
