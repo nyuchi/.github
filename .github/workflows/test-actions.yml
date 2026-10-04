@@ -1,0 +1,54 @@
+# Tests for the composite actions in .github/actions/.
+#
+# next-version holds the org's versioning policy (patch on staging, minor on
+# main, major by hand, 999 ceiling); its tests run on Node's built-in runner,
+# with no install step.
+
+name: Test actions
+
+on:
+  pull_request:
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/test-actions.yml"
+  push:
+    branches: [main]
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/test-actions.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  next-version:
+    name: next-version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Unit tests
+        run: node --test .github/actions/next-version/next-version.test.mjs
+      - name: The action computes from this repo's tags
+        id: next
+        uses: ./.github/actions/next-version
+        with:
+          channel: staging
+      - name: The action checks a proposed version
+        uses: ./.github/actions/next-version
+        with:
+          channel: main
+          current: 0.27.3
+          proposed: 0.28.0
+      - name: Show
+        env:
+          CURRENT: ${{ steps.next.outputs.current }}
+          VERSION: ${{ steps.next.outputs.version }}
+        run: echo "Tags say $CURRENT; the next staging version is $VERSION."
