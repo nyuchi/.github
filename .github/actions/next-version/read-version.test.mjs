@@ -238,10 +238,45 @@ test("changed: every file whose version the head changes", () => {
     ).map((c) => c.file),
     ["package.json", "Cargo.toml"],
   );
-  // A new file, or a version where there was none, is a change from null.
+  // The repo's first written version: no file had one at the base.
   assert.deepEqual(changed({}, { VERSION: "0.1.0\n" }), [
     { file: "VERSION", base: null, head: "0.1.0" },
   ]);
+  assert.deepEqual(
+    changed(
+      { "package.json": '{"private":true}' },
+      { "package.json": pkg("0.1.0"), "Cargo.toml": cargo("0.1.0") },
+    ),
+    [
+      { file: "package.json", base: null, head: "0.1.0" },
+      { file: "Cargo.toml", base: null, head: "0.1.0" },
+    ],
+  );
+  // A new secondary file (a Rust repo adds a package.json, placeholder or
+  // not) is not the repo's version and is not checked ...
+  assert.deepEqual(
+    changed(
+      { "Cargo.toml": cargo("0.4.0") },
+      { "Cargo.toml": cargo("0.4.0"), "package.json": pkg("0.0.0") },
+    ),
+    [],
+  );
+  assert.deepEqual(
+    changed(
+      { "Cargo.toml": cargo("0.4.0") },
+      { "Cargo.toml": cargo("0.4.0"), "package.json": pkg("1.0.0") },
+    ),
+    [],
+  );
+  // ... nor is a version added to a file that had none, beside a real one;
+  // the real one's change still is.
+  assert.deepEqual(
+    changed(
+      { "Cargo.toml": cargo("0.4.0"), "package.json": '{"private":true}' },
+      { "Cargo.toml": cargo("0.4.1"), "package.json": pkg("9.0.0") },
+    ),
+    [{ file: "Cargo.toml", base: "0.4.0", head: "0.4.1" }],
+  );
   // No change, a removed file and a removed version are not changes.
   assert.deepEqual(
     changed(
@@ -270,10 +305,8 @@ test("the CLI lists the files and prints each changed one", () => {
     assert.equal(run("changed", base, head), "VERSION\t-\t0.2.0");
     writeFileSync(join(base, "package.json"), '{"version":"0.0.0"}');
     writeFileSync(join(head, "package.json"), '{"version":"0.3.0"}');
-    assert.equal(
-      run("changed", base, head),
-      "package.json\t0.0.0\t0.3.0\nVERSION\t-\t0.2.0",
-    );
+    // package.json had a version; the new VERSION file is now secondary.
+    assert.equal(run("changed", base, head), "package.json\t0.0.0\t0.3.0");
     // PR text that is not a version is never printed raw.
     writeFileSync(
       join(head, "package.json"),

@@ -4,7 +4,13 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-import { PolicyError, check, highest, nextVersion } from "./next-version.mjs";
+import {
+  PolicyError,
+  check,
+  countTags,
+  highest,
+  nextVersion,
+} from "./next-version.mjs";
 
 const staging = { channel: "staging" };
 const main = { channel: "main" };
@@ -112,6 +118,26 @@ test("highest ignores pre-releases, other prefixes and junk", () => {
   assert.equal(highest([]), "0.0.0");
 });
 
+test("countTags tells other schemes and pre-releases apart", () => {
+  assert.deepEqual(countTags([]), { semver: 0, releases: 0 });
+  assert.deepEqual(countTags(["refs/tags/release-1", "refs/tags/vNext"]), {
+    semver: 0,
+    releases: 0,
+  });
+  assert.deepEqual(countTags(["refs/tags/v1.0.0-rc.1", "refs/tags/v0.9"]), {
+    semver: 1,
+    releases: 0,
+  });
+  assert.deepEqual(
+    countTags(["refs/tags/v0.0.0", "x\trefs/tags/v1.2.3", "refs/tags/1.2.4"]),
+    { semver: 2, releases: 2 },
+  );
+  assert.deepEqual(countTags(["pkg@1.0.0", "v1.0.0"], "pkg@"), {
+    semver: 1,
+    releases: 1,
+  });
+});
+
 test("the CLI prints the version and fails with a message", () => {
   const cli = fileURLToPath(new URL("./next-version.mjs", import.meta.url));
   const run = (...a) =>
@@ -182,6 +208,13 @@ test("the CLI prints the version and fails with a message", () => {
         { stdio: "pipe" },
       ),
     /Command failed/,
+  );
+  assert.equal(
+    execFileSync("node", [cli, "count"], {
+      input: "refs/tags/v1.0.0\nrefs/tags/v1.1.0-rc.1\nrefs/tags/nope\n",
+      encoding: "utf8",
+    }).trim(),
+    "2 1",
   );
   assert.equal(
     execFileSync("node", [cli, "highest"], {

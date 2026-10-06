@@ -18,12 +18,16 @@
 #      out or run.
 #   2. No file's version changes: the PR writes no version. It passes, and
 #      the step summary shows the version the merge will be tagged with
-#      (`next-version.mjs next` for the channel).
+#      (`next-version.mjs next` for the channel), or says it cannot be
+#      predicted when no tag is a <prefix><semver> release.
 #   3. Each file whose version changes is checked on its own with
 #      `next-version.mjs check` against the highest <prefix><semver> tag; all
-#      must pass. The failure message names the allowed version. A repo whose
-#      tags do not follow <prefix><semver> has nothing to check against and
-#      passes with a notice; a repo with no tags at all is a first release.
+#      must pass. A file new to the head counts only when no file had a
+#      version before (read-version.mjs changed()). The failure message names
+#      the allowed version. A repo whose tags do not follow <prefix><semver>
+#      has nothing to check against and passes with a notice (a value that is
+#      not a version is still refused); a repo with no tags at all is a first
+#      release.
 #
 # The channel is `main` when the PR targets the repo's default branch and
 # `staging` for any other base.
@@ -103,10 +107,15 @@ runs:
         channel=staging
         [ "$BASE_REF" = "$DEFAULT_BRANCH" ] && channel=main
 
+        # The label is read now, not from the event, so a re-run sees it. A
+        # failed read stops the check: it never quietly means "no label".
         allow_major=false
-        if [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] \
-          && gh api "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name' | grep -qxF 'semver:major'; then
-          allow_major=true
+        if [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+          if ! labels="$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name')"; then
+            echo "::error title=Release version check::Could not read the PR's labels; re-run the check."
+            exit 1
+          fi
+          if grep -qxF 'semver:major' <<<"$labels"; then allow_major=true; fi
         fi
 
         # fetch <sha> <path> <out>: 0 = got it, 1 = not there.
@@ -136,19 +145,17 @@ runs:
         # file <TAB> base version or - <TAB> head version, per changed file.
         changes="$(node "$LIB/read-version.mjs" changed "$base_dir" "$head_dir")"
 
-        # All tags: whether any follows <prefix><semver> decides if there is
-        # anything to check against.
+        # All tags. "<semver tags> <release tags>" tells no tags, tags in
+        # another scheme and only pre-releases apart from a real 0.0.0.
         refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags" --jq '.[].ref')"
-        semver_tags="$(printf '%s\n' "$refs" | PREFIX="$PREFIX" node -e '
-          const p = process.env.PREFIX;
-          const re = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
-          const n = require("fs").readFileSync(0, "utf8").split("\n")
-            .map((l) => l.trim().replace(/^refs\/tags\//, ""))
-            .filter((t) => t.startsWith(p) && re.test(t.slice(p.length))).length;
-          console.log(n);')"
+        counts="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" count --prefix "$PREFIX")"
+        read -r semver_tags release_tags <<<"$counts"
         current="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" highest --prefix "$PREFIX")"
         highest_shown="\`$PREFIX$current\`"
-        [ "$current" = 0.0.0 ] && highest_shown=none
+        [ "$release_tags" -eq 0 ] && highest_shown=none
+        # Tags, but none of them <prefix><semver>: nothing to check against.
+        untagged=false
+        [ -n "$refs" ] && [ "$semver_tags" -eq 0 ] && untagged=true
 
         summary "## Release version check" "" \
           "| | |" "|---|---|" \
@@ -159,7 +166,12 @@ runs:
         if [ -z "$changes" ]; then
           echo "version=" >> "$GITHUB_OUTPUT"
           echo "result=unchanged" >> "$GITHUB_OUTPUT"
-          if next="$(node "$LIB/next-version.mjs" next --current "$current" \
+          if [ -n "$refs" ] && [ "$release_tags" -eq 0 ]; then
+            # Tags in another scheme, or only pre-releases: no promise.
+            summary "This PR writes no new version. The next version cannot be" \
+              "predicted from these tags: none is a \`$PREFIX<semver>\` release."
+            echo "No version change in this PR; the next version cannot be predicted from these tags."
+          elif next="$(node "$LIB/next-version.mjs" next --current "$current" \
               --channel "$channel" 2>&1)"; then
             summary "This PR writes no new version. When it merges, the merge is" \
               "tagged \`$PREFIX$next\` (the next $channel version after $highest_shown)."
@@ -184,21 +196,14 @@ runs:
         if [[ "$written" == *'!invalid'* ]]; then written=""; fi
         echo "version=$written" >> "$GITHUB_OUTPUT"
 
-        if [ "$semver_tags" -eq 0 ] && [ -n "$refs" ]; then
-          while IFS=$'\t' read -r file base head; do
-            summary "| $file | $base | $head | not checked |"
-          done <<<"$changes"
-          summary "" "The tags do not follow \`$PREFIX<semver>\`; nothing to check against."
-          echo "::notice title=Release version check::The tags do not follow $PREFIX<semver>; nothing to check against."
-          echo "result=untagged" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
         failed=0
         while IFS=$'\t' read -r file base head; do
           if [ "$head" = '!invalid' ]; then
             why="the head does not hold a semantic version."
             ok=false
+          elif [ "$untagged" = true ]; then
+            summary "| $file | $base | $head | not checked |"
+            continue
           elif why="$(node "$LIB/next-version.mjs" check --current "$current" \
               --proposed "$head" --channel "$channel" \
               --allow-major "$allow_major" 2>&1)"; then
@@ -224,5 +229,11 @@ runs:
           summary "" "Set each refused file to the version the policy allows, or leave the" \
             "version alone and let the merge be tagged. A major needs the \`semver:major\` label."
           exit 1
+        fi
+        if [ "$untagged" = true ]; then
+          summary "" "The tags do not follow \`$PREFIX<semver>\`; nothing to check against."
+          echo "::notice title=Release version check::The tags do not follow $PREFIX<semver>; nothing to check against."
+          echo "result=untagged" >> "$GITHUB_OUTPUT"
+          exit 0
         fi
         echo "result=allowed" >> "$GITHUB_OUTPUT"

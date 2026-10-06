@@ -140,9 +140,17 @@ export function versions(filesByName) {
 }
 
 /**
- * Every version file whose version the head changes. A file that names a
- * version at the head and a different one (or none) at the base is changed;
- * a file that loses its version at the head writes no version and is not.
+ * The version files to check: each one whose version the head changes.
+ *
+ *   - A file that had a version at the base and a different one at the head
+ *     is checked.
+ *   - A file whose version is new at the head is checked only when no file
+ *     had a version at the base: then it is the repo's first written
+ *     version. Otherwise it is a secondary file (a Rust repo adding a
+ *     package.json with a placeholder "0.0.0") and is not the repo's
+ *     version.
+ *   - A file that loses its version at the head writes none and is not.
+ *
  * Each one is checked on its own, so a placeholder package.json (say a
  * private 0.0.0) cannot hide a real bump in Cargo.toml or pyproject.toml.
  * @returns {{file: string, base: string|null, head: string}[]}
@@ -150,9 +158,10 @@ export function versions(filesByName) {
 export function changed(baseFiles, headFiles) {
   const base = versions(baseFiles);
   const head = versions(headFiles);
-  return VERSION_FILES.filter((f) => head[f] && head[f] !== base[f]).map(
-    (file) => ({ file, base: base[file], head: head[file] }),
-  );
+  const first = VERSION_FILES.every((f) => !base[f]);
+  return VERSION_FILES.filter(
+    (f) => head[f] && head[f] !== base[f] && (base[f] || first),
+  ).map((file) => ({ file, base: base[file], head: head[file] }));
 }
 
 /** The characters a version can hold. Anything else is not printed raw. */

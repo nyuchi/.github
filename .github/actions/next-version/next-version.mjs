@@ -21,6 +21,9 @@
 //     allows next; prints why not and exits 1 otherwise.
 //   next-version.mjs highest [--prefix v]   (tag refs on stdin)
 //     Prints the highest released version among the tags, or 0.0.0.
+//   next-version.mjs count   [--prefix v]   (tag refs on stdin)
+//     Prints "<semver tags> <release tags>": how many tags are
+//     <prefix><semver>, and how many of those have no pre-release.
 
 import { pathToFileURL } from "node:url";
 
@@ -147,9 +150,9 @@ export function check(
   );
 }
 
-/** Highest released version (no pre-release) among tag names or refs. */
-export function highest(refs, prefix = "v") {
-  let best = "0.0.0";
+/** The versions among tag names or refs that are <prefix><semver>. */
+function tagVersions(refs, prefix) {
+  const out = [];
   for (const line of refs) {
     const ref = line
       .trim()
@@ -158,16 +161,33 @@ export function highest(refs, prefix = "v") {
       ?.replace(/^refs\/tags\//, "")
       .replace(/\^\{\}$/, "");
     if (!ref || !ref.startsWith(prefix)) continue;
-    let v;
     try {
-      v = parse(ref.slice(prefix.length));
+      out.push(parse(ref.slice(prefix.length)));
     } catch {
-      continue;
+      // not <prefix><semver>
     }
+  }
+  return out;
+}
+
+/** Highest released version (no pre-release) among tag names or refs. */
+export function highest(refs, prefix = "v") {
+  let best = "0.0.0";
+  for (const v of tagVersions(refs, prefix)) {
     if (v.pre) continue;
     if (compare(core(v), best) > 0) best = core(v);
   }
   return best;
+}
+
+/**
+ * How many tags are <prefix><semver>, and how many of those are releases
+ * (no pre-release). Lets a caller tell "no tags", "tags in another scheme"
+ * and "only pre-releases" apart from a real 0.0.0.
+ */
+export function countTags(refs, prefix = "v") {
+  const all = tagVersions(refs, prefix);
+  return { semver: all.length, releases: all.filter((v) => !v.pre).length };
 }
 
 function args(argv) {
@@ -208,8 +228,14 @@ async function main(argv) {
       });
     case "highest":
       return highest(await stdinLines(), a.prefix ?? "v");
+    case "count": {
+      const c = countTags(await stdinLines(), a.prefix ?? "v");
+      return `${c.semver} ${c.releases}`;
+    }
     default:
-      throw new PolicyError("Usage: next-version.mjs next|check|highest ...");
+      throw new PolicyError(
+        "Usage: next-version.mjs next|check|highest|count ...",
+      );
   }
 }
 
