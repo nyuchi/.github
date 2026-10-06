@@ -54,6 +54,16 @@
 #                 its real line (a legacy v4.0.1 above v0.27.0, say) that
 #                 cannot be deleted under the tag ruleset.
 # ref             Commit to tag (default: the commit that started the run).
+#                 It must be on `staging`: the branch name, or a commit that
+#                 `staging` contains.
+#
+# Guard
+# -----
+# The run fails before computing anything unless it tags staging: with no
+# `ref`, the run must have started on refs/heads/staging; with `ref`, the
+# commit must be on `staging`. A "Run workflow" click on the default branch
+# (main) would otherwise tag a main commit as a beta pre-release
+# (nyuchi/.github#80). test-actions.yml runs this guard's script.
 # create-release  Also create a GitHub pre-release with generated notes, so
 #                 the beta build is visible without marking it latest
 #                 (default: true).
@@ -125,7 +135,40 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
+          # An explicit ref is checked against staging's history, so fetch it.
+          fetch-depth: ${{ inputs.ref != '' && '0' || '1' }}
           persist-credentials: false
+
+      # Keep this step's script self-contained: test-actions.yml extracts it
+      # by id and runs it against a staging and a main ref.
+      - name: Refuse anything but staging
+        id: guard
+        env:
+          RUN_REF: ${{ github.ref }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "$INPUT_REF" ]; then
+            if [ "$RUN_REF" != "refs/heads/staging" ]; then
+              msg="This run started on ${RUN_REF:-an unknown ref}, not refs/heads/staging."
+              msg+=" Staging releases tag staging commits only. Re-run it on the staging branch"
+              msg+=" (Run workflow > Use workflow from: staging), or pass ref: with a commit on staging."
+              echo "::error::$msg"
+              exit 1
+            fi
+            echo "Run started on staging; tagging $(git rev-parse HEAD)."
+            exit 0
+          fi
+          head="$(git rev-parse HEAD)"
+          if ! git rev-parse --verify --quiet refs/remotes/origin/staging >/dev/null; then
+            echo "::error::ref: ${INPUT_REF} was passed, but this repo has no staging branch to check it against."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$head" refs/remotes/origin/staging; then
+            echo "::error::ref: ${INPUT_REF} resolves to ${head}, which is not on staging. Staging releases tag staging commits only."
+            exit 1
+          fi
+          echo "ref: ${INPUT_REF} resolves to ${head}, on staging; tagging it."
 
       - name: Compute the next version
         id: v
