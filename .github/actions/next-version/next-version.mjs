@@ -120,15 +120,21 @@ export function check(
 ) {
   const p = parse(proposed);
   if (!current || current === "0.0.0") return "first release";
-  if (compare(core(p), current) === 0) return "unchanged";
+  // The released version itself. A pre-release of it (0.27.3-rc.1 after
+  // v0.27.3), or of anything below it, comes before it in semver and is
+  // refused below like any other version the policy does not allow.
+  if (!p.pre && compare(core(p), current) === 0) return "unchanged";
+  const preBehind = p.pre && compare(core(p), current) <= 0;
 
   const major = `${parse(current).major + 1}.0.0`;
-  if (allowMajor && core(p) === major) return "next major";
+  if (!preBehind && allowMajor && core(p) === major) return "next major";
 
   // The usual next version; at minor 999 there is none, and that error
   // (which asks for a manual major) is the answer.
   const allowed = nextVersion(current, { channel, bump, manual: allowMajor });
-  if (core(p) === allowed) return `next ${bump || defaultBump(channel)}`;
+  if (!preBehind && core(p) === allowed) {
+    return `next ${bump || defaultBump(channel)}`;
+  }
 
   const hint =
     core(p) === major && !allowMajor

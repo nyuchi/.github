@@ -3,7 +3,7 @@
 // file. Used by release-version-check (nyuchi/.github#90) to see whether a
 // pull request changes the version, and to what.
 //
-// The files are tried in order, and the first one that names a version wins:
+// The files it knows, each read on its own:
 //
 //   package.json    the root "version"
 //   Cargo.toml      [package] version, else [workspace.package] version
@@ -23,9 +23,12 @@
 // script free of dependencies, like next-version.mjs beside it.
 //
 // Usage
-//   read-version.mjs <dir>
-//     Looks for the files above in <dir> and prints "<file>\t<version>" for
-//     the first that names a version; prints nothing when none does.
+//   read-version.mjs files
+//     Prints VERSION_FILES, one per line (the list lives only here).
+//   read-version.mjs changed <base-dir> <head-dir>
+//     Reads the files above from both directories and prints
+//     "<file>\t<base version or ->\t<head version>" for every file whose
+//     version the head changes; prints nothing when none does.
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
@@ -43,7 +46,7 @@ const clean = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
 /** The root "version" of a package.json. */
 export function fromPackageJson(text) {
   try {
-    const json = JSON.parse(String(text));
+    const json = JSON.parse(String(text).replace(/^\uFEFF/, ""));
     if (!json || typeof json !== "object" || Array.isArray(json)) return null;
     return clean(json.version);
   } catch {
@@ -121,31 +124,64 @@ const READERS = {
 };
 
 /**
- * The first of VERSION_FILES that names a version.
+ * The version each of VERSION_FILES names.
  * @param {Record<string, string|null|undefined>} filesByName  file text by
  *   name; a missing or null entry is a file that is not there
- * @returns {{file: string, version: string} | null}
+ * @returns {Record<string, string|null>}  every VERSION_FILES entry, null
+ *   when the file is not there or names no version
  */
-export function pick(filesByName) {
+export function versions(filesByName) {
+  const out = {};
   for (const file of VERSION_FILES) {
     const text = filesByName?.[file];
-    if (text == null) continue;
-    const version = READERS[file](text);
-    if (version) return { file, version };
+    out[file] = text == null ? null : READERS[file](text);
   }
-  return null;
+  return out;
 }
 
-function main(argv) {
-  const dir = argv[0];
-  if (!dir) throw new Error("Usage: read-version.mjs <dir>");
+/**
+ * Every version file whose version the head changes. A file that names a
+ * version at the head and a different one (or none) at the base is changed;
+ * a file that loses its version at the head writes no version and is not.
+ * Each one is checked on its own, so a placeholder package.json (say a
+ * private 0.0.0) cannot hide a real bump in Cargo.toml or pyproject.toml.
+ * @returns {{file: string, base: string|null, head: string}[]}
+ */
+export function changed(baseFiles, headFiles) {
+  const base = versions(baseFiles);
+  const head = versions(headFiles);
+  return VERSION_FILES.filter((f) => head[f] && head[f] !== base[f]).map(
+    (file) => ({ file, base: base[file], head: head[file] }),
+  );
+}
+
+/** The characters a version can hold. Anything else is not printed raw. */
+export const SAFE = /^[0-9A-Za-z.+-]+$/;
+
+function readDir(dir) {
   const files = {};
   for (const name of VERSION_FILES) {
     const path = join(dir, name);
     if (existsSync(path)) files[name] = readFileSync(path, "utf8");
   }
-  const got = pick(files);
-  return got ? `${got.file}\t${got.version}` : "";
+  return files;
+}
+
+function main(argv) {
+  const [cmd, baseDir, headDir] = argv;
+  if (cmd === "files") return VERSION_FILES.join("\n");
+  if (cmd === "changed" && baseDir && headDir) {
+    // One line per changed file: file, base version, head version. A version
+    // with characters no version holds is printed as "!invalid" (and a
+    // missing base as "-"), so PR text never reaches the log or a tab split.
+    const show = (v) => (v == null ? "-" : SAFE.test(v) ? v : "!invalid");
+    return changed(readDir(baseDir), readDir(headDir))
+      .map((c) => `${c.file}\t${show(c.base)}\t${show(c.head)}`)
+      .join("\n");
+  }
+  throw new Error(
+    "Usage: read-version.mjs files | changed <base-dir> <head-dir>",
+  );
 }
 
 // Run as a script (not imported). realpath, because import.meta.url is

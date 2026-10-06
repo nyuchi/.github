@@ -1,7 +1,7 @@
 // node --test .github/actions/next-version/
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,11 +9,12 @@ import { test } from "node:test";
 
 import {
   VERSION_FILES,
+  changed,
   fromCargoToml,
   fromPackageJson,
   fromPyproject,
   fromVersionFile,
-  pick,
+  versions,
 } from "./read-version.mjs";
 
 test("package.json: the root version only", () => {
@@ -35,6 +36,7 @@ test("package.json: the root version only", () => {
   assert.equal(fromPackageJson("null"), null);
   assert.equal(fromPackageJson("{ not json"), null);
   assert.equal(fromPackageJson(""), null);
+  assert.equal(fromPackageJson('\uFEFF{"version":"1.0.1"}'), "1.0.1");
 });
 
 test("Cargo.toml: [package] version", () => {
@@ -188,7 +190,7 @@ test("VERSION: the first line, trimmed", () => {
   assert.equal(fromVersionFile(""), null);
 });
 
-test("pick: the first file that names a version", () => {
+test("versions: every file, each on its own", () => {
   assert.deepEqual(VERSION_FILES, [
     "package.json",
     "Cargo.toml",
@@ -196,43 +198,97 @@ test("pick: the first file that names a version", () => {
     "VERSION",
   ]);
   assert.deepEqual(
-    pick({
-      "package.json": '{"version":"1.0.0"}',
-      "Cargo.toml": '[package]\nversion = "2.0.0"\n',
-    }),
-    { file: "package.json", version: "1.0.0" },
-  );
-  // A root package.json with no version (a Rust repo's tooling) falls through.
-  assert.deepEqual(
-    pick({
+    versions({
       "package.json": '{"private":true}',
       "Cargo.toml": '[workspace.package]\nversion = "0.3.1"\n',
       VERSION: "7.0.0",
+      "README.md": "version 1",
     }),
-    { file: "Cargo.toml", version: "0.3.1" },
+    {
+      "package.json": null,
+      "Cargo.toml": "0.3.1",
+      "pyproject.toml": null,
+      VERSION: "7.0.0",
+    },
   );
-  assert.deepEqual(pick({ VERSION: "0.0.1\n", "pyproject.toml": null }), {
-    file: "VERSION",
-    version: "0.0.1",
+  assert.deepEqual(versions(null), {
+    "package.json": null,
+    "Cargo.toml": null,
+    "pyproject.toml": null,
+    VERSION: null,
   });
-  assert.equal(pick({ "README.md": "version 1" }), null);
-  assert.equal(pick({}), null);
-  assert.equal(pick(null), null);
 });
 
-test("the CLI prints the file and version from a directory", () => {
+test("changed: every file whose version the head changes", () => {
+  const pkg = (v) => JSON.stringify({ private: true, version: v });
+  const cargo = (v) => `[package]\nversion = "${v}"\n`;
+  // A placeholder package.json does not hide a Cargo.toml bump.
+  assert.deepEqual(
+    changed(
+      { "package.json": pkg("0.0.0"), "Cargo.toml": cargo("0.4.0") },
+      { "package.json": pkg("0.0.0"), "Cargo.toml": cargo("0.5.0") },
+    ),
+    [{ file: "Cargo.toml", base: "0.4.0", head: "0.5.0" }],
+  );
+  // Both changed: both reported, in VERSION_FILES order.
+  assert.deepEqual(
+    changed(
+      { "package.json": pkg("1.0.0"), "Cargo.toml": cargo("1.0.0") },
+      { "package.json": pkg("1.1.0"), "Cargo.toml": cargo("1.1.0") },
+    ).map((c) => c.file),
+    ["package.json", "Cargo.toml"],
+  );
+  // A new file, or a version where there was none, is a change from null.
+  assert.deepEqual(changed({}, { VERSION: "0.1.0\n" }), [
+    { file: "VERSION", base: null, head: "0.1.0" },
+  ]);
+  // No change, a removed file and a removed version are not changes.
+  assert.deepEqual(
+    changed(
+      { VERSION: "odd line\n", "Cargo.toml": cargo("2.0.0") },
+      { VERSION: "odd line\n", "Cargo.toml": "[package]\nname = 'x'\n" },
+    ),
+    [],
+  );
+  assert.deepEqual(changed({ "package.json": pkg("1.0.0") }, {}), []);
+  assert.deepEqual(changed({}, {}), []);
+});
+
+test("the CLI lists the files and prints each changed one", () => {
   const cli = fileURLToPath(new URL("./read-version.mjs", import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), "read-version-"));
+  const root = mkdtempSync(join(tmpdir(), "read-version-"));
+  const base = join(root, "base");
+  const head = join(root, "head");
   try {
-    const run = () =>
-      execFileSync("node", [cli, dir], { encoding: "utf8" }).trimEnd();
-    assert.equal(run(), "");
-    writeFileSync(join(dir, "VERSION"), "0.2.0\n");
-    assert.equal(run(), "VERSION\t0.2.0");
-    writeFileSync(join(dir, "package.json"), '{"version":"0.3.0"}');
-    assert.equal(run(), "package.json\t0.3.0");
+    mkdirSync(base);
+    mkdirSync(head);
+    const run = (...a) =>
+      execFileSync("node", [cli, ...a], { encoding: "utf8" }).trimEnd();
+    assert.equal(run("files"), VERSION_FILES.join("\n"));
+    assert.equal(run("changed", base, head), "");
+    writeFileSync(join(head, "VERSION"), "0.2.0\n");
+    assert.equal(run("changed", base, head), "VERSION\t-\t0.2.0");
+    writeFileSync(join(base, "package.json"), '{"version":"0.0.0"}');
+    writeFileSync(join(head, "package.json"), '{"version":"0.3.0"}');
+    assert.equal(
+      run("changed", base, head),
+      "package.json\t0.0.0\t0.3.0\nVERSION\t-\t0.2.0",
+    );
+    // PR text that is not a version is never printed raw.
+    writeFileSync(
+      join(head, "package.json"),
+      JSON.stringify({ version: "1.0.0\n::warning::x" }),
+    );
+    writeFileSync(join(base, "VERSION"), "a\tb\n");
+    assert.equal(
+      run("changed", base, head),
+      "package.json\t0.0.0\t!invalid\nVERSION\t!invalid\t0.2.0",
+    );
     assert.throws(() => execFileSync("node", [cli], { stdio: "pipe" }));
+    assert.throws(() =>
+      execFileSync("node", [cli, "changed", base], { stdio: "pipe" }),
+    );
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
   }
 });

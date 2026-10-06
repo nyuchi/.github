@@ -77,6 +77,25 @@ test("check accepts the next version and refuses others", () => {
   assert.equal(check("0.27.999", "0.28.0", staging), "next patch");
 });
 
+test("a pre-release of the released version, or below it, is refused", () => {
+  // 0.27.3-rc.1 comes before 0.27.3 in semver: it is not "unchanged".
+  assert.throws(() => check("0.27.3", "0.27.3-rc.1", main), /allows 0.28.0/);
+  assert.throws(() => check("0.27.3", "0.27.3-rc.1", staging), /allows 0.27.4/);
+  assert.throws(() => check("0.27.3", "0.26.0-beta", main), PolicyError);
+  assert.throws(
+    () => check("0.27.3", "0.27.3-rc.1", { ...main, allowMajor: true }),
+    /allows 0.28.0/,
+  );
+  // A pre-release of the next version is still allowed.
+  assert.equal(check("0.27.3", "0.27.4-rc.1", staging), "next patch");
+  assert.equal(
+    check("0.27.3", "1.0.0-rc.1", { ...main, allowMajor: true }),
+    "next major",
+  );
+  // A downgrade to an older release is refused.
+  assert.throws(() => check("0.27.5", "0.27.3", staging), /allows 0.27.6/);
+});
+
 test("highest ignores pre-releases, other prefixes and junk", () => {
   const refs = [
     "abc\trefs/tags/v0.9.0",

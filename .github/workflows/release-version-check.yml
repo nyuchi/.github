@@ -5,6 +5,9 @@
 #   PR into the default branch   MINOR  x.y.z -> x.(y+1).0
 #   MAJOR                        only with the `semver:major` label on the PR
 #
+# The label is read through the API when the job runs, not from the event,
+# so after adding it, "Re-run" on the failed check is enough.
+#
 # A PR that writes no new version (the usual case: the merge is tagged by
 # the repo's release workflow) passes, and its step summary names the
 # version the merge will be tagged with. The logic lives in the composite
@@ -52,6 +55,7 @@ concurrency:
 
 permissions:
   contents: read
+  issues: read  # the PR's labels, read through the issues API
   pull-requests: read
 
 jobs:
@@ -102,6 +106,5 @@ jobs:
           base-ref: ${{ github.event.pull_request.base.ref }}
           base-sha: ${{ github.event.pull_request.base.sha }}
           head-sha: ${{ github.event.pull_request.head.sha }}
-          head-repository: ${{ github.event.pull_request.head.repo.full_name }}
           default-branch: ${{ github.event.repository.default_branch }}
-          allow-major: ${{ contains(github.event.pull_request.labels.*.name, 'semver:major') }}
+          pr-number: ${{ github.event.pull_request.number }}
