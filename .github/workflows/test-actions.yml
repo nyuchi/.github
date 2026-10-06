@@ -7,7 +7,8 @@
 #
 # staging-release-guard extracts the "Refuse anything but staging" step's
 # script from reusable-staging-release.yml and runs it in a scratch repo, on a
-# staging ref and a main ref, with and without an explicit `ref:`.
+# staging ref and a main ref, with and without an explicit `ref:`, and as a
+# main release (bump: minor or major on main).
 
 name: Test actions
 
@@ -88,11 +89,11 @@ jobs:
           M="$(git -C "$repo" rev-parse HEAD)"
 
           fails=0
-          # expect <pass|fail> <checked-out commit> <github.ref> <inputs.ref> <label>
+          # expect <pass|fail> <checked-out commit> <github.ref> <inputs.ref> <label> [inputs.bump]
           expect() {
-            local want="$1" commit="$2" run_ref="$3" input_ref="$4" label="$5" got out
+            local want="$1" commit="$2" run_ref="$3" input_ref="$4" label="$5" bump="${6:-}" got out
             git -C "$repo" checkout -q --detach "$commit"
-            if out="$(cd "$repo" && RUN_REF="$run_ref" INPUT_REF="$input_ref" bash "$script" 2>&1)"; then
+            if out="$(cd "$repo" && RUN_REF="$run_ref" INPUT_REF="$input_ref" BUMP="$bump" bash "$script" 2>&1)"; then
               got=pass
             else
               got=fail
@@ -111,6 +112,12 @@ jobs:
 
           expect pass "$S" refs/heads/staging ""      "push to staging"
           expect fail "$M" refs/heads/main    ""      "Run workflow on main"
+          expect fail "$M" refs/heads/main    ""      "Run workflow on main, bump: patch" patch
+          expect fail "$M" refs/heads/staging main    "staging run, ref: main"
+          # A main release (super-app-web's main-release.yml): minor or major on main.
+          expect pass "$M" refs/heads/main    ""      "main release, bump: minor" minor
+          expect pass "$M" refs/heads/main    ""      "main release, bump: major" major
+          expect fail "$M" refs/heads/feature ""      "feature branch, bump: minor" minor
           expect fail "$S" refs/tags/v1.0.0   ""      "run on a tag"
           expect pass "$S" refs/heads/main    staging "main run, ref: staging"
           expect pass "$S" refs/heads/main    "$S"    "main run, ref: a staging commit"

@@ -56,14 +56,6 @@
 # ref             Commit to tag (default: the commit that started the run).
 #                 It must be on `staging`: the branch name, or a commit that
 #                 `staging` contains.
-#
-# Guard
-# -----
-# The run fails before computing anything unless it tags staging: with no
-# `ref`, the run must have started on refs/heads/staging; with `ref`, the
-# commit must be on `staging`. A "Run workflow" click on the default branch
-# (main) would otherwise tag a main commit as a beta pre-release
-# (nyuchi/.github#80). test-actions.yml runs this guard's script.
 # create-release  Also create a GitHub pre-release with generated notes, so
 #                 the beta build is visible without marking it latest
 #                 (default: true).
@@ -74,6 +66,18 @@
 # previous        The highest version before this one.
 # created         'true' when this run created the tag ('false' when the
 #                 commit already carried a version tag, e.g. a re-run).
+#
+# Guard
+# -----
+# The run fails before computing anything unless it tags staging (or is a
+# main release, below), so a "Run workflow" click left on the default branch
+# (main) cannot tag a main commit as a beta patch (nyuchi/.github#80). Allowed:
+#   - no `ref`, and the run started on refs/heads/staging;
+#   - `ref` set, and the commit it names is on `staging`;
+#   - no `ref`, the run started on refs/heads/main, and `bump` is minor or
+#     major: a main release (mukoko-dev/super-app-web's main-release.yml
+#     calls this workflow that way).
+# test-actions.yml runs this guard's script.
 
 name: Reusable / Staging release
 
@@ -146,9 +150,15 @@ jobs:
         env:
           RUN_REF: ${{ github.ref }}
           INPUT_REF: ${{ inputs.ref }}
+          BUMP: ${{ inputs.bump }}
         run: |
           set -euo pipefail
           if [ -z "$INPUT_REF" ]; then
+            # A main release: a minor (or a manual major) on main's own push.
+            if [ "$RUN_REF" = "refs/heads/main" ] && { [ "$BUMP" = minor ] || [ "$BUMP" = major ]; }; then
+              echo "Run started on main with bump: ${BUMP}; tagging the main release at $(git rev-parse HEAD)."
+              exit 0
+            fi
             if [ "$RUN_REF" != "refs/heads/staging" ]; then
               msg="This run started on ${RUN_REF:-an unknown ref}, not refs/heads/staging."
               msg+=" Staging releases tag staging commits only. Re-run it on the staging branch"
