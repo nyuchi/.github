@@ -8,7 +8,7 @@
 # staging-release-guard extracts the "Refuse anything but staging" step's
 # script from reusable-staging-release.yml and runs it in a scratch repo, on a
 # staging ref and a main ref, with and without an explicit `ref:`, and as a
-# main release (bump: minor or major on main).
+# main release (bump: minor or major on main, with create-release: false).
 
 name: Test actions
 
@@ -89,11 +89,14 @@ jobs:
           M="$(git -C "$repo" rev-parse HEAD)"
 
           fails=0
-          # expect <pass|fail> <checked-out commit> <github.ref> <inputs.ref> <label> [inputs.bump]
+          # expect <pass|fail> <checked-out commit> <github.ref> <inputs.ref> <label>
+          #        [inputs.bump] [inputs.create-release, default true]
           expect() {
-            local want="$1" commit="$2" run_ref="$3" input_ref="$4" label="$5" bump="${6:-}" got out
+            local want="$1" commit="$2" run_ref="$3" input_ref="$4" label="$5"
+            local bump="${6:-}" create="${7:-true}" got out
             git -C "$repo" checkout -q --detach "$commit"
-            if out="$(cd "$repo" && RUN_REF="$run_ref" INPUT_REF="$input_ref" BUMP="$bump" bash "$script" 2>&1)"; then
+            if out="$(cd "$repo" && RUN_REF="$run_ref" INPUT_REF="$input_ref" BUMP="$bump" \
+              CREATE_RELEASE="$create" bash "$script" 2>&1)"; then
               got=pass
             else
               got=fail
@@ -114,10 +117,16 @@ jobs:
           expect fail "$M" refs/heads/main    ""      "Run workflow on main"
           expect fail "$M" refs/heads/main    ""      "Run workflow on main, bump: patch" patch
           expect fail "$M" refs/heads/staging main    "staging run, ref: main"
-          # A main release (super-app-web's main-release.yml): minor or major on main.
-          expect pass "$M" refs/heads/main    ""      "main release, bump: minor" minor
-          expect pass "$M" refs/heads/main    ""      "main release, bump: major" major
-          expect fail "$M" refs/heads/feature ""      "feature branch, bump: minor" minor
+          # Run workflow on main with a non-patch bump, from staging-version.yml
+          # (create-release left at its default, true): still refused.
+          expect fail "$M" refs/heads/main    ""      "Run workflow on main, bump: minor" minor
+          expect fail "$M" refs/heads/main    ""      "Run workflow on main, bump: major" major
+          # A main release (super-app-web's main-release.yml): minor or major on
+          # main with create-release: false.
+          expect pass "$M" refs/heads/main    ""      "main release, bump: minor" minor false
+          expect pass "$M" refs/heads/main    ""      "main release, bump: major" major false
+          expect fail "$M" refs/heads/main    ""      "main, create-release: false, bump: patch" patch false
+          expect fail "$M" refs/heads/feature ""      "feature branch, bump: minor" minor false
           expect fail "$S" refs/tags/v1.0.0   ""      "run on a tag"
           expect pass "$S" refs/heads/main    staging "main run, ref: staging"
           expect pass "$S" refs/heads/main    "$S"    "main run, ref: a staging commit"

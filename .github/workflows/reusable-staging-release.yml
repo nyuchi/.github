@@ -74,9 +74,11 @@
 # (main) cannot tag a main commit as a beta patch (nyuchi/.github#80). Allowed:
 #   - no `ref`, and the run started on refs/heads/staging;
 #   - `ref` set, and the commit it names is on `staging`;
-#   - no `ref`, the run started on refs/heads/main, and `bump` is minor or
-#     major: a main release (mukoko-dev/super-app-web's main-release.yml
-#     calls this workflow that way).
+#   - no `ref`, the run started on refs/heads/main, `bump` is minor or
+#     major, and `create-release` is false: a main release, which publishes
+#     its own latest release (mukoko-dev/super-app-web's main-release.yml).
+#     A staging-version.yml run left on main never qualifies: it keeps
+#     create-release at its default, true.
 # test-actions.yml runs this guard's script.
 
 name: Reusable / Staging release
@@ -151,11 +153,14 @@ jobs:
           RUN_REF: ${{ github.ref }}
           INPUT_REF: ${{ inputs.ref }}
           BUMP: ${{ inputs.bump }}
+          CREATE_RELEASE: ${{ inputs.create-release }}
         run: |
           set -euo pipefail
           if [ -z "$INPUT_REF" ]; then
-            # A main release: a minor (or a manual major) on main's own push.
-            if [ "$RUN_REF" = "refs/heads/main" ] && { [ "$BUMP" = minor ] || [ "$BUMP" = major ]; }; then
+            # A main release: a minor (or a manual major) on main, from a caller
+            # that publishes the release itself (create-release: false).
+            if [ "$RUN_REF" = "refs/heads/main" ] && [ "$CREATE_RELEASE" = "false" ] \
+              && { [ "$BUMP" = minor ] || [ "$BUMP" = major ]; }; then
               echo "Run started on main with bump: ${BUMP}; tagging the main release at $(git rev-parse HEAD)."
               exit 0
             fi
