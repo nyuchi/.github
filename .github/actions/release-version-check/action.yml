@@ -1,0 +1,207 @@
+# Composite action: does a pull request write a version the org versioning
+# policy allows? The logic behind .github/workflows/release-version-check.yml
+# (nyuchi/.github#90), kept here so that workflow stays a thin wrapper.
+#
+#   Into `staging`               PATCH  x.y.z -> x.y.(z+1)
+#   Into the default branch      MINOR  x.y.z -> x.(y+1).0
+#   MAJOR                        only with the `semver:major` label
+#
+# The policy itself is next-version.mjs (nyuchi/.github#80), called here as
+# is; nothing in this file restates it.
+#
+# What it does:
+#
+#   1. Reads package.json, Cargo.toml, pyproject.toml and VERSION at the PR's
+#      base commit and at its head commit, through the contents API. Nothing
+#      from the PR is checked out or run. read-version.mjs picks the version
+#      from the first file that names one.
+#   2. The same version on both sides (or none at the head): the PR writes no
+#      version. It passes, and the step summary shows the version the merge
+#      will be tagged with (`next-version.mjs next` for the channel).
+#   3. A changed version: if it is already a tag, it passes ("already
+#      released"). Otherwise `next-version.mjs check` against the highest
+#      v-tag decides, and its message (which names the allowed version) is
+#      the failure.
+#
+# The channel is `main` when the PR targets the repo's default branch and
+# `staging` for any other base.
+#
+# Every value from the event arrives through an input and an env var, never
+# through `${{ }}` inside the script, so no PR title, branch name or label
+# can inject shell.
+#
+# Reads with `token` (contents: read on the repo; a public fork is read the
+# same way). Writes nothing but the step summary.
+
+name: Release version check
+description: Check the version a pull request writes against the org versioning policy.
+
+inputs:
+  base-ref:
+    description: Branch the PR targets (github.event.pull_request.base.ref).
+    required: true
+  base-sha:
+    description: Base commit (github.event.pull_request.base.sha).
+    required: true
+  head-sha:
+    description: Head commit (github.event.pull_request.head.sha).
+    required: true
+  head-repository:
+    description: owner/repo the head lives in; differs from `repository` for a fork.
+    required: false
+    default: ""
+  default-branch:
+    description: The repo's default branch (github.event.repository.default_branch).
+    required: true
+  allow-major:
+    description: "'true' when the PR carries the semver:major label."
+    required: false
+    default: "false"
+  repository:
+    description: owner/repo of the PR.
+    required: false
+    default: ${{ github.repository }}
+  tag-prefix:
+    description: Prefix of the version tags.
+    required: false
+    default: v
+  token:
+    description: Token that can read the repo's contents and tags.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  result:
+    description: "'unchanged', 'released', 'allowed' (the step fails otherwise)."
+    value: ${{ steps.run.outputs.result }}
+  version:
+    description: The version the PR writes (empty when it writes none).
+    value: ${{ steps.run.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: run
+      shell: bash
+      env:
+        BASE_REF: ${{ inputs.base-ref }}
+        BASE_SHA: ${{ inputs.base-sha }}
+        HEAD_SHA: ${{ inputs.head-sha }}
+        HEAD_REPO: ${{ inputs.head-repository }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+        ALLOW_MAJOR: ${{ inputs.allow-major }}
+        REPO: ${{ inputs.repository }}
+        PREFIX: ${{ inputs.tag-prefix }}
+        GH_TOKEN: ${{ inputs.token }}
+        LIB: ${{ github.action_path }}/../next-version
+      run: |
+        set -euo pipefail
+        summary() { printf '%s\n' "$@" >> "$GITHUB_STEP_SUMMARY"; }
+        [ "$ALLOW_MAJOR" = "true" ] || ALLOW_MAJOR=false
+        HEAD_REPO="${HEAD_REPO:-$REPO}"
+
+        channel=staging
+        [ "$BASE_REF" = "$DEFAULT_BRANCH" ] && channel=main
+
+        # fetch <owner/repo> <sha> <path> <out>: 0 = got it, 1 = not there.
+        # Any other API failure stops the check rather than passing it.
+        fetch() {
+          local err="$RUNNER_TEMP/rvc-err"
+          if gh api -H "Accept: application/vnd.github.raw" \
+            "repos/$1/contents/$3?ref=$2" > "$4" 2> "$err"; then
+            return 0
+          fi
+          rm -f "$4"
+          if grep -q 'HTTP 404' "$err"; then return 1; fi
+          echo "::error::Could not read $3 at $2 in $1; re-run the check."
+          cat "$err" >&2
+          exit 1
+        }
+
+        base_dir="$RUNNER_TEMP/rvc-base"
+        head_dir="$RUNNER_TEMP/rvc-head"
+        mkdir -p "$base_dir" "$head_dir"
+        for f in package.json Cargo.toml pyproject.toml VERSION; do
+          fetch "$REPO" "$BASE_SHA" "$f" "$base_dir/$f" || true
+          # The head commit is reachable from the base repo, fork or not;
+          # the fork itself is the fallback.
+          fetch "$REPO" "$HEAD_SHA" "$f" "$head_dir/$f" \
+            || { [ "$HEAD_REPO" != "$REPO" ] \
+                 && fetch "$HEAD_REPO" "$HEAD_SHA" "$f" "$head_dir/$f"; } \
+            || true
+        done
+
+        base="$(node "$LIB/read-version.mjs" "$base_dir")"
+        head="$(node "$LIB/read-version.mjs" "$head_dir")"
+        base_file="${base%%$'\t'*}" base_version="${base#*$'\t'}"
+        head_file="${head%%$'\t'*}" head_version="${head#*$'\t'}"
+
+        # The versions come from the PR. Anything outside the characters a
+        # version can hold could carry a workflow command or a second output
+        # line, so it is refused before it is printed anywhere.
+        safe='^[0-9A-Za-z.+-]+$'
+        if [ -n "$base_version" ] && ! [[ "$base_version" =~ $safe ]]; then
+          base_version="(not a version)"
+        fi
+        if [ -n "$head_version" ] && ! [[ "$head_version" =~ $safe ]]; then
+          echo "::error title=Release version check::$head_file at the head does not hold a semantic version."
+          exit 1
+        fi
+
+        enc="$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
+        refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$enc" --jq '.[].ref')"
+        current="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" highest --prefix "$PREFIX")"
+
+        show() { if [ -n "$1" ]; then echo "\`$1\` ($2)"; else echo none; fi; }
+        summary "## Release version check" "" \
+          "| | |" "|---|---|" \
+          "| Channel | \`$channel\` (base \`$BASE_REF\`, default \`$DEFAULT_BRANCH\`) |" \
+          "| Highest tag | \`$PREFIX$current\` |" \
+          "| Base version | $(show "$base_version" "$base_file") |" \
+          "| Head version | $(show "$head_version" "$head_file") |" \
+          "| semver:major | $ALLOW_MAJOR |" ""
+
+        if [ -z "$head_version" ] || [ "$head_version" = "$base_version" ]; then
+          echo "version=" >> "$GITHUB_OUTPUT"
+          echo "result=unchanged" >> "$GITHUB_OUTPUT"
+          bump=""
+          [ "$ALLOW_MAJOR" = "true" ] && bump=major
+          if next="$(node "$LIB/next-version.mjs" next --current "$current" \
+              --channel "$channel" --bump "$bump" --manual "$ALLOW_MAJOR" 2>&1)"; then
+            summary "This PR writes no new version. When it merges, the merge is" \
+              "tagged \`$PREFIX$next\` (the next ${bump:-$channel} version after \`$PREFIX$current\`)."
+            echo "No version change in this PR; the merge will be tagged $PREFIX$next."
+          else
+            next="${next#::error::}"
+            summary "This PR writes no new version, but the policy has no next" \
+              "version for it: $next"
+            echo "::warning::No version change in this PR, but: $next"
+          fi
+          exit 0
+        fi
+
+        echo "version=$head_version" >> "$GITHUB_OUTPUT"
+        if printf '%s\n' "$refs" | grep -qxF "refs/tags/$PREFIX$head_version"; then
+          echo "result=released" >> "$GITHUB_OUTPUT"
+          summary "\`$head_version\` is already tagged: already released, nothing to check."
+          echo "Version $head_version is already tagged; already released."
+          exit 0
+        fi
+
+        if why="$(node "$LIB/next-version.mjs" check --current "$current" \
+            --proposed "$head_version" --channel "$channel" \
+            --allow-major "$ALLOW_MAJOR" 2>&1)"; then
+          echo "result=allowed" >> "$GITHUB_OUTPUT"
+          summary "\`$head_version\` after \`$PREFIX$current\` on \`$channel\`: allowed ($why)."
+          echo "Version $head_version after $current on $channel: allowed ($why)."
+        else
+          why="${why#::error::}"
+          case "$why" in
+            *"bump: major"*) why="$why On a pull request, the semver:major label allows a major." ;;
+          esac
+          summary "**Refused.** $why" "" \
+            "Set $head_file to the version the policy allows, or leave the version" \
+            "alone and let the merge be tagged. A major needs the \`semver:major\` label."
+          echo "::error title=Release version check::$why"
+          exit 1
+        fi

@@ -1,0 +1,107 @@
+# Release version check. Fails a pull request that writes a version the org
+# versioning policy does not allow next (nyuchi/.github#80, #90):
+#
+#   PR into `staging`            PATCH  x.y.z -> x.y.(z+1)
+#   PR into the default branch   MINOR  x.y.z -> x.(y+1).0
+#   MAJOR                        only with the `semver:major` label on the PR
+#
+# A PR that writes no new version (the usual case: the merge is tagged by
+# the repo's release workflow) passes, and its step summary names the
+# version the merge will be tagged with. The logic lives in the composite
+# action .github/actions/release-version-check; the policy itself is
+# .github/actions/next-version/next-version.mjs.
+#
+# HOW IT IS ENFORCED
+#
+# This file is meant to be named in an ENTERPRISE ruleset, in a "Require
+# workflows to pass" rule:
+#
+#   repository  nyuchi/.github (repo id 1116531720)
+#   path        .github/workflows/release-version-check.yml
+#   ref         refs/heads/main
+#   targets     ~DEFAULT_BRANCH and staging
+#
+# GitHub then runs it on every pull request into those branches, in every
+# repo the ruleset covers, from this repo's main branch.
+#
+#   - A ruleset-run workflow IGNORES the `on:` filters below (types, branches,
+#     paths). So the job decides for itself and always finishes: a merge
+#     queue run, or anything that is not a pull request, passes with a notice.
+#   - NEVER put it on a ruleset that targets all branches. A "Require
+#     workflows to pass" rule also blocks direct pushes to the branches it
+#     covers, and every feature branch would become unpushable.
+#
+# The job checks out nyuchi/.github at the commit this workflow runs from
+# (github.workflow_ref / workflow_sha), so the action always matches this
+# file; no pin to bump. It never checks out or runs the PR's code: the
+# version files are read through the contents API.
+#
+# In nyuchi/.github itself it runs as an ordinary pull_request workflow on
+# this repo's PRs. This repo writes no version file, so it passes.
+
+name: Release version check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+  merge_group:
+
+concurrency:
+  group: release-version-check-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Nothing to check outside a pull request
+        if: github.event_name != 'pull_request'
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          echo "::notice title=Release version check::Nothing to check on '$EVENT'; the pull request already ran this check."
+
+      - name: Find this workflow's repository and commit
+        id: src
+        if: github.event_name == 'pull_request'
+        env:
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          set -euo pipefail
+          # owner/repo/.github/workflows/<file>@<ref>
+          repo="$(cut -d/ -f1,2 <<<"$WORKFLOW_REF")"
+          if ! [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] \
+            || ! [[ "$WORKFLOW_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Cannot tell where this workflow runs from ('$WORKFLOW_REF')."
+            exit 1
+          fi
+          echo "repository=$repo" >> "$GITHUB_OUTPUT"
+          echo "sha=$WORKFLOW_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the check (not the pull request)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: ${{ steps.src.outputs.repository }}
+          ref: ${{ steps.src.outputs.sha }}
+          path: .release-version-check
+          sparse-checkout: .github/actions
+          persist-credentials: false
+
+      - name: Check the version
+        if: github.event_name == 'pull_request'
+        uses: ./.release-version-check/.github/actions/release-version-check
+        with:
+          base-ref: ${{ github.event.pull_request.base.ref }}
+          base-sha: ${{ github.event.pull_request.base.sha }}
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          head-repository: ${{ github.event.pull_request.head.repo.full_name }}
+          default-branch: ${{ github.event.repository.default_branch }}
+          allow-major: ${{ contains(github.event.pull_request.labels.*.name, 'semver:major') }}
