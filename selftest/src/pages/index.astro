@@ -1,0 +1,5 @@
+---
+import jwt from "jsonwebtoken";
+const token = jwt.sign({ a: 1 }, "hardcoded-secret-value");
+---
+<html><body>{token}</body></html>
