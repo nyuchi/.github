@@ -1,6 +1,6 @@
 // node --test .github/actions/next-version/
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,7 +10,6 @@ import { test } from "node:test";
 import {
   PolicyError,
   check,
-  countTags,
   currentVersion,
   decide,
   highest,
@@ -272,10 +271,10 @@ test("decide: check mode", () => {
     }).current,
     "0.1.0",
   );
-  // But its own odd tags still make it untagged.
-  assert.throws(
-    () => d(t("web-vNext"), { ...main, proposed: "0.1.0", prefix: "web-v" }),
-    /can't be verified/,
+  // Its own odd tags are ignored too: only the default prefix is untagged.
+  assert.match(
+    d(t("web-vNext"), { ...main, proposed: "0.1.0", prefix: "web-v" }).reason,
+    /^first release/,
   );
   // Strict inputs only.
   assert.throws(
@@ -293,6 +292,47 @@ test("decide: check mode", () => {
   );
 });
 
+test("decide: a custom prefix ignores everything but its own version tags", () => {
+  const t = (...v) => v.map((x) => `refs/tags/${x}`);
+  for (const prefix of ["web-v", ""]) {
+    // Its only tag a pre-release, or tags of other schemes: a first release.
+    const refs = t(`${prefix}1.0.0-rc.1`, "release-1", "v9.9.9-x");
+    assert.deepEqual(
+      currentVersion(refs, { prefix }),
+      { kind: "none" },
+      prefix,
+    );
+    assert.match(
+      decide(refs, {
+        mode: "check",
+        channel: "main",
+        proposed: "0.1.0",
+        prefix,
+      }).reason,
+      /^first release, next minor/,
+      prefix,
+    );
+    assert.equal(
+      decide(refs, { mode: "compute", channel: "main", prefix }).version,
+      "0.1.0",
+    );
+  }
+  // "" counts bare version tags.
+  assert.deepEqual(currentVersion(t("1.2.3", "v9.0.0"), { prefix: "" }), {
+    kind: "tagged",
+    version: "1.2.3",
+  });
+  // Only the default prefix can be untagged; it carries the files' version.
+  assert.deepEqual(currentVersion(t("release-1"), { fromFiles: "0.4.0" }), {
+    kind: "untagged",
+    written: "0.4.0",
+  });
+  assert.deepEqual(currentVersion(t("release-1")), {
+    kind: "untagged",
+    written: "",
+  });
+});
+
 test("decide: compute mode", () => {
   const t = (...v) => v.map((x) => `refs/tags/${x}`);
   const d = (refs, o) => decide(refs, { mode: "compute", ...o });
@@ -300,6 +340,41 @@ test("decide: compute mode", () => {
   assert.equal(d(t("v0.27.3"), main).version, "0.28.0");
   assert.equal(d([], staging).version, "0.0.1");
   assert.match(d([], staging).reason, /^first release/);
+  // Files ahead of the tags: their own version when the policy allows it
+  // after the highest tag, else the next after the files.
+  assert.equal(
+    d(t("v0.28.0"), { ...main, fromFiles: "0.29.0" }).version,
+    "0.29.0",
+  );
+  assert.match(
+    d(t("v0.28.0"), { ...main, fromFiles: "0.29.0" }).reason,
+    /the version the repo writes/,
+  );
+  assert.equal(
+    d(t("v0.28.0"), { ...main, fromFiles: "0.35.0" }).version,
+    "0.36.0",
+  );
+  assert.equal(
+    d(t("v0.28.0"), { ...staging, fromFiles: "0.28.1" }).version,
+    "0.28.1",
+  );
+  assert.equal(
+    d(t("v0.28.0"), { ...staging, fromFiles: "0.29.0" }).version,
+    "0.29.1",
+  );
+  assert.equal(
+    d(t("v0.28.0"), { ...main, fromFiles: "1.0.0" }).version,
+    "1.1.0",
+  );
+  assert.equal(
+    d(t("v0.28.0"), {
+      ...main,
+      fromFiles: "1.0.0",
+      bump: "major",
+      manual: true,
+    }).version,
+    "1.0.0",
+  );
   // from-files counts in compute mode too: files 1.4.2, no tags -> 1.4.3.
   assert.equal(d([], { ...staging, fromFiles: "1.4.2" }).version, "1.4.3");
   assert.equal(
@@ -380,7 +455,7 @@ test("current: the one current-version rule", () => {
   ]) {
     assert.deepEqual(
       cur(tags, { fromFiles: "0.4.0" }),
-      { kind: "untagged" },
+      { kind: "untagged", written: "0.4.0" },
       tags.join(),
     );
   }
@@ -405,6 +480,7 @@ test("current: the one current-version rule", () => {
   assert.deepEqual(cur(["refs/tags/v0.27.10"], { fromFiles: "9.0.0" }), {
     kind: "written",
     version: "9.0.0",
+    tagged: "0.27.10",
   });
   assert.deepEqual(
     cur(["refs/tags/pkg@1.2.3", "refs/tags/v0.1.0"], { prefix: "pkg@" }),
@@ -423,16 +499,59 @@ test("current: the one current-version rule", () => {
   assert.equal(run("\n"), "none\n");
 });
 
-test("countTags counts only strict version tags", () => {
-  assert.equal(countTags([]), 0);
-  assert.equal(countTags(["refs/tags/release-1", "refs/tags/vNext"]), 0);
-  // A pre-release-only repo has no version tags.
-  assert.equal(countTags(["refs/tags/v1.0.0-rc.1", "refs/tags/v0.9"]), 0);
+test("--manual and --allow-major take exactly true or false", () => {
+  const cli = fileURLToPath(new URL("./next-version.mjs", import.meta.url));
+  const run = (...a) => spawnSync("node", [cli, ...a], { encoding: "utf8" });
+  const major = [
+    "next",
+    "--current",
+    "1.0.0",
+    "--channel",
+    "main",
+    "--bump",
+    "major",
+  ];
+  // Exactly true, or a bare flag: a manual run.
+  assert.equal(run(...major, "--manual", "true").stdout.trim(), "2.0.0");
+  assert.equal(run(...major, "--manual").stdout.trim(), "2.0.0");
   assert.equal(
-    countTags(["refs/tags/v0.0.0", "x\trefs/tags/v1.2.3", "refs/tags/1.2.4"]),
-    2,
+    run(
+      "next",
+      "--manual",
+      "--current",
+      "1.0.0",
+      "--channel",
+      "main",
+      "--bump",
+      "major",
+    ).stdout.trim(),
+    "2.0.0",
   );
-  assert.equal(countTags(["pkg@1.0.0", "v1.0.0"], "pkg@"), 1);
+  // Exactly false: not one, so the major is refused.
+  assert.match(run(...major, "--manual", "false").stderr, /by hand/);
+  // Anything else is refused outright, never read as true.
+  for (const bad of ["no", "", "0", "False", "yes", "1"]) {
+    const r = run(...major, "--manual", bad);
+    assert.notEqual(r.status, 0, bad);
+    assert.match(r.stderr, /--manual takes true or false/, bad);
+  }
+  const check = [
+    "check",
+    "--current",
+    "1.0.0",
+    "--proposed",
+    "2.0.0",
+    "--channel",
+    "main",
+  ];
+  assert.equal(
+    run(...check, "--allow-major", "true").stdout.trim(),
+    "next major",
+  );
+  assert.match(
+    run(...check, "--allow-major", "no").stderr,
+    /--allow-major takes true or false/,
+  );
 });
 
 test("the CLI prints the version and fails with a message", () => {

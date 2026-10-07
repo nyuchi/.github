@@ -92,9 +92,14 @@ case "$url" in
     node -e 'const b = require("fs").readFileSync(process.argv[1]);
       process.stdout.write(JSON.stringify({ type: "file", path: process.argv[2],
         encoding: "base64", size: b.length, content: b.toString("base64") }));' "$file" "$path" ;;
-  repos/o/r/git/matching-refs/tags | repos/o/r/git/matching-refs/tags/*)
+  repos/o/r/git/matching-refs/tags)
     [ -e "$FIX/fail-tags" ] && fail "Server Error (HTTP 500)"
     answer < "$FIX/tags.json" ;;
+  repos/o/r/git/matching-refs/tags/*)
+    # Filtered on the server by the (URL-encoded) prefix.
+    [ -e "$FIX/fail-tags" ] && fail "Server Error (HTTP 500)"
+    prefix="$(node -p 'decodeURIComponent(process.argv[1])' "${url#repos/o/r/git/matching-refs/tags/}")"
+    jq --arg p "refs/tags/$prefix" '[.[] | select(.ref | startswith($p))]' "$FIX/tags.json" | answer ;;
   repos/o/r/issues/*/labels)
     [ -e "$FIX/fail-labels" ] && fail "Bad Gateway (HTTP 502)"
     answer < "$FIX/labels.json" ;;
@@ -222,7 +227,8 @@ case_() {
 }
 
 # next_ <label> <want exit> <want version|-> <want text> <channel> <current>
-#       <proposed> <tags> [current-from-files]   (NEXT_PREFIX: the tag prefix)
+#       <proposed> <tags> [current-from-files]
+#       (NEXT_PREFIX, NEXT_BUMP, NEXT_MANUAL: the action's inputs)
 next_() {
   local label="$1" want_rc="$2" want_version="$3" want_text="$4"
   n=$((n + 1))
@@ -230,8 +236,8 @@ next_() {
   fixture "$fix" "$8" ""
   mkdir -p "$rt"
   : > "$rt/out"
-  out="$(PATH="$work/bin:$PATH" FIX="$fix" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
-    CHANNEL="$5" BUMP="" MANUAL=false CURRENT="$6" PROPOSED="$7" FROM_FILES="${9:-}" \
+  out="$(PATH="$work/bin:$PATH" FIX="$fix" RUNNER_TEMP="$rt" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
+    CHANNEL="$5" BUMP="${NEXT_BUMP:-}" MANUAL="${NEXT_MANUAL-false}" CURRENT="$6" PROPOSED="$7" FROM_FILES="${9:-}" \
     PREFIX="${NEXT_PREFIX:-v}" REPO=o/r \
     GH_TOKEN=fake SCRIPT="$lib/next-version.mjs" bash -e "$work/next.sh" 2>&1)" || rc=$?
   version="$(sed -n 's/^version=//p' "$rt/out" | tail -1)"
@@ -412,6 +418,14 @@ case_ "other duplicate keys in package.json do not refuse the PR" 0 allowed "all
 case_ "a BOM before Cargo.toml is fine" 0 allowed "allowed (next patch" \
   staging "v0.27.3" "" "B:Cargo.toml=$(cargo 0.27.3)" "H:Cargo.toml=$(printf '\357\273\277'; cargo 0.27.4)"
 
+# Files ahead of the tags; a custom prefix.
+case_ "no change, files ahead of the tags: the merge is tagged the files' version" 0 unchanged \
+  "will be tagged v0.29.0" main "v0.28.0" "" "B:VERSION=0.29.0" "H:VERSION=0.29.0"
+case_ "a custom prefix ignores other tags: a component's first release" 0 allowed "first release, next minor" \
+  main "v3.0.0 release-1 web-v1.0.0-rc.1" "" env:PREFIX=web-v "H:VERSION=0.1.0"
+case_ "a custom prefix counts its own tags" 1 - "the policy allows 0.3.0" \
+  main "v3.0.0 web-v0.2.0" "" env:PREFIX=web-v "B:VERSION=0.2.0" "H:VERSION=0.4.0"
+
 # Judged against the merge-base; rebase when the base tip is ahead.
 case_ "a bump landed on the base after the PR branched: no downgrade" 0 unchanged "No version change" \
   staging "v0.27.4" "" "B:VERSION=0.27.3" "T:VERSION=0.27.4" "H:VERSION=0.27.3"
@@ -481,6 +495,17 @@ next_ "the current, tagged version passes as already tagged" 0 0.27.4 "already t
 next_ "an older tagged version is a downgrade, refused" 1 - "the policy allows 0.27.5" staging "" 0.27.3 "v0.27.3 v0.27.4"
 next_ "files ahead of the tags: no deadlock" 0 0.27.6 "next patch" staging "" 0.27.6 "v0.27.4" 0.27.5
 next_ "compute mode honours current-from-files" 0 1.4.3 "next patch" staging "" "" "" 1.4.2
+next_ "files ahead of the tags, and allowed: the files' version itself" 0 0.29.0 "the version the repo writes" \
+  main "" "" "v0.28.0" 0.29.0
+next_ "files ahead of the tags, not allowed: the next after the files" 0 0.36.0 "next minor" \
+  main "" "" "v0.28.0" 0.35.0
+NEXT_PREFIX=web-v next_ "a component whose only tag is a pre-release: a normal first release" 0 0.1.0 \
+  "first release" main "" "" "web-v1.0.0-rc.1 v3.0.0"
+NEXT_BUMP=major NEXT_MANUAL=no next_ "--manual no is never true: a major is refused" 1 - "by hand" \
+  main 1.0.0 "" ""
+NEXT_BUMP=major NEXT_MANUAL='' next_ "--manual empty is never true: a major is refused" 1 - "by hand" \
+  main 1.0.0 "" ""
+NEXT_BUMP=major NEXT_MANUAL=true next_ "--manual true: a major" 0 2.0.0 "next major" main 1.0.0 "" ""
 NEXT_PREFIX=web-v next_ "a custom prefix ignores other tags" 0 0.1.0 "first release" main "" "" "v3.0.0 release-1"
 NEXT_PREFIX=web-v next_ "a custom prefix counts its own tags" 0 0.3.0 "next minor" main "" "" "v3.0.0 web-v0.2.0"
 next_ "no tags: the first release fails closed" 1 - "the policy allows 0.0.1" staging "" 5.0.0 ""
@@ -517,7 +542,7 @@ same_rule_() {
   a_check="$(sed -n 's/^decide check: //p' <<<"$out")"
   # next_run <proposed>: the next-version action's decide line.
   next_run() {
-    PATH="$work/bin:$PATH" FIX="$fix" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
+    PATH="$work/bin:$PATH" FIX="$fix" RUNNER_TEMP="$rt" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
       CHANNEL=staging BUMP="" MANUAL=false CURRENT="" PROPOSED="$1" FROM_FILES="$written" \
       PREFIX=v REPO=o/r GH_TOKEN=fake SCRIPT="$lib/next-version.mjs" bash -e "$work/next.sh" 2>&1 || true
   }

@@ -22,10 +22,13 @@
 # The current version is the higher of the highest version tag (a tag named
 # exactly <prefix><strict version>; v2024.10.1 is out of range and ignored)
 # and `current-from-files`, the version the repo already writes, so files
-# ahead of the tags never deadlock a repo. With the default prefix, a repo
-# with tags but no version tag cannot be verified: check fails, next starts
-# from the files or 0.0.1. With another prefix (a monorepo component), other
-# tags are ignored. A proposed version must be strict (MAJOR.MINOR.PATCH,
+# ahead of the tags never deadlock a repo; when the files already hold a
+# version the policy allows after the highest tag, next is that version.
+# With the default prefix, a repo with tags but no version tag cannot be
+# verified: check fails, next starts from the files or 0.0.1. With any other
+# prefix (a monorepo component), every tag but its own version tags is
+# ignored, and only those are fetched. `manual` is a manual run only when it
+# is exactly "true". A proposed version must be strict (MAJOR.MINOR.PATCH,
 # each 0..999).
 #
 # Usage, pinned to a commit like every org action:
@@ -130,9 +133,18 @@ runs:
           strict "$CURRENT" || die "The current version is not MAJOR.MINOR.PATCH (each 0..999)."
           refs="refs/tags/$PREFIX$CURRENT"
         else
-          refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags" --jq '.[].ref')"
+          # The default prefix needs every tag (to tell an untagged repo);
+          # any other prefix only its own, filtered on the server.
+          tag_path="repos/$REPO/git/matching-refs/tags"
+          if [ "$PREFIX" != v ]; then
+            tag_path="$tag_path/$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
+          fi
+          refs="$(gh api --paginate "$tag_path" --jq '.[].ref')"
         fi
-        args=(--channel "$CHANNEL" --prefix "$PREFIX" --bump "$BUMP" --manual "$MANUAL")
+        # --manual takes exactly true or false.
+        manual=false
+        if [ "$MANUAL" = "true" ]; then manual=true; fi
+        args=(--channel "$CHANNEL" --prefix "$PREFIX" --bump "$BUMP" --manual "$manual")
         mode=compute
         if [ -n "$PROPOSED" ]; then
           mode=check
@@ -141,10 +153,16 @@ runs:
         args+=(--mode "$mode")
         if [ -n "$FROM_FILES" ]; then args+=(--from-files "$FROM_FILES"); fi
 
-        if ! out="$(printf '%s\n' "$refs" | node "$SCRIPT" decide "${args[@]}" 2>&1)"; then
-          reason="${out#::error::}"
+        # Only stdout is the answer; stderr (the reason, or a crash) goes to
+        # the log.
+        err="$RUNNER_TEMP/next-version-err"
+        if ! out="$(printf '%s\n' "$refs" | node "$SCRIPT" decide "${args[@]}" 2> "$err")"; then
+          sed 1d "$err" >&2  # the first line is the reason, reported by die
+          reason="$(head -n 1 "$err")"
+          reason="${reason#::error::}"
           die "${reason:-next-version decide refused without a reason.}"
         fi
+        if [ -s "$err" ]; then cat "$err" >&2; fi
         echo "decide $mode: $out"
         ok_re='^ok ([^ ]+) ([^ ]+) (.+)$'
         [[ "$out" =~ $ok_re ]] || die "next-version decide gave no answer."

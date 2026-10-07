@@ -191,11 +191,6 @@ export function check(
   );
 }
 
-/**
- * The versions of the tags whose name is exactly <prefix><strict version>.
- * A line is a tag name, a "refs/tags/" ref, or "<sha>\t<ref>"; nothing is
- * trimmed, so a tag that is not exactly a version tag is ignored.
- */
 /** The tag name in a ref line: "<name>", "refs/tags/<name>", "<sha>\t<ref>". */
 function tagName(line) {
   return String(line)
@@ -204,6 +199,10 @@ function tagName(line) {
     .replace(/\^\{\}$/, "");
 }
 
+/**
+ * The versions of the tags whose name is exactly <prefix><strict version>.
+ * Nothing is trimmed, so a tag that is not exactly a version tag is ignored.
+ */
 function tagVersions(refs, prefix) {
   const out = [];
   for (const line of refs) {
@@ -224,14 +223,6 @@ export function highest(refs, prefix = "v") {
   return best;
 }
 
-/**
- * How many tags are <prefix><strict version>. Tells "no version tags"
- * (another scheme, pre-releases only, or none) apart from a real v0.0.0.
- */
-export function countTags(refs, prefix = "v") {
-  return tagVersions(refs, prefix).length;
-}
-
 export const DEFAULT_PREFIX = "v";
 
 /**
@@ -239,22 +230,25 @@ export const DEFAULT_PREFIX = "v";
  *
  *   { kind: "tagged", version }   the highest <prefix><strict version> tag,
  *                                 at least as high as the files
- *   { kind: "written", version }  the version the repo writes (`fromFiles`),
+ *   { kind: "written", version, tagged? }
+ *                                 the version the repo writes (`fromFiles`),
  *                                 when there is no version tag, or the files
  *                                 are ahead of the tags (a hand bump, or a
- *                                 tag not made yet): never a deadlock
- *   { kind: "untagged" }          default prefix only: tags exist, but none
+ *                                 tag not made yet; `tagged` is the highest
+ *                                 tag): never a deadlock
+ *   { kind: "untagged", written } DEFAULT PREFIX ONLY: tags exist, but none
  *                                 is a version tag (another scheme,
  *                                 pre-releases only, out of range), so no
- *                                 written version can be verified
+ *                                 written version can be verified;
+ *                                 `written` is the files' version or ""
  *   { kind: "none" }              nothing: a true first release from 0.0.0
  *
- * With a non-default prefix (a monorepo component, say `web-v`), only tags
- * starting with that prefix matter; every other tag is someone else's, so a
- * component's first release works.
+ * With any other prefix (a monorepo component such as `web-v`, or ""), a tag
+ * that is not exactly <prefix><strict version> is ignored as if absent, so a
+ * component whose only tag is web-v1.0.0-rc.1 has a normal first release.
  *
- * @param {string[]} refs  ALL tag refs (not filtered by prefix); blank
- *   lines are ignored
+ * @param {string[]} refs  ALL tag refs (or, for another prefix, at least
+ *   that prefix's); blank lines are ignored
  * @param {{prefix?: string, fromFiles?: string}} opts  `fromFiles`, when
  *   given, must be a strict version; 0.0.0 is a placeholder (nothing)
  */
@@ -262,10 +256,7 @@ export function currentVersion(
   refs,
   { prefix = DEFAULT_PREFIX, fromFiles = "" } = {},
 ) {
-  let tags = refs.filter((r) => String(r) !== "");
-  if (prefix !== DEFAULT_PREFIX) {
-    tags = tags.filter((r) => tagName(r).startsWith(prefix));
-  }
+  const tags = refs.filter((r) => String(r) !== "");
   const files =
     fromFiles !== "" && fromFiles !== undefined && parseStrict(fromFiles)
       ? fromFiles
@@ -275,11 +266,13 @@ export function currentVersion(
   if (versions.length > 0) {
     const tagged = highest(versions, "");
     if (written && compare(written, tagged) > 0) {
-      return { kind: "written", version: written };
+      return { kind: "written", version: written, tagged };
     }
     return { kind: "tagged", version: tagged };
   }
-  if (tags.length > 0) return { kind: "untagged" };
+  if (prefix === DEFAULT_PREFIX && tags.length > 0) {
+    return { kind: "untagged", written };
+  }
   if (written) return { kind: "written", version: written };
   return { kind: "none" };
 }
@@ -295,7 +288,10 @@ export function currentVersion(
  *                   downgrade to an old tag included. An untagged repo
  *                   (default prefix) cannot be verified: refused.
  *   mode "compute"  the next version after the current one; an untagged
- *                   repo starts from the files, or 0.0.1.
+ *                   repo starts from the files, or 0.0.1. When the files
+ *                   are ahead of the tags and are themselves a version the
+ *                   policy allows after the highest tag, the answer is the
+ *                   files' version: the release they announce.
  *
  * The current version is currentVersion(): the higher of the highest
  * version tag and `fromFiles`. A major needs `allowMajor` (the semver:major
@@ -355,9 +351,24 @@ export function decide(
     };
   }
   if (mode === "compute") {
-    if (cur.kind === "untagged") {
-      // The first version tag of a repo with tags in another scheme.
-      current = fromFiles && fromFiles !== "0.0.0" ? fromFiles : "0.0.0";
+    // The first version tag of a repo with tags in another scheme.
+    if (cur.kind === "untagged") current = cur.written || "0.0.0";
+    if (cur.kind === "written" && cur.tagged) {
+      // Files ahead of the tags: the release they announce, when the
+      // policy allows it after the highest tag.
+      let why = "";
+      try {
+        why = check(cur.tagged, current, { channel, bump, allowMajor: major });
+      } catch (err) {
+        if (!(err instanceof PolicyError)) throw err;
+      }
+      if (why && why !== "unchanged") {
+        return {
+          version: current,
+          current: cur.tagged,
+          reason: `${why}, the version the repo writes (current: the highest tag ${prefix}${cur.tagged})`,
+        };
+      }
     }
     const version = nextVersion(current, { channel, bump, manual });
     const kind = bump || defaultBump(channel);
@@ -376,9 +387,12 @@ function args(argv) {
     const a = argv[i];
     if (!a.startsWith("--")) out._.push(a);
     else if (a === "--manual" || a === "--allow-major") {
-      // A bare flag is true; an explicit value after it is consumed.
+      // Exactly "true" or "false"; a bare flag (last, or before another
+      // --flag) is true. Anything else is refused, never read as true.
       const v = argv[i + 1];
-      out[a.slice(2)] = v === "true" || v === "false" ? argv[++i] : true;
+      if (v === undefined || v.startsWith("--")) out[a.slice(2)] = true;
+      else if (v === "true" || v === "false") out[a.slice(2)] = argv[++i];
+      else throw new PolicyError(`${a} takes true or false, not '${v}'.`);
     } else out[a.slice(2)] = argv[++i] ?? "";
   }
   return out;
@@ -427,7 +441,7 @@ async function main(argv) {
     }
     case "current": {
       const c = currentVersion(await stdinLines(), {
-        prefix: a.prefix ?? "v",
+        prefix: a.prefix ?? DEFAULT_PREFIX,
         fromFiles: a["from-files"] ?? "",
       });
       return c.version ? `${c.kind} ${c.version}` : c.kind;

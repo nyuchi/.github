@@ -68,6 +68,17 @@ test("package.json: the root version only, read by python's json", () => {
   ]) {
     assert.equal(kind(pj(bad)), "invalid", bad);
   }
+  // Nesting too deep for python (RecursionError) is invalid, not a crash.
+  const deep = `{"version":"1.0.0","x":${"[".repeat(100000)}${"]".repeat(100000)}}`;
+  assert.equal(kind(pj(deep)), "invalid");
+  assert.equal(
+    kind(
+      cargo(
+        `[package]\nversion = "1.0.0"\nx = ${"[".repeat(100000)}${"]".repeat(100000)}\n`,
+      )["Cargo.toml#package"],
+    ),
+    "invalid",
+  );
   // Bad UTF-8 is invalid, not a crash.
   assert.equal(kind(pj(Buffer.from([0x7b, 0xff, 0x7d]))), "invalid");
 });

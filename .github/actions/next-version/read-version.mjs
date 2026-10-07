@@ -225,7 +225,7 @@ for kind, path in zip(args[0::2], args[1::2]):
             doc = json.loads(text, object_pairs_hook=keep_versions, parse_constant=no_constant)
         else:
             doc = tomllib.loads(text)
-    except (UnicodeDecodeError, ValueError, tomllib.TOMLDecodeError):
+    except (UnicodeDecodeError, ValueError, RecursionError, tomllib.TOMLDecodeError):
         out.append({t: unreadable(data) for t in tables})
         continue
     if kind == "package.json" and isinstance(doc, Obj) and len(doc.versions) > 1:
