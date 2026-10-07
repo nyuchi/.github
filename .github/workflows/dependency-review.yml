@@ -250,7 +250,8 @@ jobs:
                 else
                   # Something in the tree ships no wheel: audit the exact
                   # pins the file names, and leave the rest to review.
-                  grep -E '^[A-Za-z0-9._-]+(\[[^]]*\])?[[:space:]]*==' "$w/req.txt" > "$w/direct.txt" || true
+                  grep -E '^[[:space:]]*[A-Za-z0-9._-]+(\[[^]]*\])?[[:space:]]*==[^*;[:space:]]+[[:space:]]*(;.*)?$' "$w/req.txt" \
+                    > "$w/direct.txt" || true
                   if [ -s "$w/direct.txt" ]; then
                     pyaudit "$w/direct.txt" || rc=$?
                     [ "$rc" -eq 0 ] && rc=3
