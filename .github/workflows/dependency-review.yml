@@ -200,7 +200,7 @@ jobs:
           # Exact pins only: no options, editables, local paths or direct
           # (git or URL) references, none of which are PyPI packages.
           pins() { sed -e ':a' -e '/\\$/N; s/\\\n//; ta' "$1" | sed -E 's/[[:space:]]+--hash=[^[:space:]]+//g; s/[[:space:]]#.*$//' \
-            | grep -Ev '^[[:space:]]*(-|\.|/|$|#)| @ |file:' || true; }
+            | grep -Ev '^[[:space:]]*(-|\.|/|$|#)|^[[:space:]]*[A-Za-z0-9._-]+(\[[^]]*\])?[[:space:]]*@|file:' || true; }
           while IFS= read -r f; do
             dir=$(dirname -- "$f")
             name=$(basename -- "$f")
@@ -215,10 +215,14 @@ jobs:
                 ;;
               pnpm-lock.yaml)
                 tool="pnpm audit"
-                cp -- "$root/$dir/package.json" "$root/$f" "$w/" 2>/dev/null
-                # The scratch directory has no .pnpmfile.cjs or .npmrc to load.
-                (cd "$w" && npx --yes --registry="$REGISTRY" "pnpm@$PNPM_VERSION" audit \
-                  --audit-level high --registry="$REGISTRY") || rc=1
+                cp -- "$root/$f" "$w/"
+                # The scratch directory has no .pnpmfile.cjs or .npmrc, and
+                # package.json loses the fields pnpm reads settings from
+                # (auditConfig ignores, overrides, a pnpm version to switch to).
+                jq 'del(.pnpm, .packageManager, .devEngines)' "$root/$dir/package.json" > "$w/package.json" 2>/dev/null || rc=1
+                [ "$rc" -eq 0 ] && { (cd "$w" && npm_config_manage_package_manager_versions=false \
+                  npx --yes --registry="$REGISTRY" "pnpm@$PNPM_VERSION" audit --audit-level high \
+                  --registry="$REGISTRY" --config.manage-package-manager-versions=false) || rc=1; }
                 ;;
               Cargo.lock)
                 tool="cargo audit"
@@ -262,7 +266,7 @@ jobs:
             case "$rc" in
               0) summary "| \`$f\` | $tool | pass |" ;;
               3)
-                echo "::warning file=$f::$tool audited only the exact pins in this file; ranges and their dependencies are covered by the review job only."
+                echo "::warning file=$f::$tool audited only the exact pins here; ranges and their dependencies are left to review."
                 summary "| \`$f\` | $tool | pass (exact pins only) |"
                 ;;
               2)
