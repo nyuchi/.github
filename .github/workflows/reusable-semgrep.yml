@@ -28,13 +28,15 @@
 #
 # Rules: p/typescript, p/javascript, p/react, p/python, p/rust, p/secrets
 # and p/owasp-top-ten, plus a repo's own `.semgrep.yml` or `.semgrep/`
-# rules where present. `.semgrepignore` and `# nosemgrep` work as usual.
+# rules where present. `.semgrepignore` and `# nosemgrep` work as usual;
+# both live in the repo, so adding one shows in the pull request's diff.
 #
 # Astro: Semgrep has no Astro parser, so the TypeScript rules cannot read a
 # `.astro` file. For each changed `.astro` file, the frontmatter (between
 # the `---` fences) and every `<script>` block are copied into a `.ts` file
 # of the same name under a scratch directory and scanned with the same
-# rules; a finding names the original path with `.ts` appended. p/secrets is generic and reads
+# rules; a finding names the original path with `.ts` appended. The base
+# versions are extracted too, so here also only new findings count. p/secrets is generic and reads
 # `.astro` files directly. Svelte is not extracted yet.
 #
 # Semgrep runs in its official image, pinned by digest. It reads the code
@@ -100,13 +102,10 @@ jobs:
           else
             git ls-files -z -- '*.astro' > "$RUNNER_TEMP/astro.lst"
           fi
-          n=0
-          while IFS= read -r -d '' f; do
-            [ -f "$f" ] || continue
-            mkdir -p "$out/$(dirname -- "$f")"
-            # Frontmatter: the lines between the first two `---` fences.
-            # Scripts: every <script ...> ... </script> block. Blank lines
-            # stand in for everything else, so line numbers still match.
+          # Frontmatter: the lines between the first two `---` fences.
+          # Scripts: every <script ...> ... </script> block. Blank lines
+          # stand in for everything else, so line numbers still match.
+          extract() {
             awk '
               NR == 1 && /^---[[:space:]]*$/ { fm = 1; print ""; next }
               fm && /^---[[:space:]]*$/      { fm = 0; print ""; next }
@@ -115,16 +114,45 @@ jobs:
               sc && /<\/script>/             { sub(/<\/script>.*/, ""); print; sc = 0; next }
               sc                             { print; next }
                                              { print "" }
-            ' "$f" > "$out/$f.ts"
+            '
+          }
+          # The extracts live in a scratch git repo with two commits, the
+          # base versions and then the head versions, so Semgrep's own
+          # baseline mode reports only what the change introduces.
+          g() { git -C "$out" -c user.name=semgrep -c user.email=semgrep@invalid "$@"; }
+          g init -q
+          n=0
+          if [ -n "$BASE" ]; then
+            while IFS= read -r -d '' f; do
+              if git cat-file -e "$BASE:$f" 2>/dev/null; then
+                mkdir -p "$out/$(dirname -- "$f")"
+                git show "$BASE:$f" | extract > "$out/$f.ts"
+              fi
+            done < "$RUNNER_TEMP/astro.lst"
+          fi
+          g add -A
+          g commit -q --allow-empty -m base
+          while IFS= read -r -d '' f; do
+            [ -f "$f" ] || continue
+            mkdir -p "$out/$(dirname -- "$f")"
+            extract < "$f" > "$out/$f.ts"
             n=$((n + 1))
           done < "$RUNNER_TEMP/astro.lst"
-          echo "count=$n" >> "$GITHUB_OUTPUT"
-          echo "dir=$out" >> "$GITHUB_OUTPUT"
+          base_commit=$(g rev-parse HEAD)
+          g add -A
+          g commit -q --allow-empty -m head
+          {
+            echo "count=$n"
+            echo "dir=$out"
+            # No baseline for a full scan: every extract is reported.
+            if [ -n "$BASE" ]; then echo "base=$base_commit"; else echo "base="; fi
+          } >> "$GITHUB_OUTPUT"
       - name: Semgrep
         env:
           BASE: ${{ steps.range.outputs.base }}
           ASTRO_COUNT: ${{ steps.astro.outputs.count }}
           ASTRO_DIR: ${{ steps.astro.outputs.dir }}
+          ASTRO_BASE: ${{ steps.astro.outputs.base }}
           # A ruleset run has no inputs, so this is empty there: only an
           # explicit false turns failing off.
           FAIL: ${{ format('{0}', inputs.fail-on-findings) }}
@@ -135,24 +163,25 @@ jobs:
           for local in .semgrep.yml .semgrep.yaml .semgrep; do
             [ -e "$local" ] && configs+=(--config "/src/$local")
           done
-          common=(--metrics=off --disable-version-check --quiet "${configs[@]}")
+          common=(--metrics=off --disable-version-check "${configs[@]}")
           [ "$FAIL" != "false" ] && common+=(--error)
+          # run <host dir> <baseline commit or empty>
           run() {
+            local dir=$1 base=$2
+            local extra=()
+            [ -n "$base" ] && extra=(--baseline-commit "$base")
             docker run --rm \
-              -v "$PWD:/src" -v "$ASTRO_DIR:/astro:ro" -w /src \
+              -v "$PWD:/src:ro" -v "$dir:/scan" -w /scan \
               -e SEMGREP_SEND_METRICS=off \
               --entrypoint sh "$SEMGREP_IMAGE" -c \
-              'git config --global --add safe.directory /src && exec semgrep scan "$@"' semgrep "$@"
+              'git config --global --add safe.directory /scan && exec semgrep scan "$@"' \
+              semgrep "${common[@]}" "${extra[@]}" .
           }
           rc=0
-          if [ -n "$BASE" ]; then
-            run "${common[@]}" --baseline-commit "$BASE" /src || rc=$?
-          else
-            run "${common[@]}" /src || rc=$?
-          fi
+          run "$PWD" "$BASE" || rc=$?
           if [ "${ASTRO_COUNT:-0}" -gt 0 ]; then
             echo "Scanning frontmatter and scripts of $ASTRO_COUNT .astro file(s)."
-            run "${common[@]}" /astro || rc=$?
+            run "$ASTRO_DIR" "$ASTRO_BASE" || rc=$?
           fi
           {
             echo "### Semgrep"

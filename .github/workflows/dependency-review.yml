@@ -15,10 +15,12 @@
 #             pnpm-lock.yaml                           pnpm audit (high+)
 #             Cargo.lock                               cargo audit (any)
 #             uv.lock                                  pip-audit (any), via uv export
-#             requirements*.txt                        pip-audit (any)
-#           yarn.lock, bun.lock and poetry.lock are left to `review` and
-#           named in the job summary. RustSec and PyPI advisories often
-#           carry no severity, so those auditors fail on any advisory.
+#             requirements*.txt                        pip-audit (any), ranges resolved
+#                                                      with uv pip compile --no-build
+#           RustSec and PyPI advisories often carry no severity, so those
+#           auditors fail on any advisory. A Python file that cannot be
+#           resolved to exact PyPI versions is reported as a warning and
+#           left to `review`; so are yarn.lock, bun.lock and poetry.lock.
 #
 # HOW IT IS ENFORCED
 #
@@ -32,8 +34,9 @@
 # workflow also blocks direct pushes to the branches it covers).
 #
 # Every action is pinned to a commit. Nothing here runs the pull request's
-# code: the auditors read lockfiles only (pip-audit runs with --no-deps
-# --disable-pip, so it installs nothing), and the token is read-only.
+# code or reads its tool config: each auditor runs on copies of the files it
+# needs in an empty scratch directory, pip-audit installs nothing
+# (--no-deps --disable-pip), and the token is read-only.
 
 name: Dependency review
 
@@ -171,6 +174,7 @@ jobs:
           TARGETS: ${{ steps.pick.outputs.targets }}
           PNPM_VERSION: 10.34.6
           PIP_AUDIT_VERSION: 2.10.1
+          REGISTRY: https://registry.npmjs.org/
         run: |
           set -uo pipefail
           root=$PWD
@@ -180,56 +184,97 @@ jobs:
           summary ""
           summary "| Lockfile | Auditor | Result |"
           summary "|---|---|---|"
+          # Each auditor runs in an empty scratch directory holding copies of
+          # the files it needs, so config the pull request controls (.npmrc,
+          # .pnpmfile.cjs, .cargo/audit.toml) can neither run code nor point
+          # the auditor elsewhere. npm and pnpm also get the registry on the
+          # command line, which outranks any config file.
+          pyaudit() {  # pyaudit <requirements file of exact pins>
+            uvx "pip-audit==$PIP_AUDIT_VERSION" -r "$1" --no-deps --disable-pip \
+              --progress-spinner off -f json -o "$w/audit.json" > /dev/null 2>&1
+            [ -s "$w/audit.json" ] || return 2  # not audited
+            n=$(jq '[.dependencies[].vulns | length] | add // 0' "$w/audit.json")
+            jq -r '.dependencies[] | select(.vulns | length > 0) | "\(.name) \(.version): \([.vulns[].id] | join(", "))"' "$w/audit.json"
+            [ "$n" -eq 0 ]
+          }
+          # Exact pins only: no options, editables, local paths or direct
+          # (git or URL) references, none of which are PyPI packages.
+          pins() { sed -e ':a' -e '/\\$/N; s/\\\n//; ta' "$1" | sed -E 's/[[:space:]]+--hash=[^[:space:]]+//g; s/[[:space:]]#.*$//' \
+            | grep -Ev '^[[:space:]]*(-|\.|/|$|#)| @ |file:' || true; }
           while IFS= read -r f; do
             dir=$(dirname -- "$f")
             name=$(basename -- "$f")
+            w=$(mktemp -d)
             tool=""
-            cd -- "$root/$dir" || { failed=1; continue; }
+            rc=0
             case "$name" in
               package-lock.json|npm-shrinkwrap.json)
                 tool="npm audit"
-                npm audit --package-lock-only --audit-level=high
+                cp -- "$root/$dir/package.json" "$root/$f" "$w/" 2>/dev/null
+                (cd "$w" && npm audit --package-lock-only --audit-level=high --registry="$REGISTRY") || rc=1
                 ;;
               pnpm-lock.yaml)
                 tool="pnpm audit"
-                # Audit with one pinned pnpm, not the version the repo names.
-                npm_config_manage_package_manager_versions=false \
-                  npx --yes "pnpm@$PNPM_VERSION" audit --audit-level high
+                cp -- "$root/$dir/package.json" "$root/$f" "$w/" 2>/dev/null
+                # The scratch directory has no .pnpmfile.cjs or .npmrc to load.
+                (cd "$w" && npx --yes --registry="$REGISTRY" "pnpm@$PNPM_VERSION" audit \
+                  --audit-level high --registry="$REGISTRY") || rc=1
                 ;;
               Cargo.lock)
                 tool="cargo audit"
-                cargo audit --file "$name"
+                cp -- "$root/$f" "$w/Cargo.lock"
+                (cd "$w" && cargo audit --file Cargo.lock) || rc=1
                 ;;
               uv.lock)
                 tool="pip-audit (uv export)"
-                req="$RUNNER_TEMP/uv-req-$RANDOM.txt"
-                if uv export --frozen --no-hashes --format requirements-txt \
-                    --all-extras --all-groups --no-emit-workspace --no-header --no-annotate -o "$req" > /dev/null; then
-                  # Local path and editable entries are first-party code, not PyPI packages.
-                  grep -Ev '^(-e |\./|\.\./|/)|@ file:' "$req" > "$req.pypi" || true
-                  uvx "pip-audit==$PIP_AUDIT_VERSION" -r "$req.pypi" --no-deps --disable-pip --progress-spinner off
+                if (cd "$root/$dir" && uv export --frozen --no-hashes --format requirements-txt \
+                      --all-extras --all-groups --no-emit-workspace --no-header --no-annotate \
+                      -o "$w/export.txt" > /dev/null 2>&1); then
+                  pins "$w/export.txt" > "$w/pins.txt"
+                  pyaudit "$w/pins.txt" || rc=$?
                 else
-                  false
+                  rc=2
                 fi
                 ;;
               requirements*.txt)
                 tool="pip-audit"
-                uvx "pip-audit==$PIP_AUDIT_VERSION" -r "$name" --no-deps --disable-pip --progress-spinner off
+                pins "$root/$f" > "$w/req.txt"
+                # Resolve ranges to exact pins from wheels only (--no-build
+                # never runs a package's build code).
+                if (cd "$w" && uv pip compile --no-build --quiet --no-header --no-annotate req.txt -o pins.txt > /dev/null 2>&1); then
+                  pyaudit "$w/pins.txt" || rc=$?
+                else
+                  # Something in the tree ships no wheel: audit the exact
+                  # pins the file names, and leave the rest to review.
+                  grep -E '^[A-Za-z0-9._-]+(\[[^]]*\])?[[:space:]]*==' "$w/req.txt" > "$w/direct.txt" || true
+                  if [ -s "$w/direct.txt" ]; then
+                    pyaudit "$w/direct.txt" || rc=$?
+                    [ "$rc" -eq 0 ] && rc=3
+                  else
+                    rc=2
+                  fi
+                fi
                 ;;
               *)
                 tool="(dependency review only)"
-                true
                 ;;
             esac
-            rc=$?
-            cd -- "$root" || exit 1
-            if [ "$rc" -eq 0 ]; then
-              summary "| \`$f\` | $tool | pass |"
-            else
-              failed=1
-              echo "::error file=$f::$tool reported advisories, or could not read this lockfile."
-              summary "| \`$f\` | $tool | **fail** |"
-            fi
+            case "$rc" in
+              0) summary "| \`$f\` | $tool | pass |" ;;
+              3)
+                echo "::warning file=$f::$tool audited only the exact pins in this file; ranges and their dependencies are covered by the review job only."
+                summary "| \`$f\` | $tool | pass (exact pins only) |"
+                ;;
+              2)
+                echo "::warning file=$f::$tool could not resolve this file to exact versions; it is covered by the review job only."
+                summary "| \`$f\` | $tool | not audited (review only) |"
+                ;;
+              *)
+                failed=1
+                echo "::error file=$f::$tool reported advisories, or could not read this lockfile."
+                summary "| \`$f\` | $tool | **fail** |"
+                ;;
+            esac
           done < "$TARGETS"
           exit "$failed"
       - name: Nothing to audit
