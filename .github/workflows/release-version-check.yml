@@ -109,7 +109,7 @@ jobs:
           esac
           [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]] || fail "The event has no base commit."
           [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]] || fail "The event has no head commit."
-          [ -n "$base_ref" ] && [[ "$base_ref" != *$'\n'* ]] || fail "The event has no base branch."
+          if [ -z "$base_ref" ] || [[ "$base_ref" == *$'\n'* ]]; then fail "The event has no base branch."; fi
           {
             echo "base-ref=$base_ref"
             echo "base-sha=$base_sha"
