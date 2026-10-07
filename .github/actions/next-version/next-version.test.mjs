@@ -286,6 +286,22 @@ test("decide: check mode", () => {
     () => d([], { ...staging, proposed: "0.0.1", fromFiles: "1.4" }),
     /--from-files "1.4" is not MAJOR.MINOR.PATCH/,
   );
+  // --from-files equal to the proposed version passes only when it is the
+  // current tag already (a caller whose parent and head are one commit).
+  assert.match(
+    d(t("v0.28.5"), { ...main, proposed: "0.28.5", fromFiles: "0.28.5" })
+      .reason,
+    /already tagged v0.28.5/,
+  );
+  assert.throws(
+    () =>
+      d(t("v0.28.5", "v0.28.6"), {
+        ...main,
+        proposed: "0.28.5",
+        fromFiles: "0.28.5",
+      }),
+    UsageError,
+  );
   // --from-files is the version BEFORE the change: never the proposed one.
   assert.throws(
     () => d(t("v0.28.0"), { ...main, proposed: "9.9.9", fromFiles: "9.9.9" }),
@@ -402,17 +418,62 @@ test("decide: compute mode", () => {
     d(t("v0.28.0"), { ...main, fromFiles: "0.20.0" }).version,
     "0.29.0",
   );
-  // from-files counts in compute mode too: files 1.4.2, no tags -> 1.4.3.
-  assert.equal(d([], { ...staging, fromFiles: "1.4.2" }).version, "1.4.3");
+  // No version tag: the files' own version, the release they announce.
+  assert.equal(d([], { ...staging, fromFiles: "0.1.0" }).version, "0.1.0");
+  assert.equal(d([], { ...staging, fromFiles: "1.4.2" }).version, "1.4.2");
+  assert.match(
+    d([], { ...staging, fromFiles: "1.4.2" }).reason,
+    /no version tag yet/,
+  );
+  // A 0.0.0 placeholder is no version: a first release.
+  assert.equal(d([], { ...staging, fromFiles: "0.0.0" }).version, "0.0.1");
   assert.equal(
     d(t("v0.1.0"), { ...main, fromFiles: "1.4.2" }).version,
     "1.4.2",
   );
-  // Untagged: starts from the files, or 0.0.1.
+  // Untagged: the files' version, or 0.0.1.
   assert.equal(d(t("release-1"), staging).version, "0.0.1");
   assert.equal(
     d(t("release-1"), { ...staging, fromFiles: "2.0.0" }).version,
-    "2.0.1",
+    "2.0.0",
+  );
+  // A manual run with an explicit bump overrides the files-ahead rule:
+  // it bumps from max(tag, files).
+  assert.equal(
+    d(t("v0.28.5"), {
+      ...main,
+      fromFiles: "0.28.6",
+      bump: "major",
+      manual: true,
+    }).version,
+    "1.0.0",
+  );
+  assert.equal(
+    d(t("v0.28.5"), {
+      ...main,
+      fromFiles: "0.28.6",
+      bump: "patch",
+      manual: true,
+    }).version,
+    "0.28.7",
+  );
+  assert.equal(
+    d(t("v0.28.5"), {
+      ...main,
+      fromFiles: "0.20.0",
+      bump: "patch",
+      manual: true,
+    }).version,
+    "0.28.6",
+  );
+  assert.equal(
+    d([], { ...main, fromFiles: "1.4.2", bump: "minor", manual: true }).version,
+    "1.5.0",
+  );
+  // A manual run without a bump is no override.
+  assert.equal(
+    d(t("v0.28.5"), { ...main, fromFiles: "0.28.6", manual: true }).version,
+    "0.28.6",
   );
   // A custom prefix ignores the rest.
   assert.equal(d(t("v9.0.0"), { ...main, prefix: "web-v" }).version, "0.1.0");
@@ -424,7 +485,7 @@ test("decide: compute mode", () => {
   );
   assert.throws(
     () => d([], { channel: "staging", mode: "other" }),
-    /Unknown mode/,
+    (e) => e instanceof UsageError && /Unknown mode/.test(e.message),
   );
   // The CLI prints one line.
   const cli = fileURLToPath(new URL("./next-version.mjs", import.meta.url));
@@ -570,11 +631,42 @@ test("CLI exit codes: 0 an answer, 2 the policy says no, 1 a bad call", () => {
     ["decide", "--mode", "compute", "--channel", "--prefix"],
     ["strict", "--version", "--x"],
     ["tags-path", "--repo", "o/r"],
+    ["bogus"],
+    ["next", "--current", "1.0.0", "--channel", "prod"],
+    ["next", "--current", "1.0.0", "--channel", "main", "--bump", "huge"],
+    [
+      "decide",
+      "--mode",
+      "compute",
+      "--channel",
+      "main",
+      "--prefix",
+      "v",
+      "--",
+      "w",
+    ],
+    ["decide", "--mode", "compute", "--channel", "main", "--", "a", "b"],
   ]) {
     r = run("", ...bad);
     assert.equal(r.status, 1, bad.join(" "));
     assert.doesNotMatch(r.stderr, /policy:/, bad.join(" "));
   }
+  // A prefix that starts with -- goes after --, for decide as for tags-path.
+  r = run(
+    "refs/tags/--x0.1.0\nrefs/tags/v9.0.0\n",
+    "decide",
+    "--mode",
+    "compute",
+    "--channel",
+    "main",
+    "--",
+    "--x",
+  );
+  assert.equal(r.status, 0);
+  assert.equal(
+    r.stdout.trim(),
+    "ok 0.2.0 0.1.0 next minor (current: the highest tag --x0.1.0)",
+  );
   // A value that starts with -- is never taken as a value.
   r = run("", "next", "--current", "--channel", "main");
   assert.equal(r.status, 1);

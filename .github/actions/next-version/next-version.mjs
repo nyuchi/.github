@@ -113,7 +113,7 @@ export function compare(a, b) {
 export function defaultBump(channel) {
   if (channel === "staging") return "patch";
   if (channel === "main") return "minor";
-  throw new PolicyError(
+  throw new UsageError(
     `Unknown channel '${channel}'; expected 'staging' or 'main'.`,
   );
 }
@@ -151,7 +151,7 @@ export function nextVersion(current, { channel, bump = "", manual = false }) {
 
   if (kind === "minor") return bumpMinor(v, `Minor bump from ${core(v)} needs`);
 
-  throw new PolicyError(
+  throw new UsageError(
     `Unknown bump '${bump}'; expected patch, minor or major.`,
   );
 }
@@ -347,21 +347,12 @@ export function decide(
       `--from-files ${JSON.stringify(fromFiles)} is not MAJOR.MINOR.PATCH.`,
     );
   }
-  if (mode === "check") {
-    if (proposed === "" || proposed === undefined) {
-      throw new UsageError("decide --mode check needs --proposed.");
-    }
-    // In check mode the files' version is the one BEFORE the change. The
-    // proposed one would make itself current and pass as "unchanged".
-    if (fromFiles && fromFiles === proposed) {
-      throw new UsageError(
-        "--from-files must be the version before the change, not the proposed one.",
-      );
-    }
+  if (mode === "check" && (proposed === "" || proposed === undefined)) {
+    throw new UsageError("decide --mode check needs --proposed.");
   }
   const major = allowMajor || (manual && bump === "major");
   const cur = currentVersion(refs, { prefix, fromFiles });
-  let current = cur.version ?? "0.0.0";
+  const current = cur.version ?? "0.0.0";
   const from = {
     tagged: `the highest tag ${prefix}${current}`,
     written: `the version the repo writes, ${current}`,
@@ -372,13 +363,23 @@ export function decide(
 
   if (mode === "check") {
     parseStrict(proposed);
+    // In check mode the files' version is the one BEFORE the change. Equal
+    // to the proposed one it would make itself current and pass as
+    // "unchanged" -- unless it is the current tag already (a caller whose
+    // parent and head are the same commit).
+    const tagged = cur.kind === "tagged" && proposed === current;
+    if (fromFiles && fromFiles === proposed && !tagged) {
+      throw new UsageError(
+        "--from-files must be the version before the change, not the proposed one.",
+      );
+    }
     if (cur.kind === "untagged") {
       throw new PolicyError(
         `This repo's tags don't follow ${prefix}<MAJOR.MINOR.PATCH>, so the ` +
           `version can't be verified; tag releases as ${prefix}<version>.`,
       );
     }
-    if (cur.kind === "tagged" && proposed === current) {
+    if (tagged) {
       return {
         version: proposed,
         current,
@@ -392,28 +393,33 @@ export function decide(
       reason: `${first}${why} (current: ${from})`,
     };
   }
-  if (mode === "compute") {
-    // The first version tag of a repo with tags in another scheme.
-    if (cur.kind === "untagged") current = cur.written || "0.0.0";
-    if (cur.kind === "written" && cur.tagged) {
-      // Files ahead of the tags: the release they announce. They reached
-      // the branch through the required check (with its label) or an owner
-      // bypass, so compute tags exactly what they say, never past it.
-      return {
-        version: current,
-        current: cur.tagged,
-        reason: `the version the repo writes, ahead of the highest tag ${prefix}${cur.tagged}`,
-      };
-    }
-    const version = nextVersion(current, { channel, bump, manual });
-    const kind = bump || defaultBump(channel);
+
+  // Compute. ONE rule: files that hold a real version above every version
+  // tag (no tag counts as below) are the answer, the release they announce;
+  // they reached the branch through the required check (with its label) or
+  // an owner bypass. A manual run with an explicit bump overrides that and
+  // bumps from max(tag, files). Otherwise: bump from the highest tag.
+  const files = fromFiles && fromFiles !== "0.0.0" ? fromFiles : "";
+  const tag = cur.kind === "tagged" ? cur.version : (cur.tagged ?? "");
+  const override = manual && bump !== "";
+  if (files && !override && (!tag || compare(files, tag) > 0)) {
     return {
-      version,
-      current,
-      reason: `${first}next ${kind} (current: ${from})`,
+      version: files,
+      current: tag || "0.0.0",
+      reason: tag
+        ? `the version the repo writes, ahead of the highest tag ${prefix}${tag}`
+        : `the version the repo writes (no version tag yet)`,
     };
   }
-  throw new UsageError(`Unknown mode '${mode}'; expected check or compute.`);
+  const base =
+    files && (!tag || compare(files, tag) > 0) ? files : tag || "0.0.0";
+  const version = nextVersion(base, { channel, bump, manual });
+  const kind = bump || defaultBump(channel);
+  return {
+    version,
+    current: base,
+    reason: `${first}next ${kind} (current: ${from})`,
+  };
 }
 
 function args(argv) {
@@ -442,6 +448,23 @@ function args(argv) {
     }
   }
   return out;
+}
+
+/**
+ * The tag prefix: the one positional argument after --, or --prefix
+ * (which cannot start with --), or the default.
+ */
+function prefixArg(a) {
+  if (a._.length > 2) throw new UsageError("Only one argument after --.");
+  if (a._.length === 2) {
+    if (a.prefix !== undefined) {
+      throw new UsageError(
+        "Give the prefix after -- or as --prefix, not both.",
+      );
+    }
+    return a._[1];
+  }
+  return a.prefix ?? DEFAULT_PREFIX;
 }
 
 async function stdinLines() {
@@ -475,7 +498,8 @@ async function main(argv) {
         proposed: a.proposed ?? "",
         fromFiles: a["from-files"] ?? "",
         allowMajor: truthy(a["allow-major"]),
-        prefix: a.prefix ?? DEFAULT_PREFIX,
+        // The prefix after --, so one starting with - is never a flag.
+        prefix: prefixArg(a),
       });
       return `ok ${d.version} ${d.current} ${d.reason}`;
     }
@@ -492,7 +516,7 @@ async function main(argv) {
       }
       if (a._.length !== 2)
         throw new UsageError("tags-path needs -- <prefix>.");
-      const prefix = a._[1];
+      const prefix = prefixArg(a);
       const base = `repos/${repo}/git/matching-refs/tags`;
       if (prefix === DEFAULT_PREFIX || prefix === "") return base;
       return `${base}/${prefix.split("/").map(encodeURIComponent).join("/")}`;
@@ -513,7 +537,7 @@ async function main(argv) {
       return c.version ? `${c.kind} ${c.version}` : c.kind;
     }
     default:
-      throw new PolicyError(
+      throw new UsageError(
         "Usage: next-version.mjs decide|next|check|current|strict|tags-path ...",
       );
   }

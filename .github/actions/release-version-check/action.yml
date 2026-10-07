@@ -252,11 +252,16 @@ runs:
         ok_re='^ok ([^ ]+) ([^ ]+) (.+)$'
         # Only stdout is the answer; stderr (the reason, or a crash) goes to
         # the log.
+        # DECIDE_NO_FILES=1 leaves the files' version out: the entry is
+        # judged against the tags alone.
         decide() {
-          local out rc=0 err="$RUNNER_TEMP/rvc-decide-err"
+          local out rc=0 err="$RUNNER_TEMP/rvc-decide-err" files=()
+          if [ -z "${DECIDE_NO_FILES:-}" ]; then
+            files=(${from_files[@]+"${from_files[@]}"})
+          fi
           out="$(printf '%s\n' "$refs" | node "$nv" decide --mode "$1" \
-            --channel "$channel" --prefix "$PREFIX" --allow-major "$allow_major" \
-            ${from_files[@]+"${from_files[@]}"} "${@:2}" 2> "$err")" || rc=$?
+            --channel "$channel" --allow-major "$allow_major" \
+            ${files[@]+"${files[@]}"} "${@:2}" -- "$PREFIX" 2> "$err")" || rc=$?
           case "$rc" in
             0)
               if [ -s "$err" ]; then cat "$err" >&2; fi
@@ -330,11 +335,12 @@ runs:
             behind)
               ok=false why="rebase onto $BASE_REF: it is now at $tip." ;;
             check)
-              if [ "$head" = "$written" ]; then
-                # The version the repo already writes, in one more entry:
-                # not a new version (and --from-files may not equal it).
-                ok=true why="the version the repo already writes"
-              elif decide check --proposed "$head"; then
+              # An entry that writes the version the repo already writes
+              # (one more file at the same version) is judged against the
+              # tags alone: --from-files is the version before the change.
+              no_files=""
+              if [ "$head" = "$written" ]; then no_files=1; fi
+              if DECIDE_NO_FILES="$no_files" decide check --proposed "$head"; then
                 ok=true why="$d_reason"
               else
                 ok=false why="$d_reason"

@@ -371,9 +371,9 @@ case_ "only pre-release tags: a bump is refused" 1 - "can't be verified" \
   staging "v1.0.0-rc.1" "" "H:package.json=$(pj 0.0.1)"
 case_ "out-of-range tags (v2024.10.1): a bump is refused" 1 - "can't be verified" \
   staging "v2024.10.1" "" "B:VERSION=2024.10.1" "H:VERSION=0.0.1"
-case_ "tags in another scheme, no change: passes; the first version tag follows the files" 0 unchanged "will be tagged v0.1.1" \
+case_ "tags in another scheme, no change: passes; the first version tag is the files' version" 0 unchanged "will be tagged v0.1.0" \
   staging "release-1" "" "B:package.json=$(pj 0.1.0)" "H:package.json=$(pj 0.1.0)"
-case_ "only pre-release tags, no change: passes; the first version tag follows the files" 0 unchanged "will be tagged v0.1.1" \
+case_ "only pre-release tags, no change: passes; the first version tag is the files' version" 0 unchanged "will be tagged v0.1.0" \
   staging "v1.0.0-rc.1" "" "B:package.json=$(pj 0.1.0)" "H:package.json=$(pj 0.1.0)"
 case_ "only pre-release tags: an invalid head is refused" 1 - "does not hold a version" \
   staging "v1.0.0-rc.1" "" "H:package.json=$(pj 5.0.0-rc.2)"
@@ -436,8 +436,14 @@ case_ "a custom prefix ignores other tags: a component's first release" 0 allowe
 case_ "a prefix with slashes: its own tags only" 0 allowed "next minor" \
   main "v9.0.0 packages/web/v0.1.0 packages/other/v5.0.0" "" env:PREFIX=packages/web/v \
   "B:VERSION=0.1.0" "H:VERSION=0.2.0"
-case_ "a new entry equal to the version already written passes" 0 allowed "the version the repo already writes" \
+case_ "a new entry at the written version, which is the tag: already tagged" 0 allowed "already tagged v0.27.3" \
+  staging "v0.27.3" "" "B:VERSION=0.27.3" "H:VERSION=0.27.3" "H:package.json=$(pj 0.27.3)"
+case_ "a new entry at the written version, below the tag: refused" 1 - "0.28.5 is not allowed after 0.28.6" \
+  main "v0.28.6" "" "B:VERSION=0.28.5" "H:VERSION=0.28.5" "H:package.json=$(pj 0.28.5)"
+case_ "a new entry at the written version, no tags: judged as a first release" 1 - "the policy allows 0.0.1" \
   staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.27.3" "H:package.json=$(pj 0.27.3)"
+case_ "a new entry at the written version, untagged repo: refused" 1 - "can't be verified" \
+  staging "release-1" "" "B:VERSION=0.27.3" "H:VERSION=0.27.3" "H:package.json=$(pj 0.27.3)"
 case_ "a custom prefix counts its own tags" 1 - "the policy allows 0.3.0" \
   main "v3.0.0 web-v0.2.0" "" env:PREFIX=web-v "B:VERSION=0.2.0" "H:VERSION=0.4.0"
 
@@ -458,7 +464,7 @@ case_ "no tags, 0.27.3 written: 0.0.1 is a downgrade" 1 - "0.0.1 is lower than 0
   staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.0.1"
 case_ "no tags, 0.27.3 written elsewhere: a new file at 0.0.1 is refused" 1 - "the policy allows 0.27.4" \
   staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.27.3" "H:package.json=$(pj 0.0.1)"
-case_ "no tags, no change: the next tag follows the written version" 0 unchanged "will be tagged v0.28.0" \
+case_ "no tags, no change: the first tag is the written version" 0 unchanged "will be tagged v0.27.3" \
   main "" "" "B:VERSION=0.27.3" "H:VERSION=0.27.3"
 
 # Downgrades.
@@ -509,7 +515,12 @@ next_ "a pre-release proposed version is refused" 1 - "is not a version" main 0.
 next_ "the current, tagged version passes as already tagged" 0 0.27.4 "already tagged" staging "" 0.27.4 "v0.27.3 v0.27.4"
 next_ "an older tagged version is a downgrade, refused" 1 - "the policy allows 0.27.5" staging "" 0.27.3 "v0.27.3 v0.27.4"
 next_ "files ahead of the tags: no deadlock" 0 0.27.6 "next patch" staging "" 0.27.6 "v0.27.4" 0.27.5
-next_ "compute mode honours current-from-files" 0 1.4.3 "next patch" staging "" "" "" 1.4.2
+next_ "compute, no tags: the files' version" 0 1.4.2 "no version tag yet" staging "" "" "" 1.4.2
+next_ "compute, untagged repo: the files' version" 0 2.0.0 "no version tag yet" staging "" "" "release-1" 2.0.0
+NEXT_BUMP=major NEXT_MANUAL=true next_ "compute, a manual major overrides files ahead" 0 1.0.0 "next major" \
+  main "" "" "v0.28.5" 0.28.6
+next_ "check: from-files equal to proposed, and the current tag: already tagged" 0 0.28.5 "already tagged" \
+  main "" 0.28.5 "v0.28.5" 0.28.5
 next_ "files ahead of the tags, and allowed: the files' version itself" 0 0.29.0 "the version the repo writes" \
   main "" "" "v0.28.0" 0.29.0
 next_ "files ahead of the tags, beyond the policy: still the files' version" 0 0.35.0 \

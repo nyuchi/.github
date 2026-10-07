@@ -145,7 +145,7 @@ runs:
         # --manual takes exactly true or false.
         manual=false
         if [ "$MANUAL" = "true" ]; then manual=true; fi
-        args=(--channel "$CHANNEL" --prefix "$PREFIX" --bump "$BUMP" --manual "$manual")
+        args=(--channel "$CHANNEL" --bump "$BUMP" --manual "$manual")
         mode=compute
         if [ -n "$PROPOSED" ]; then
           mode=check
@@ -157,7 +157,8 @@ runs:
         # Only stdout is the answer; stderr (the reason, or a crash) goes to
         # the log.
         err="$RUNNER_TEMP/next-version-err"
-        if ! out="$(printf '%s\n' "$refs" | node "$nv" decide "${args[@]}" 2> "$err")"; then
+        # The prefix after --, so one starting with - is never a flag.
+        if ! out="$(printf '%s\n' "$refs" | node "$nv" decide "${args[@]}" -- "$PREFIX" 2> "$err")"; then
           sed 1d "$err" >&2  # the first line is the reason, reported by die
           reason="$(head -n 1 "$err")"
           reason="${reason#::error::}"
