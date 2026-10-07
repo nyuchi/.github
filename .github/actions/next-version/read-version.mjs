@@ -6,19 +6,27 @@
 //
 // The files it knows, each read on its own:
 //
-//   package.json    the root "version"
+//   package.json    the root "version" (a root key given twice is invalid:
+//                   JSON.parse would silently keep the last one)
 //   Cargo.toml      [package] version, else [workspace.package] version
 //                   (`version.workspace = true`, `version = { workspace =
 //                   true }` and dependency tables name no version)
 //   pyproject.toml  [project] version, else [tool.poetry] version
 //                   (a `dynamic = ["version"]` project names none)
-//   VERSION         the first line, without a leading "v"
+//   VERSION         the whole file: the version, then at most one line
+//                   ending ("\n" or "\r\n"), and nothing else
 //
-// Each reader returns null when the file names no version, the version
-// string as written, or an Invalid when the file cannot be read as one
-// (broken JSON, a version that is not a string, a blank first line).
-// classify() then sorts every value into absent, valid (next-version.mjs's
-// parse() accepts it) or invalid ("banana" is invalid).
+// A `version` key given twice in a table is invalid. Nothing is trimmed and
+// no "v" is stripped: the value is the exact string written, and it is a
+// version only if next-version.mjs's isStrictVersion() accepts it (the one
+// parser shared with the policy and the Nyuchi App; MAJOR.MINOR.PATCH, each
+// 0..999). So no reader here can see a version the policy would not.
+//
+// Each reader returns null when the file names no version, the value as
+// written, or an Invalid when the file cannot be read as one (broken JSON, a
+// value that is not a string, a duplicate key). classify() then sorts every
+// value into absent, valid or invalid ("banana", "v1.2.3", " 1.2.3" and
+// "1.2.3-rc.1" are all invalid).
 //
 // assess() applies the rules to every file, base against head:
 //
@@ -33,7 +41,9 @@
 // never checked as a release, at the base or the head.
 //
 // The TOML reading is deliberately small: it tracks the current [table]
-// header and reads the `version` key of the tables above. That is all a
+// header, resolves each key's full dotted path (quoted keys included), and
+// reads the `version` of the tables above; anything it cannot read as a
+// plain string there is invalid. That is all a
 // manifest's own version ever is, and it keeps the script free of
 // dependencies, like next-version.mjs beside it.
 //
@@ -50,7 +60,7 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { compare, parse } from "./next-version.mjs";
+import { compare, isStrictVersion } from "./next-version.mjs";
 
 export const VERSION_FILES = [
   "package.json",
@@ -66,9 +76,42 @@ export class Invalid {
   }
 }
 
+/**
+ * How many times each key appears in the root object of a JSON text that
+ * JSON.parse already accepted. Keys are decoded, so "\u0076ersion" counts
+ * as "version".
+ */
+function rootKeyCounts(src) {
+  const counts = {};
+  let depth = 0;
+  let expectKey = false;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '"') {
+      let j = i + 1;
+      while (src[j] !== '"') j += src[j] === "\\" ? 2 : 1;
+      const token = src.slice(i, j + 1);
+      if (depth === 1 && expectKey) {
+        const key = JSON.parse(token);
+        counts[key] = (counts[key] ?? 0) + 1;
+        expectKey = false;
+      }
+      i = j;
+    } else if (ch === "{" || ch === "[") {
+      depth++;
+      expectKey = depth === 1 && ch === "{";
+    } else if (ch === "}" || ch === "]") {
+      depth--;
+    } else if (ch === "," && depth === 1) {
+      expectKey = true;
+    }
+  }
+  return counts;
+}
+
 /** The root "version" of a package.json. */
 export function fromPackageJson(text) {
-  const src = String(text).replace(/^﻿/, "");
+  const src = String(text).replace(/^\uFEFF/, "");
   let json;
   try {
     json = JSON.parse(src);
@@ -78,34 +121,78 @@ export function fromPackageJson(text) {
   if (!json || typeof json !== "object" || Array.isArray(json)) {
     return new Invalid(src);
   }
-  if (!("version" in json)) return null;
+  if (!Object.hasOwn(json, "version")) return null;
+  if ((rootKeyCounts(src).version ?? 0) > 1) return new Invalid(src);
   if (typeof json.version !== "string") {
     return new Invalid(JSON.stringify(json.version));
   }
-  return json.version.trim();
+  return json.version;
 }
 
 // A table header: [a.b] or [[a.b]], with optional spaces and a comment.
 const HEADER = /^\[(\[)?\s*([^\]]+?)\s*\](\])?\s*(?:#.*)?$/;
-// version = "x" or version = 'x', then optional comment.
-const VERSION_STRING =
-  /^version\s*=\s*(?:"((?:[^"\\]|\\.)*)"|'([^']*)')\s*(?:#.*)?$/;
-// version = { workspace = true }: inherited, names no version here.
-const VERSION_INHERITED =
-  /^version\s*=\s*\{\s*workspace\s*=\s*true\s*\}\s*(?:#.*)?$/;
-// Any other `version = ...` in a wanted table cannot be read as a version.
-const VERSION_ANY = /^version\s*=/;
+// A plain one-line string value, then an optional comment.
+const STRING_VALUE = /^(?:"((?:[^"\\]|\\.)*)"|'([^']*)')\s*(?:#.*)?$/;
+// { workspace = true }: inherited, names no version here.
+const INHERITED = /^\{\s*workspace\s*=\s*true\s*\}\s*(?:#.*)?$/;
+
+/** Split a TOML key on dots outside quotes; unquote each part. */
+function keyPath(key) {
+  const parts = [];
+  let cur = "";
+  let quote = null;
+  for (const ch of key) {
+    if (quote) {
+      if (ch === quote) quote = null;
+      else cur += ch;
+    } else if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === ".") {
+      parts.push(cur.trim());
+      cur = "";
+    } else cur += ch;
+  }
+  parts.push(cur.trim());
+  return parts;
+}
+
+/** The index of the first "=" outside quotes, or -1. */
+function assignAt(line) {
+  let quote = null;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === "=") return i;
+    else if (ch === "#") return -1;
+  }
+  return -1;
+}
 
 /**
  * The `version` in each named TOML table (`tables` like
- * ["package", "workspace.package"]), as { table: string | Invalid }.
- * Multi-line strings are skipped over, so a header-like line inside one is
- * not a header.
+ * ["package", "workspace.package"]), as { table: string | Invalid }. Each
+ * key's full dotted path counts, so `package.version = "x"` at the root,
+ * `"version" = "x"` in [package] and an inline `package = { ... }` are all
+ * seen. A version given twice, or any value that is not a plain one-line
+ * string, is Invalid. Multi-line strings are skipped over, so a header-like
+ * line inside one is not a header.
  */
 function tomlVersions(text, tables) {
   const want = new Set(tables);
   const found = {};
-  let table = ""; // the root table
+  const raw = (v) => (v instanceof Invalid ? v.raw : v);
+  // A second version makes the table invalid; both values stay in `raw`, so
+  // a change to either is still a change.
+  const set = (table, value) => {
+    found[table] =
+      table in found
+        ? new Invalid(
+            `duplicate: ${JSON.stringify([raw(found[table]), raw(value)])}`,
+          )
+        : value;
+  };
+  let table = []; // the root table
   let multiline = null; // the closing delimiter while inside """ or '''
   for (const raw of String(text).split(/\r?\n/)) {
     const line = raw.trim();
@@ -117,19 +204,28 @@ function tomlVersions(text, tables) {
     const h = HEADER.exec(line);
     if (h) {
       // [[array.of.tables]] are never the package table.
-      const name = h[2].replace(/\s*\.\s*/g, ".").replace(/["']/g, "");
-      table = h[1] || h[3] ? `[[${name}]]` : name;
+      const path = keyPath(h[2]);
+      table = h[1] || h[3] ? ["[[", ...path] : path;
       continue;
+    }
+    const eq = assignAt(line);
+    if (eq !== -1) {
+      const path = [...table, ...keyPath(line.slice(0, eq))].join(".");
+      const value = line.slice(eq + 1).trim();
+      const name = path.endsWith(".version") ? path.slice(0, -8) : null;
+      if (name !== null && want.has(name)) {
+        const m = STRING_VALUE.exec(value);
+        if (m) set(name, m[1] ?? m[2]);
+        else if (!INHERITED.test(value)) set(name, new Invalid(value));
+      } else if (want.has(path) && value.startsWith("{")) {
+        // An inline table for a whole wanted table: not read, so invalid.
+        set(path, new Invalid(value));
+      }
     }
     for (const delim of ['"""', "'''"]) {
       const at = line.indexOf(delim);
       if (at !== -1 && line.indexOf(delim, at + 3) === -1) multiline = delim;
     }
-    if (multiline || !want.has(table) || table in found) continue;
-    const m = VERSION_STRING.exec(line);
-    if (m) found[table] = (m[1] ?? m[2]).trim();
-    else if (VERSION_INHERITED.test(line)) continue;
-    else if (VERSION_ANY.test(line)) found[table] = new Invalid(line);
   }
   return found;
 }
@@ -146,11 +242,15 @@ export function fromPyproject(text) {
   return v.project ?? v["tool.poetry"] ?? null;
 }
 
-/** The first line of a VERSION file, trimmed, without a leading "v". */
+/**
+ * A VERSION file: the version, then at most one line ending ("\n" or
+ * "\r\n"). Nothing is trimmed; any other content makes the value invalid.
+ */
 export function fromVersionFile(text) {
-  const first = String(text).split(/\r?\n/, 1)[0] ?? "";
-  const v = first.trim().replace(/^v(?=\d)/i, "");
-  return v ? v : new Invalid(first);
+  let v = String(text);
+  if (v.endsWith("\n")) v = v.slice(0, -1);
+  if (v.endsWith("\r")) v = v.slice(0, -1);
+  return v;
 }
 
 const READERS = {
@@ -167,12 +267,8 @@ const READERS = {
 export function classify(value) {
   if (value == null) return { kind: "absent" };
   if (value instanceof Invalid) return { kind: "invalid", raw: value.raw };
-  try {
-    parse(value);
-    return { kind: "valid", version: value };
-  } catch {
-    return { kind: "invalid", raw: value };
-  }
+  if (isStrictVersion(value)) return { kind: "valid", version: value };
+  return { kind: "invalid", raw: String(value) };
 }
 
 /** Every VERSION_FILES entry, classified. A missing text is absent. */
@@ -187,9 +283,7 @@ export function classifyFiles(filesByName) {
 
 /** 0.0.0 marks a file that is not the repo's version. */
 export function isPlaceholder(c) {
-  if (c.kind !== "valid") return false;
-  const v = parse(c.version);
-  return v.major === 0 && v.minor === 0 && v.patch === 0 && !v.pre;
+  return c.kind === "valid" && c.version === "0.0.0";
 }
 
 const same = (a, b) =>
@@ -225,14 +319,13 @@ export function assess(baseFiles, headFiles) {
   return out;
 }
 
-/** The characters a version can hold. Anything else is not printed raw. */
-export const SAFE = /^[0-9A-Za-z.+-]+$/;
-
-/** How a classified value prints: "-", "!invalid" or the version. */
+/**
+ * How a classified value prints: "-", "!invalid" or the version. Only a
+ * strict version is ever printed, so PR text never reaches the log.
+ */
 export function show(c) {
   if (c.kind === "absent") return "-";
-  if (c.kind === "invalid" || !SAFE.test(c.version)) return "!invalid";
-  return c.version;
+  return c.kind === "valid" ? c.version : "!invalid";
 }
 
 function readDir(dir) {

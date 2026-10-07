@@ -5,6 +5,9 @@
 # main, major by hand, 999 ceiling), and read-version.mjs beside it reads a
 # repo's version from package.json, Cargo.toml, pyproject.toml or VERSION;
 # their tests run on Node's built-in runner, with no install step.
+# version-fixtures.test.mjs feeds every entry of version-fixtures.json (the
+# table the Nyuchi App also tests against) to the strict parser, every
+# version-file reader and the CLI, which must all agree.
 #
 # release-version-check runs the action's script against a fake gh in
 # test.sh (refused and allowed versions, labels, tag schemes, version files),
@@ -55,6 +58,7 @@ jobs:
           node --test
           .github/actions/next-version/next-version.test.mjs
           .github/actions/next-version/read-version.test.mjs
+          .github/actions/next-version/version-fixtures.test.mjs
       - name: The action computes from this repo's tags
         id: next
         uses: ./.github/actions/next-version

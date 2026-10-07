@@ -141,7 +141,7 @@ case_ "major without the label is refused" 1 - "the semver:major label allows a 
   main "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 1.0.0)"
 case_ "major with the label is allowed" 0 allowed "allowed (next major)" \
   main "v0.27.3" "bug semver:major" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 1.0.0)"
-case_ "pre-release of the released version is refused" 1 - "the policy allows 0.28.0" \
+case_ "pre-release of the released version is refused" 1 - "does not hold a version" \
   main "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3-rc.1)"
 case_ "no tags at all: first release" 0 allowed "allowed (first release)" \
   staging "" "" "H:Cargo.toml=$(cargo 0.1.0)"
@@ -163,15 +163,15 @@ case_ "through a symlink, the next patch is still allowed" 0 allowed "allowed (n
   staging "v0.27.3" "" symlink "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.4)"
 
 # Invalid values are refused in every path; an unchanged one is not new.
-case_ "an invalid head value is refused" 1 - "does not hold a semantic version" \
+case_ "an invalid head value is refused" 1 - "does not hold a version" \
   staging "v0.27.3" "" "B:VERSION=0.27.3" "H:VERSION=$(printf '0.27.4\t::warning::x')"
 case_ "an unchanged odd VERSION line passes" 0 unchanged "No version change" \
   staging "v0.27.3" "" "B:VERSION=$(printf 'odd\tline')" "H:VERSION=$(printf 'odd\tline')"
-case_ '{"version":28} is refused' 1 - "does not hold a semantic version" \
+case_ '{"version":28} is refused' 1 - "does not hold a version" \
   staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" 'H:package.json={"version":28}'
-case_ "broken package.json JSON is refused" 1 - "does not hold a semantic version" \
+case_ "broken package.json JSON is refused" 1 - "does not hold a version" \
   staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" 'H:package.json={ "version": '
-case_ "banana in an untagged repo is refused" 1 - "does not hold a semantic version" \
+case_ "banana in an untagged repo is refused" 1 - "does not hold a version" \
   staging "release-1" "" "B:VERSION=0.1.0" "H:VERSION=banana"
 
 # Tags in another scheme, or only pre-releases.
@@ -183,8 +183,10 @@ case_ "only pre-release tags, no change: no promise" 0 unchanged "cannot be pred
   staging "v1.0.0-rc.1" "" "B:package.json=$(pj 0.1.0)" "H:package.json=$(pj 0.1.0)"
 case_ "only a v0.0.0 tag: a jump to 5.0.0 is refused" 1 - "the policy allows 0.1.0" \
   main "v0.0.0" "" "H:package.json=$(pj 5.0.0)"
-case_ "only pre-release tags: a jump to 5.0.0 is refused" 1 - "the policy allows 0.0.1" \
+case_ "only pre-release tags are no version tags: nothing to check against" 0 untagged "nothing to check against" \
   staging "v1.0.0-rc.1" "" "H:package.json=$(pj 5.0.0)"
+case_ "only pre-release tags: an invalid head is still refused" 1 - "does not hold a version" \
+  staging "v1.0.0-rc.1" "" "H:package.json=$(pj 5.0.0-rc.2)"
 
 # New files and placeholders.
 case_ "a version moved into a new Cargo.toml at 9.0.0 is refused" 1 - "Cargo.toml: Version 9.0.0" \
@@ -207,6 +209,35 @@ case_ "a downgrade to an old tag is refused" 1 - "0.27.3 is lower than 0.27.5" \
   staging "v0.27.3 v0.27.5" "" "B:package.json=$(pj 0.27.5)" "H:package.json=$(pj 0.27.3)"
 case_ "a downgrade in an untagged repo is refused" 1 - "0.1.0 is lower than 0.2.0" \
   staging "release-1" "" "B:VERSION=0.2.0" "H:VERSION=0.1.0"
+
+# The one strict parser, end to end (fixtures from version-fixtures.json).
+case_ "fixture 999.999.999 (valid) is checked by the policy" 1 - "the policy allows 0.27.4" \
+  staging "v0.27.3" "" "B:VERSION=0.27.3" "H:VERSION=999.999.999"
+case_ "fixture 0.27.4 (valid) in every file is allowed" 0 allowed "VERSION: 0.27.3 -> 0.27.4" \
+  staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.4)" \
+  "B:Cargo.toml=$(cargo 0.27.3)" "H:Cargo.toml=$(cargo 0.27.4)" \
+  "B:pyproject.toml=$(printf '[project]\nversion = "0.27.3"\n')" "H:pyproject.toml=$(printf '[project]\nversion = "0.27.4"\n')" \
+  "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+for bad in "v0.27.4" " 0.27.4" "0.27.4 " "0.27.4-rc.1" "0.27.4+b" "00.27.4" "0.27.04" "1000.0.0" "0.27" "0.27.4.1" ""; do
+  case_ "fixture '$bad' (invalid) in package.json is refused" 1 - "does not hold a version" \
+    staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj "$bad")"
+done
+case_ "a VERSION file with more than one line is refused" 1 - "does not hold a version" \
+  staging "v0.27.3" "" "B:VERSION=0.27.3" "H:VERSION=$(printf '0.27.4\n\nx')"
+case_ "fixture 'v0.27.4' (invalid) in Cargo.toml is refused" 1 - "does not hold a version" \
+  staging "v0.27.3" "" "B:Cargo.toml=$(cargo 0.27.3)" "H:Cargo.toml=$(cargo v0.27.4)"
+# Duplicate keys.
+case_ "a duplicate root version in package.json is refused" 1 - "does not hold a version" \
+  staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" 'H:package.json={"version":"0.27.4","version":"9.0.0"}'
+case_ "a duplicate version in [package] is refused" 1 - "does not hold a version" \
+  staging "v0.27.3" "" "B:Cargo.toml=$(cargo 0.27.3)" \
+  "H:Cargo.toml=$(printf '[package]\nversion = "0.27.4"\nversion = "9.0.0"\n')"
+case_ "a quoted second version key in [project] is refused" 1 - "does not hold a version" \
+  staging "v0.27.3" "" "B:pyproject.toml=$(printf '[project]\nversion = "0.27.3"\n')" \
+  "H:pyproject.toml=$(printf '[project]\nversion = "0.27.4"\n"version" = "9.0.0"\n')"
+case_ "a version set by a root dotted key is checked" 1 - "the policy allows 0.27.4" \
+  staging "v0.27.3" "" "B:Cargo.toml=$(cargo 0.27.3)" \
+  "H:Cargo.toml=$(printf 'package.version = "9.0.0"\n[package]\nname = "x"\n')"
 
 if [ "$fails" -ne 0 ]; then
   echo "$fails of $n case(s) failed."

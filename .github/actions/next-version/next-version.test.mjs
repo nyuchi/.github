@@ -12,6 +12,9 @@ import {
   check,
   countTags,
   highest,
+  isStrictVersion,
+  parse,
+  parseStrict,
   nextVersion,
 } from "./next-version.mjs";
 
@@ -81,31 +84,53 @@ test("check accepts the next version and refuses others", () => {
     check("0.999.0", "1.0.0", { ...main, allowMajor: true }),
     "next major",
   );
-  assert.throws(() => check("0.999.0", "0.1000.0", main), /bump: major/);
-  assert.equal(check("0.27.0", "0.28.0-rc.1", main), "next minor");
+  assert.throws(() => check("0.999.0", "0.1000.0", main), /not a version/);
+  assert.throws(() => check("0.999.0", "0.999.1", main), /bump: major/);
   assert.equal(check("0.27.999", "0.28.0", staging), "next patch");
 });
 
-test("a pre-release of the released version, or below it, is refused", () => {
-  // 0.27.3-rc.1 comes before 0.27.3 in semver: it is not "unchanged".
-  assert.throws(() => check("0.27.3", "0.27.3-rc.1", main), /allows 0.28.0/);
-  assert.throws(() => check("0.27.3", "0.27.3-rc.1", staging), /allows 0.27.4/);
-  assert.throws(() => check("0.27.3", "0.26.0-beta", main), PolicyError);
-  assert.throws(
-    () => check("0.27.3", "0.27.3-rc.1", { ...main, allowMajor: true }),
-    /allows 0.28.0/,
-  );
-  // A pre-release of the next version is still allowed.
-  assert.equal(check("0.27.3", "0.27.4-rc.1", staging), "next patch");
-  assert.equal(
-    check("0.27.3", "1.0.0-rc.1", { ...main, allowMajor: true }),
-    "next major",
-  );
+test("only strict versions: pre-releases and suffixes are refused", () => {
+  // MAJOR.MINOR.PATCH and nothing else, wherever a version is read.
+  for (const bad of [
+    "0.27.3-rc.1",
+    "0.27.4-rc.1",
+    "1.0.0-rc.1",
+    "0.28.0+build",
+    "v0.28.0",
+    " 0.28.0",
+    "0.28.0\n",
+    "0.28",
+  ]) {
+    assert.throws(() => check("0.27.3", bad, main), /not a version/, bad);
+    assert.throws(
+      () => check("0.27.3", bad, { ...main, allowMajor: true }),
+      /not a version/,
+      bad,
+    );
+  }
+  assert.throws(() => nextVersion("0.27.3-rc.1", main), /not a version/);
+  assert.throws(() => check("v0.27.3", "0.28.0", main), /not a version/);
   // A downgrade to an older release is refused.
   assert.throws(() => check("0.27.5", "0.27.3", staging), /allows 0.27.6/);
 });
 
+test("parseStrict and isStrictVersion", () => {
+  assert.deepEqual(parseStrict("1.20.300"), {
+    major: 1,
+    minor: 20,
+    patch: 300,
+  });
+  assert.equal(parse, parseStrict);
+  assert.ok(isStrictVersion("999.999.999"));
+  assert.ok(!isStrictVersion("1000.0.0"));
+  assert.ok(!isStrictVersion(undefined));
+  assert.ok(!isStrictVersion(123));
+  assert.throws(() => parseStrict(null), PolicyError);
+  assert.throws(() => parseStrict("01.2.3"), /not a version/);
+});
+
 test("highest ignores pre-releases, other prefixes and junk", () => {
+  // Only <prefix><strict version> is a version tag; nothing is trimmed.
   const refs = [
     "abc\trefs/tags/v0.9.0",
     "def\trefs/tags/v0.27.3",
@@ -114,6 +139,10 @@ test("highest ignores pre-releases, other prefixes and junk", () => {
     "bbb\trefs/tags/v0.10.0",
     "ccc\trefs/tags/release-9.0.0",
     "refs/tags/vNext",
+    "refs/tags/v99.0.0 ",
+    " refs/tags/v98.0.0",
+    "refs/tags/v097.0.0",
+    "refs/tags/v1000.0.0",
     "",
   ];
   assert.equal(highest(refs), "0.27.3");
@@ -128,7 +157,7 @@ test("first release only where the repo has no semver tag", () => {
     check("0.0.0", "5.0.0", { ...main, hasTags: false }),
     "first release",
   );
-  // A v0.0.0 tag, or only pre-release tags: checked against 0.0.0.
+  // A v0.0.0 tag: checked against 0.0.0.
   const tagged = { ...main, hasTags: true };
   assert.throws(() => check("0.0.0", "5.0.0", tagged), /allows 0.1.0/);
   assert.equal(check("0.0.0", "0.1.0", tagged), "next minor");
@@ -142,24 +171,16 @@ test("first release only where the repo has no semver tag", () => {
   );
 });
 
-test("countTags tells other schemes and pre-releases apart", () => {
-  assert.deepEqual(countTags([]), { semver: 0, releases: 0 });
-  assert.deepEqual(countTags(["refs/tags/release-1", "refs/tags/vNext"]), {
-    semver: 0,
-    releases: 0,
-  });
-  assert.deepEqual(countTags(["refs/tags/v1.0.0-rc.1", "refs/tags/v0.9"]), {
-    semver: 1,
-    releases: 0,
-  });
-  assert.deepEqual(
+test("countTags counts only strict version tags", () => {
+  assert.equal(countTags([]), 0);
+  assert.equal(countTags(["refs/tags/release-1", "refs/tags/vNext"]), 0);
+  // A pre-release-only repo has no version tags.
+  assert.equal(countTags(["refs/tags/v1.0.0-rc.1", "refs/tags/v0.9"]), 0);
+  assert.equal(
     countTags(["refs/tags/v0.0.0", "x\trefs/tags/v1.2.3", "refs/tags/1.2.4"]),
-    { semver: 2, releases: 2 },
+    2,
   );
-  assert.deepEqual(countTags(["pkg@1.0.0", "v1.0.0"], "pkg@"), {
-    semver: 1,
-    releases: 1,
-  });
+  assert.equal(countTags(["pkg@1.0.0", "v1.0.0"], "pkg@"), 1);
 });
 
 test("the CLI prints the version and fails with a message", () => {
@@ -281,7 +302,7 @@ test("the CLI prints the version and fails with a message", () => {
       input: "refs/tags/v1.0.0\nrefs/tags/v1.1.0-rc.1\nrefs/tags/nope\n",
       encoding: "utf8",
     }).trim(),
-    "2 1",
+    "1",
   );
   assert.equal(
     execFileSync("node", [cli, "highest"], {

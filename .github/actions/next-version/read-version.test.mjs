@@ -34,7 +34,8 @@ test("package.json: the root version only", () => {
     ),
     null,
   );
-  assert.equal(fromPackageJson('{"version": "  0.4.0 "}'), "0.4.0");
+  // Nothing is trimmed: the value is exactly what is written.
+  assert.equal(fromPackageJson('{"version": "  0.4.0 "}'), "  0.4.0 ");
   assert.equal(fromPackageJson('{"private":true}'), null);
   assert.equal(fromPackageJson('\uFEFF{"version":"1.0.1"}'), "1.0.1");
   // Fails closed: anything that cannot be read as a version is Invalid.
@@ -190,14 +191,64 @@ version = "9.9.9"
   );
 });
 
-test("VERSION: the first line, trimmed", () => {
+test("VERSION: the version, then at most one line ending", () => {
+  assert.equal(fromVersionFile("1.2.3"), "1.2.3");
   assert.equal(fromVersionFile("1.2.3\n"), "1.2.3");
-  assert.equal(fromVersionFile("  1.2.3  \r\nsecond line\n"), "1.2.3");
-  assert.equal(fromVersionFile("v0.4.0\n"), "0.4.0");
-  assert.equal(fromVersionFile("banana\n"), "banana");
-  invalid(fromVersionFile("\n1.0.0\n"));
-  invalid(fromVersionFile(""));
-  invalid(fromVersionFile("   \n"));
+  assert.equal(fromVersionFile("1.2.3\r\n"), "1.2.3");
+  // Nothing else is stripped, so these never classify as valid.
+  assert.equal(fromVersionFile("  1.2.3  \r\n"), "  1.2.3  ");
+  assert.equal(fromVersionFile("v0.4.0\n"), "v0.4.0");
+  assert.equal(fromVersionFile("1.2.3\n\n"), "1.2.3\n");
+  assert.equal(fromVersionFile("1.2.3\nsecond line\n"), "1.2.3\nsecond line");
+  assert.equal(fromVersionFile("\n1.0.0\n"), "\n1.0.0");
+  assert.equal(fromVersionFile(""), "");
+  for (const t of ["v0.4.0\n", "1.2.3\n\n", "\n1.0.0\n", "", " 1.2.3\n"]) {
+    assert.equal(classify(fromVersionFile(t)).kind, "invalid", t);
+  }
+});
+
+test("a duplicate version key is invalid", () => {
+  // package.json: JSON.parse would silently keep the last one.
+  invalid(fromPackageJson('{"version":"1.0.0","version":"2.0.0"}'));
+  invalid(fromPackageJson('{"\\u0076ersion":"1.0.0","version":"1.0.0"}'));
+  // Nested or quoted "version" text is not a root key.
+  assert.equal(
+    fromPackageJson(
+      '{"a":{"version":"9.9.9"},"b":"\\"version\\"","c":["version"],"version":"1.0.0"}',
+    ),
+    "1.0.0",
+  );
+  // TOML: twice in the table, or once more by another spelling.
+  invalid(fromCargoToml('[package]\nversion = "1.0.0"\nversion = "1.0.1"\n'));
+  invalid(fromCargoToml('[package]\nversion = "1.0.0"\n"version" = "1.0.0"\n'));
+  invalid(
+    fromCargoToml('package.version = "1.0.0"\n[package]\nversion = "2.0.0"\n'),
+  );
+  invalid(fromPyproject('[project]\nversion = "1.0.0"\nversion = "1.0.0"\n'));
+  // A duplicate whose values change is still a change.
+  assert.notDeepEqual(
+    classify(
+      fromCargoToml('[package]\nversion = "1.0.0"\nversion = "1.0.1"\n'),
+    ),
+    classify(
+      fromCargoToml('[package]\nversion = "1.0.0"\nversion = "1.0.2"\n'),
+    ),
+  );
+});
+
+test("TOML: every spelling of the key is read", () => {
+  assert.equal(fromCargoToml('[package]\n"version" = "1.0.0"\n'), "1.0.0");
+  assert.equal(fromCargoToml("[package]\n'version' = '1.0.0'\n"), "1.0.0");
+  assert.equal(fromCargoToml('package.version = "1.0.0"\n'), "1.0.0");
+  assert.equal(
+    fromCargoToml('[workspace]\npackage.version = "0.3.0"\n'),
+    "0.3.0",
+  );
+  // An inline table for the whole package table is not read: invalid.
+  invalid(fromCargoToml('package = { version = "1.0.0" }\n'));
+  invalid(fromPyproject('tool.poetry = { version = "1.0.0" }\n'));
+  // A multi-line string is not a plain value.
+  invalid(fromCargoToml('[package]\nversion = """\n1.0.0"""\n'));
 });
 
 test("TOML: a version key that is not a string is invalid", () => {
@@ -216,8 +267,8 @@ test("classify: absent, valid or invalid", () => {
   assert.deepEqual(classify(null), { kind: "absent" });
   assert.deepEqual(classify("1.2.3"), { kind: "valid", version: "1.2.3" });
   assert.deepEqual(classify("1.2.3-rc.1"), {
-    kind: "valid",
-    version: "1.2.3-rc.1",
+    kind: "invalid",
+    raw: "1.2.3-rc.1",
   });
   assert.deepEqual(classify("banana"), { kind: "invalid", raw: "banana" });
   assert.deepEqual(classify(""), { kind: "invalid", raw: "" });
@@ -239,7 +290,6 @@ test("classify: absent, valid or invalid", () => {
     },
   );
   assert.ok(isPlaceholder({ kind: "valid", version: "0.0.0" }));
-  assert.ok(!isPlaceholder({ kind: "valid", version: "0.0.0-rc.1" }));
   assert.ok(!isPlaceholder({ kind: "valid", version: "0.0.1" }));
   assert.ok(!isPlaceholder({ kind: "absent" }));
 });
@@ -307,8 +357,12 @@ test("assess: the rules, file by file", () => {
   assert.deepEqual(actions({ VERSION: "0.27.4" }, { VERSION: "0.27.3" }), [
     "VERSION:downgrade",
   ]);
-  assert.deepEqual(actions({ VERSION: "1.0.0" }, { VERSION: "0.9.9-rc.1" }), [
+  assert.deepEqual(actions({ VERSION: "1.0.0" }, { VERSION: "0.9.9" }), [
     "VERSION:downgrade",
+  ]);
+  // A pre-release is not a version: invalid.
+  assert.deepEqual(actions({ VERSION: "1.0.0" }, { VERSION: "1.0.1-rc.1" }), [
+    "VERSION:invalid",
   ]);
   // Removing a version writes none.
   assert.deepEqual(actions({ VERSION: "1.0.0" }, {}), []);

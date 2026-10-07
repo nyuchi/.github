@@ -21,24 +21,28 @@
 #      that, a 404 means the file is absent. Nothing from the PR is checked
 #      out or run.
 #   2. read-version.mjs assess sorts each file's base and head values into
-#      absent, valid semver or invalid, and decides per file:
+#      absent, valid or invalid, and decides per file. Valid means exactly
+#      MAJOR.MINOR.PATCH, each 0..999 (next-version.mjs isStrictVersion, the
+#      one parser shared with the policy and the Nyuchi App); nothing is
+#      trimmed and a duplicate version key is invalid.
 #        invalid    the head value is invalid and differs from the base:
 #                   refused, in every path
 #        downgrade  the head is lower than a valid base: refused
 #        check      the head is valid, not the 0.0.0 placeholder, and
 #                   differs from the base (new file or changed):
 #                   `next-version.mjs check` against the highest
-#                   <prefix><semver> tag decides; all must pass
+#                   version tag decides; all must pass
 #   3. Nothing to do: the PR writes no version. It passes, and the summary
 #      shows the version the merge will be tagged with, or says it cannot be
-#      predicted when no tag is a <prefix><semver> release.
+#      predicted when there is no version tag.
 #
-# 0.0.0 is a placeholder in every file and is never checked as a release. A
-# first release is only where the repo has no <prefix><semver> tag at all;
-# with a v0.0.0 tag or only pre-release tags, versions are checked against
-# 0.0.0. A repo whose tags follow another scheme has nothing to check
-# against: invalid values and downgrades are still refused, and the rest
-# passes with a notice.
+# A version tag is a tag named exactly <prefix><strict version>; any other
+# tag, pre-releases included, is ignored. 0.0.0 is a placeholder in every
+# file and is never checked as a release. A first release is only where the
+# repo has no tags at all; with a v0.0.0 tag, versions are checked against
+# 0.0.0. A repo with tags but no version tag (another scheme, or only
+# pre-releases) has nothing to check against: invalid values and downgrades
+# are still refused, and the rest passes with a notice.
 #
 # The channel is `main` when the PR targets the repo's default branch and
 # `staging` for any other base.
@@ -159,20 +163,21 @@ runs:
         # file <TAB> invalid|downgrade|check <TAB> base <TAB> head
         todo="$(node "$LIB/read-version.mjs" assess "$base_dir" "$head_dir")"
 
-        # All tags. "<semver tags> <release tags>" tells no tags, tags in
-        # another scheme and only pre-releases apart from a real 0.0.0.
+        # All tags. A version tag is exactly <prefix><strict version>
+        # (next-version.mjs); the count tells "no version tags" apart from a
+        # real v0.0.0.
         refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags" --jq '.[].ref')" \
           || die "Could not read the repo's tags; re-run the check."
-        counts="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" count --prefix "$PREFIX")"
-        read -r semver_tags release_tags <<<"$counts"
+        version_tags="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" count --prefix "$PREFIX")"
         current="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" highest --prefix "$PREFIX")"
         has_tags=false
-        [ "$semver_tags" -gt 0 ] && has_tags=true
-        # Tags, but none of them <prefix><semver>: nothing to check against.
+        [ "$version_tags" -gt 0 ] && has_tags=true
+        # Tags, but none a version tag (another scheme, or only
+        # pre-releases): nothing to check against.
         untagged=false
-        [ -n "$refs" ] && [ "$semver_tags" -eq 0 ] && untagged=true
+        [ -n "$refs" ] && [ "$version_tags" -eq 0 ] && untagged=true
         highest_shown="\`$PREFIX$current\`"
-        [ "$release_tags" -eq 0 ] && highest_shown=none
+        [ "$version_tags" -eq 0 ] && highest_shown=none
 
         summary "## Release version check" "" \
           "| | |" "|---|---|" \
@@ -183,10 +188,10 @@ runs:
         if [ -z "$todo" ]; then
           echo "version=" >> "$GITHUB_OUTPUT"
           echo "result=unchanged" >> "$GITHUB_OUTPUT"
-          if [ -n "$refs" ] && [ "$release_tags" -eq 0 ]; then
+          if [ "$untagged" = true ]; then
             # Tags in another scheme, or only pre-releases: no promise.
             summary "This PR writes no new version. The next version cannot be" \
-              "predicted from these tags: none is a \`$PREFIX<semver>\` release."
+              "predicted from these tags: none is a \`$PREFIX<MAJOR.MINOR.PATCH>\` version tag."
             echo "No version change in this PR; the next version cannot be predicted from these tags."
           elif next="$(node "$LIB/next-version.mjs" next --current "$current" \
               --channel "$channel" 2>&1)"; then
@@ -213,7 +218,7 @@ runs:
           [ "$head" = '!invalid' ] || written="${written:+$written }$head"
           case "$action" in
             invalid)
-              ok=false why="the head does not hold a semantic version." ;;
+              ok=false why="the head does not hold a version (MAJOR.MINOR.PATCH, each 0..999, nothing else)." ;;
             downgrade)
               ok=false why="$head is lower than $base, the version at the base." ;;
             check)
@@ -253,8 +258,8 @@ runs:
           exit 1
         fi
         if [ "$unchecked" -gt 0 ]; then
-          summary "" "The tags do not follow \`$PREFIX<semver>\`; nothing to check against."
-          echo "::notice title=Release version check::The tags do not follow $PREFIX<semver>; nothing to check against."
+          summary "" "No tag is a \`$PREFIX<MAJOR.MINOR.PATCH>\` version tag; nothing to check against."
+          echo "::notice title=Release version check::No tag is a $PREFIX<MAJOR.MINOR.PATCH> version tag; nothing to check against."
           echo "result=untagged" >> "$GITHUB_OUTPUT"
           exit 0
         fi
