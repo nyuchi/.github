@@ -12,20 +12,25 @@
 # release-version-check makes; this action only fetches tags and writes
 # outputs):
 #
-#   next   (no `proposed`)  The next version for `channel`, or for `bump`
-#                           when a person overrides it.
+#   next   (no `proposed`)  When `current-from-files` holds a version above
+#                           every version tag (none, or an untagged repo,
+#                           counts as below), that version itself: the
+#                           release the files announce (the PR check, or an
+#                           owner bypass, already let it in). A manual run
+#                           with an explicit `bump` overrides that and bumps
+#                           from max(tag, files). Otherwise the next version
+#                           after the highest tag for `channel`.
 #   check  (`proposed` set) The version is written in the repo (package.json,
 #                           Cargo.toml, ...). The step fails unless it is
 #                           the current, tagged version or the one the policy
 #                           allows next; a downgrade to an old tag fails.
 #
-# The current version is the higher of the highest version tag (a tag named
-# exactly <prefix><strict version>; v2024.10.1 is out of range and ignored)
-# and `current-from-files`, the version the repo already writes, so files
-# ahead of the tags never deadlock a repo; when the files already hold a
-# version the policy allows after the highest tag, next is that version.
-# With the default prefix, a repo with tags but no version tag cannot be
-# verified: check fails, next starts from the files or 0.0.1. With any other
+# In check mode the current version is the higher of the highest version tag
+# (a tag named exactly <prefix><strict version>; v2024.10.1 is out of range
+# and ignored) and `current-from-files`, the version the files held before
+# the change, so files ahead of the tags never deadlock a repo. With the
+# default prefix, a repo with tags but no version tag cannot be verified:
+# check fails, next gives the files' version or 0.0.1. With any other
 # prefix (a monorepo component), every tag but its own version tags is
 # ignored, and only those are fetched. `manual` is a manual run only when it
 # is exactly "true". A proposed version must be strict (MAJOR.MINOR.PATCH,
@@ -140,7 +145,8 @@ runs:
             || [[ "$tag_path" != "repos/$REPO/git/matching-refs/tags"* ]]; then
             die "next-version tags-path gave no path."
           fi
-          refs="$(gh api --paginate "$tag_path" --jq '.[].ref')"
+          refs="$(gh api --paginate "$tag_path" --jq '.[].ref')" \
+            || die "Could not read the repo's tags; re-run the workflow."
         fi
         # --manual takes exactly true or false.
         manual=false

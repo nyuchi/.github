@@ -230,12 +230,13 @@ case_() {
 
 # next_ <label> <want exit> <want version|-> <want text> <channel> <current>
 #       <proposed> <tags> [current-from-files]
-#       (NEXT_PREFIX, NEXT_BUMP, NEXT_MANUAL: the action's inputs)
+#       (NEXT_PREFIX, NEXT_BUMP, NEXT_MANUAL: the action's inputs; NEXT_SPEC: one
+#       fixture spec, such as fail-tags)
 next_() {
   local label="$1" want_rc="$2" want_version="$3" want_text="$4"
   n=$((n + 1))
   local fix="$work/fix$n" rt="$work/rt$n" out rc=0 version
-  fixture "$fix" "$8" ""
+  fixture "$fix" "$8" "" ${NEXT_SPEC:+"$NEXT_SPEC"}
   mkdir -p "$rt"
   : > "$rt/out"
   out="$(PATH="$work/bin:$PATH" FIX="$fix" RUNNER_TEMP="$rt" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
@@ -550,6 +551,8 @@ next_ "no tags: the first release fails closed" 1 - "the policy allows 0.0.1" st
 next_ "no tags: 0.0.1 is the first release" 0 0.0.1 "first release, next patch" staging "" 0.0.1 ""
 next_ "a v0.0.0 tag: checked against 0.0.0" 0 0.1.0 ": next minor" main "" 0.1.0 "v0.0.0"
 next_ "out-of-range tags are ignored" 0 0.0.1 "Version 0.0.0 -> 0.0.1" staging "" "" "v2024.10.1"
+NEXT_SPEC=fail-tags next_ "a failed tags read is a hard error" 1 - "Could not read the repo's tags" \
+  staging "" "" "v0.1.0"
 next_ "untagged (another scheme): a proposed version is refused" 1 - "can't be verified" staging "" 0.0.1 "release-1"
 next_ "untagged (pre-releases only): a proposed version is refused" 1 - "can't be verified" staging "" 0.0.1 "v1.0.0-rc.1"
 next_ "no tags, current-from-files 0.27.3: 0.27.4 is allowed" 0 0.27.4 ": next patch" staging "" 0.27.4 "" 0.27.3

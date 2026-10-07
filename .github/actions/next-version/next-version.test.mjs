@@ -383,6 +383,31 @@ test("decide: a custom prefix ignores everything but its own version tags", () =
     }).trim();
   assert.equal(cur("--from-files", "0.4.0"), "untagged 0.4.0");
   assert.equal(cur(), "untagged");
+  // The prefix goes after --, like decide; a bad --from-files is a usage
+  // error (exit 1), not a policy answer.
+  assert.equal(
+    execFileSync("node", [cli, "current", "--", "web-v"], {
+      input: "refs/tags/web-v0.1.0\nrefs/tags/release-1\n",
+      encoding: "utf8",
+    }).trim(),
+    "tagged 0.1.0",
+  );
+  const bad = spawnSync("node", [cli, "current", "--from-files", "v1"], {
+    input: "",
+    encoding: "utf8",
+  });
+  assert.equal(bad.status, 1);
+  // A manual override that bumps from the files says so.
+  assert.match(
+    decide(["refs/tags/release-1"], {
+      mode: "compute",
+      channel: "main",
+      fromFiles: "2.0.0",
+      bump: "minor",
+      manual: true,
+    }).reason,
+    /current: the version the repo writes, 2.0.0/,
+  );
 });
 
 test("decide: compute mode", () => {

@@ -53,7 +53,7 @@
 //                            --channel staging|main [--allow-major]
 //     Exits 0 with the reason when a version written into the repo is what
 //     the policy allows after a known current one; fails otherwise.
-//   next-version.mjs current [--prefix v] [--from-files <x.y.z>]
+//   next-version.mjs current [--from-files <x.y.z>] [-- <prefix>]
 //                            (ALL tag refs on stdin)
 //     The current version alone, one line: "tagged <x.y.z>", "untagged",
 //     "written <x.y.z>" or "none". See currentVersion().
@@ -269,11 +269,17 @@ export function currentVersion(
   { prefix = DEFAULT_PREFIX, fromFiles = "" } = {},
 ) {
   const tags = refs.filter((r) => String(r) !== "");
-  const files =
-    fromFiles !== "" && fromFiles !== undefined && parseStrict(fromFiles)
-      ? fromFiles
-      : "";
-  const written = files && files !== "0.0.0" ? files : "";
+  if (
+    fromFiles !== "" &&
+    fromFiles !== undefined &&
+    !isStrictVersion(fromFiles)
+  ) {
+    // A bad call, not a policy answer (exit 1 from the CLI).
+    throw new UsageError(
+      `--from-files ${JSON.stringify(fromFiles)} is not a version: expected MAJOR.MINOR.PATCH.`,
+    );
+  }
+  const written = fromFiles && fromFiles !== "0.0.0" ? fromFiles : "";
   const versions = tagVersions(tags, prefix);
   if (versions.length > 0) {
     const tagged = highest(versions, "");
@@ -299,15 +305,19 @@ export function currentVersion(
  *                   current version; anything else is refused, a
  *                   downgrade to an old tag included. An untagged repo
  *                   (default prefix) cannot be verified: refused.
- *   mode "compute"  the next version after the current one; an untagged
- *                   repo starts from the files, or 0.0.1. When the files
- *                   are ahead of the tags and are themselves a version the
- *                   policy allows after the highest tag, the answer is the
- *                   files' version: the release they announce.
+ *   mode "compute"  when `fromFiles` holds a real version (not 0.0.0) above
+ *                   every version tag (no tag, or an untagged repo, counts
+ *                   as below), the answer is the files' version itself: the
+ *                   release they announce. Compute trusts the PR check (and
+ *                   its label) or an owner bypass that put it there. A
+ *                   manual run with an explicit `bump` overrides that and
+ *                   bumps from max(tag, files). Otherwise it bumps from the
+ *                   highest tag (0.0.1 / 0.1.0 with none).
  *
- * The current version is currentVersion(): the higher of the highest
- * version tag and `fromFiles`. A major needs `allowMajor` (the semver:major
- * label) in check mode, or a manual run with bump: major.
+ * In check mode the current version is currentVersion(): the higher of the
+ * highest version tag and `fromFiles`, the version BEFORE the change. A
+ * major needs `allowMajor` (the semver:major label) in check mode, or a
+ * manual run with bump: major.
  *
  * @returns {{version: string, current: string, reason: string}}
  * @throws {PolicyError} with the reason, when the answer is no
@@ -411,14 +421,21 @@ export function decide(
         : `the version the repo writes (no version tag yet)`,
     };
   }
-  const base =
-    files && (!tag || compare(files, tag) > 0) ? files : tag || "0.0.0";
+  const fromFilesBase = files && (!tag || compare(files, tag) > 0);
+  const base = fromFilesBase ? files : tag || "0.0.0";
   const version = nextVersion(base, { channel, bump, manual });
   const kind = bump || defaultBump(channel);
+  const baseFrom = fromFilesBase
+    ? `the version the repo writes, ${base}`
+    : tag
+      ? `the highest tag ${prefix}${tag}`
+      : cur.kind === "untagged"
+        ? "no version tag"
+        : "nothing yet";
   return {
     version,
     current: base,
-    reason: `${first}next ${kind} (current: ${from})`,
+    reason: `${first}next ${kind} (current: ${baseFrom})`,
   };
 }
 
@@ -528,8 +545,9 @@ async function main(argv) {
       return `${v.major}.${v.minor}.${v.patch}`;
     }
     case "current": {
+      // The prefix after --, like decide and tags-path.
       const c = currentVersion(await stdinLines(), {
-        prefix: a.prefix ?? DEFAULT_PREFIX,
+        prefix: prefixArg(a),
         fromFiles: a["from-files"] ?? "",
       });
       if (c.kind === "untagged")
