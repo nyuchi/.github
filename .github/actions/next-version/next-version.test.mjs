@@ -539,7 +539,7 @@ test("CLI exit codes: 0 an answer, 2 the policy says no, 1 a bad call", () => {
     "main",
   );
   assert.equal(r.status, 2);
-  assert.match(r.stderr, /^policy: Minor bump/);
+  assert.match(r.stderr, /^(::error::)?policy: Minor bump/);
   r = run(
     "refs/tags/v0.27.3\n",
     "decide",
@@ -551,7 +551,7 @@ test("CLI exit codes: 0 an answer, 2 the policy says no, 1 a bad call", () => {
     "0.29.0",
   );
   assert.equal(r.status, 2);
-  assert.match(r.stderr, /^policy: Version 0.29.0 is not allowed/);
+  assert.match(r.stderr, /^(::error::)?policy: Version 0.29.0 is not allowed/);
   for (const bad of [
     ["decide", "--mode", "check", "--channel", "main"],
     ["decide", "--mode", "other", "--channel", "main"],
@@ -573,7 +573,7 @@ test("CLI exit codes: 0 an answer, 2 the policy says no, 1 a bad call", () => {
   ]) {
     r = run("", ...bad);
     assert.equal(r.status, 1, bad.join(" "));
-    assert.doesNotMatch(r.stderr, /^policy:/, bad.join(" "));
+    assert.doesNotMatch(r.stderr, /policy:/, bad.join(" "));
   }
   // A value that starts with -- is never taken as a value.
   r = run("", "next", "--current", "--channel", "main");
