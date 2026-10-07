@@ -96,9 +96,11 @@ case "$url" in
     [ -e "$FIX/fail-tags" ] && fail "Server Error (HTTP 500)"
     answer < "$FIX/tags.json" ;;
   repos/o/r/git/matching-refs/tags/*)
-    # Filtered on the server by the (URL-encoded) prefix.
+    # Filtered on the server by the prefix: each /-separated segment is
+    # decoded, but an encoded slash (%2F) is not a slash, as on GitHub.
     [ -e "$FIX/fail-tags" ] && fail "Server Error (HTTP 500)"
-    prefix="$(node -p 'decodeURIComponent(process.argv[1])' "${url#repos/o/r/git/matching-refs/tags/}")"
+    prefix="$(node -p 'process.argv[1].split("/").map((s) => /%2f/i.test(s) ? s : decodeURIComponent(s)).join("/")' \
+      "${url#repos/o/r/git/matching-refs/tags/}")"
     jq --arg p "refs/tags/$prefix" '[.[] | select(.ref | startswith($p))]' "$FIX/tags.json" | answer ;;
   repos/o/r/issues/*/labels)
     [ -e "$FIX/fail-labels" ] && fail "Bad Gateway (HTTP 502)"
@@ -114,8 +116,8 @@ ln -s "$lib" "$work/lib-link"
 
 # Broken scripts, to prove every answer is checked before it is used:
 #   lib-empty  read-version prints nothing at all
-#   lib-stub   next-version answers `decide` with STUB_DECIDE (or fails with
-#              no reason when STUB_DECIDE_FAIL is set), or `strict` with
+#   lib-stub   next-version answers `decide` with STUB_DECIDE (or exits with
+#              STUB_DECIDE_FAIL and no reason), or `strict` with
 #              STUB_STRICT
 mkdir -p "$work/lib-empty" "$work/lib-stub"
 cp "$lib/next-version.mjs" "$work/lib-empty/next-version.mjs"
@@ -131,7 +133,7 @@ const self = fileURLToPath(import.meta.url);
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(self)) {
   const cmd = process.argv[2];
   if (cmd === "decide" && process.env.STUB_DECIDE_FAIL) {
-    process.exit(1);
+    process.exit(Number(process.env.STUB_DECIDE_FAIL));
   } else if (cmd === "decide" && process.env.STUB_DECIDE !== undefined) {
     console.log(process.env.STUB_DECIDE);
   } else if (cmd === "strict" && process.env.STUB_STRICT !== undefined) {
@@ -323,8 +325,16 @@ case_ "a decide answer without a reason is a hard error" 1 - "decide gave no ans
   staging "v0.27.3" "" lib=stub "env:STUB_DECIDE=ok 0.27.4 0.27.3" "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "a decide answer with a bad version is a hard error" 1 - "decide gave a bad version" \
   staging "v0.27.3" "" lib=stub "env:STUB_DECIDE=ok v0.27.4 0.27.3 next patch" "B:VERSION=0.27.3" "H:VERSION=0.27.4"
-case_ "a decide refusal without a reason is a hard error" 1 - "refused without a reason" \
+case_ "a policy refusal (exit 2) without a reason is a hard error" 1 - "refused without a reason" \
+  staging "v0.27.3" "" lib=stub env:STUB_DECIDE_FAIL=2 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a decide failure (exit 1) is a hard error, not a refusal" 1 - "decide failed (exit 1" \
   staging "v0.27.3" "" lib=stub env:STUB_DECIDE_FAIL=1 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a decide crash (exit 3) is a hard error" 1 - "decide failed (exit 3" \
+  staging "v0.27.3" "" lib=stub env:STUB_DECIDE_FAIL=3 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a decide crash in compute, no version written: still a hard error" 1 - "decide failed (exit 1" \
+  staging "v0.27.3" "" lib=stub env:STUB_DECIDE_FAIL=1
+case_ "a policy refusal in compute (minor 999) is only a warning" 0 unchanged \
+  "::warning::No version change in this PR, but: Minor bump" main "v0.999.0" ""
 case_ "a strict that does not echo the version is a hard error" 1 - "bad 'written' version" \
   staging "v0.27.3" "" lib=stub env:STUB_STRICT=9.9.9 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "an empty strict answer is a hard error" 1 - "bad 'written' version" \
@@ -423,6 +433,11 @@ case_ "no change, files ahead of the tags: the merge is tagged the files' versio
   "will be tagged v0.29.0" main "v0.28.0" "" "B:VERSION=0.29.0" "H:VERSION=0.29.0"
 case_ "a custom prefix ignores other tags: a component's first release" 0 allowed "first release, next minor" \
   main "v3.0.0 release-1 web-v1.0.0-rc.1" "" env:PREFIX=web-v "H:VERSION=0.1.0"
+case_ "a prefix with slashes: its own tags only" 0 allowed "next minor" \
+  main "v9.0.0 packages/web/v0.1.0 packages/other/v5.0.0" "" env:PREFIX=packages/web/v \
+  "B:VERSION=0.1.0" "H:VERSION=0.2.0"
+case_ "a new entry equal to the version already written passes" 0 allowed "the version the repo already writes" \
+  staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.27.3" "H:package.json=$(pj 0.27.3)"
 case_ "a custom prefix counts its own tags" 1 - "the policy allows 0.3.0" \
   main "v3.0.0 web-v0.2.0" "" env:PREFIX=web-v "B:VERSION=0.2.0" "H:VERSION=0.4.0"
 
@@ -497,8 +512,20 @@ next_ "files ahead of the tags: no deadlock" 0 0.27.6 "next patch" staging "" 0.
 next_ "compute mode honours current-from-files" 0 1.4.3 "next patch" staging "" "" "" 1.4.2
 next_ "files ahead of the tags, and allowed: the files' version itself" 0 0.29.0 "the version the repo writes" \
   main "" "" "v0.28.0" 0.29.0
-next_ "files ahead of the tags, not allowed: the next after the files" 0 0.36.0 "next minor" \
-  main "" "" "v0.28.0" 0.35.0
+next_ "files ahead of the tags, beyond the policy: still the files' version" 0 0.35.0 \
+  "the version the repo writes" main "" "" "v0.28.0" 0.35.0
+next_ "files 1.0.0 ahead of v0.28.5: compute tags 1.0.0" 0 1.0.0 "ahead of the highest tag" \
+  main "" "" "v0.28.5" 1.0.0
+next_ "files 0.28.2 ahead of v0.28.0 on staging: compute tags 0.28.2" 0 0.28.2 "ahead of the highest tag" \
+  staging "" "" "v0.28.0" 0.28.2
+next_ "check: from-files equal to the proposed version is refused" 1 - "version before the change" \
+  main "" 9.9.9 "v0.28.0" 9.9.9
+next_ "check: prior files 0.28.5, proposed 1.0.0 without a major: refused" 1 - "bump: major" \
+  main "" 1.0.0 "v0.28.5" 0.28.5
+NEXT_BUMP=major NEXT_MANUAL=true next_ "check: prior files 0.28.5, proposed 1.0.0 on a manual major" 0 1.0.0 \
+  "next major" main "" 1.0.0 "v0.28.5" 0.28.5
+NEXT_PREFIX=packages/web/v next_ "a prefix with slashes: its own tags only" 0 0.2.0 "next minor" \
+  main "" "" "v9.0.0 packages/web/v0.1.0 packages/other/v5.0.0"
 NEXT_PREFIX=web-v next_ "a component whose only tag is a pre-release: a normal first release" 0 0.1.0 \
   "first release" main "" "" "web-v1.0.0-rc.1 v3.0.0"
 NEXT_BUMP=major NEXT_MANUAL=no next_ "--manual no is never true: a major is refused" 1 - "by hand" \
@@ -517,7 +544,7 @@ next_ "untagged (pre-releases only): a proposed version is refused" 1 - "can't b
 next_ "no tags, current-from-files 0.27.3: 0.27.4 is allowed" 0 0.27.4 ": next patch" staging "" 0.27.4 "" 0.27.3
 next_ "no tags, current-from-files 0.27.3: 0.0.1 is refused" 1 - "the policy allows 0.27.4" staging "" 0.0.1 "" 0.27.3
 next_ "no tags, current-from-files empty: a true first release" 0 0.0.1 "first release, next patch" staging "" 0.0.1 ""
-next_ "a non-strict current-from-files is refused" 1 - "is not a version" staging "" 0.0.1 "" v0.27.3
+next_ "a non-strict current-from-files is refused" 1 - "is not MAJOR.MINOR.PATCH" staging "" 0.0.1 "" v0.27.3
 
 # THE decision: both actions decide the same on the same tags and files,
 # in compute mode (what the merge is tagged) and in check mode (a PR that

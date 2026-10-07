@@ -9,6 +9,7 @@ import { test } from "node:test";
 
 import {
   PolicyError,
+  UsageError,
   check,
   currentVersion,
   decide,
@@ -283,7 +284,33 @@ test("decide: check mode", () => {
   );
   assert.throws(
     () => d([], { ...staging, proposed: "0.0.1", fromFiles: "1.4" }),
-    /not a version/,
+    /--from-files "1.4" is not MAJOR.MINOR.PATCH/,
+  );
+  // --from-files is the version BEFORE the change: never the proposed one.
+  assert.throws(
+    () => d(t("v0.28.0"), { ...main, proposed: "9.9.9", fromFiles: "9.9.9" }),
+    (e) => e instanceof UsageError && /before the change/.test(e.message),
+  );
+  // A major the files already announce (prior 0.28.5, proposed 1.0.0) is
+  // a major like any other: with the label, or refused.
+  assert.match(
+    d(t("v0.28.5"), {
+      ...main,
+      proposed: "1.0.0",
+      fromFiles: "0.28.5",
+      allowMajor: true,
+    }).reason,
+    /next major/,
+  );
+  assert.throws(
+    () => d(t("v0.28.5"), { ...main, proposed: "1.0.0", fromFiles: "0.28.5" }),
+    PolicyError,
+  );
+  // Prior files already at 1.0.0 (ahead of v0.28.5): the next is checked
+  // from 1.0.0, and 1.0.0 itself is the files' own (unchanged) version.
+  assert.match(
+    d(t("v0.28.5"), { ...main, proposed: "1.1.0", fromFiles: "1.0.0" }).reason,
+    /next minor/,
   );
   assert.throws(() => d([], { ...staging }), /needs --proposed/);
   assert.throws(
@@ -331,6 +358,15 @@ test("decide: a custom prefix ignores everything but its own version tags", () =
     kind: "untagged",
     written: "",
   });
+  // The CLI prints the files' version with it.
+  const cli = fileURLToPath(new URL("./next-version.mjs", import.meta.url));
+  const cur = (...a) =>
+    execFileSync("node", [cli, "current", ...a], {
+      input: "refs/tags/release-1\n",
+      encoding: "utf8",
+    }).trim();
+  assert.equal(cur("--from-files", "0.4.0"), "untagged 0.4.0");
+  assert.equal(cur(), "untagged");
 });
 
 test("decide: compute mode", () => {
@@ -340,46 +376,37 @@ test("decide: compute mode", () => {
   assert.equal(d(t("v0.27.3"), main).version, "0.28.0");
   assert.equal(d([], staging).version, "0.0.1");
   assert.match(d([], staging).reason, /^first release/);
-  // Files ahead of the tags: their own version when the policy allows it
-  // after the highest tag, else the next after the files.
+  // Files ahead of the tags: exactly the version they announce (they
+  // reached the branch through the required check or a bypass), even when
+  // check(tag, files) would refuse it; never past it.
+  for (const [tag, files, channel, want] of [
+    ["v0.28.0", "0.29.0", main, "0.29.0"],
+    ["v0.28.0", "0.35.0", main, "0.35.0"],
+    ["v0.28.5", "1.0.0", main, "1.0.0"],
+    ["v0.28.0", "0.28.2", staging, "0.28.2"],
+    ["v0.28.0", "0.28.1", staging, "0.28.1"],
+  ]) {
+    const r = d(t(tag), { ...channel, fromFiles: files });
+    assert.equal(r.version, want, `${tag} + ${files}`);
+    assert.match(
+      r.reason,
+      /the version the repo writes, ahead of the highest tag/,
+    );
+  }
+  // Files at or behind the tags: bump from the highest tag.
   assert.equal(
-    d(t("v0.28.0"), { ...main, fromFiles: "0.29.0" }).version,
+    d(t("v0.28.0"), { ...main, fromFiles: "0.28.0" }).version,
     "0.29.0",
   );
-  assert.match(
-    d(t("v0.28.0"), { ...main, fromFiles: "0.29.0" }).reason,
-    /the version the repo writes/,
-  );
   assert.equal(
-    d(t("v0.28.0"), { ...main, fromFiles: "0.35.0" }).version,
-    "0.36.0",
-  );
-  assert.equal(
-    d(t("v0.28.0"), { ...staging, fromFiles: "0.28.1" }).version,
-    "0.28.1",
-  );
-  assert.equal(
-    d(t("v0.28.0"), { ...staging, fromFiles: "0.29.0" }).version,
-    "0.29.1",
-  );
-  assert.equal(
-    d(t("v0.28.0"), { ...main, fromFiles: "1.0.0" }).version,
-    "1.1.0",
-  );
-  assert.equal(
-    d(t("v0.28.0"), {
-      ...main,
-      fromFiles: "1.0.0",
-      bump: "major",
-      manual: true,
-    }).version,
-    "1.0.0",
+    d(t("v0.28.0"), { ...main, fromFiles: "0.20.0" }).version,
+    "0.29.0",
   );
   // from-files counts in compute mode too: files 1.4.2, no tags -> 1.4.3.
   assert.equal(d([], { ...staging, fromFiles: "1.4.2" }).version, "1.4.3");
   assert.equal(
     d(t("v0.1.0"), { ...main, fromFiles: "1.4.2" }).version,
-    "1.5.0",
+    "1.4.2",
   );
   // Untagged: starts from the files, or 0.0.1.
   assert.equal(d(t("release-1"), staging).version, "0.0.1");
@@ -497,6 +524,84 @@ test("current: the one current-version rule", () => {
   assert.equal(run("refs/tags/x\n"), "untagged\n");
   assert.equal(run("", "--from-files", "0.2.0"), "written 0.2.0\n");
   assert.equal(run("\n"), "none\n");
+});
+
+test("CLI exit codes: 0 an answer, 2 the policy says no, 1 a bad call", () => {
+  const cli = fileURLToPath(new URL("./next-version.mjs", import.meta.url));
+  const run = (input, ...a) =>
+    spawnSync("node", [cli, ...a], { input, encoding: "utf8" });
+  let r = run(
+    "refs/tags/v0.999.0\n",
+    "decide",
+    "--mode",
+    "compute",
+    "--channel",
+    "main",
+  );
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /^policy: Minor bump/);
+  r = run(
+    "refs/tags/v0.27.3\n",
+    "decide",
+    "--mode",
+    "check",
+    "--channel",
+    "main",
+    "--proposed",
+    "0.29.0",
+  );
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /^policy: Version 0.29.0 is not allowed/);
+  for (const bad of [
+    ["decide", "--mode", "check", "--channel", "main"],
+    ["decide", "--mode", "other", "--channel", "main"],
+    ["decide", "--mode", "compute", "--channel", "prod"],
+    [
+      "decide",
+      "--mode",
+      "check",
+      "--channel",
+      "main",
+      "--proposed",
+      "9.9.9",
+      "--from-files",
+      "9.9.9",
+    ],
+    ["decide", "--mode", "compute", "--channel", "--prefix"],
+    ["strict", "--version", "--x"],
+    ["tags-path", "--repo", "o/r"],
+  ]) {
+    r = run("", ...bad);
+    assert.equal(r.status, 1, bad.join(" "));
+    assert.doesNotMatch(r.stderr, /^policy:/, bad.join(" "));
+  }
+  // A value that starts with -- is never taken as a value.
+  r = run("", "next", "--current", "--channel", "main");
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /--current needs a value/);
+});
+
+test("tags-path: all tags for the default prefix, else the prefix's own", () => {
+  const cli = fileURLToPath(new URL("./next-version.mjs", import.meta.url));
+  const run = (prefix) =>
+    execFileSync("node", [cli, "tags-path", "--repo", "o/r", "--", prefix], {
+      encoding: "utf8",
+    }).trim();
+  const base = "repos/o/r/git/matching-refs/tags";
+  assert.equal(run("v"), base);
+  assert.equal(run(""), base);
+  assert.equal(run("web-v"), `${base}/web-v`);
+  // Each segment encoded, slashes kept; a leading - is a prefix, not a flag.
+  assert.equal(run("packages/web/v"), `${base}/packages/web/v`);
+  assert.equal(run("pkg@"), `${base}/pkg%40`);
+  assert.equal(run("a b/c?d"), `${base}/a%20b/c%3Fd`);
+  assert.equal(run("-x"), `${base}/-x`);
+  assert.equal(run("--x"), `${base}/--x`);
+  assert.throws(() =>
+    execFileSync("node", [cli, "tags-path", "--repo", "bad", "--", "v"], {
+      stdio: "pipe",
+    }),
+  );
 });
 
 test("--manual and --allow-major take exactly true or false", () => {

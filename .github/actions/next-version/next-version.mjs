@@ -40,7 +40,12 @@
 //                            (ALL tag refs on stdin, not prefix-filtered)
 //     THE decision, used by both composite actions (release-version-check
 //     and next-version): prints one line, "ok <version> <current> <reason>",
-//     or fails with the reason. See decide().
+//     or fails with the reason. See decide(). In check mode --from-files is
+//     the version BEFORE the change, never the proposed one.
+//
+//   Exit codes: 0 an answer; 2 the policy says no (stderr "policy: <reason>");
+//   1 a bad call or a crash. Callers treat anything but 0 and 2 as a hard
+//   error.
 //   next-version.mjs next    --current 0.27.3 --channel staging|main
 //                            [--bump patch|minor|major] [--manual]
 //     Prints the next version after a known current one.
@@ -52,6 +57,9 @@
 //                            (ALL tag refs on stdin)
 //     The current version alone, one line: "tagged <x.y.z>", "untagged",
 //     "written <x.y.z>" or "none". See currentVersion().
+//   next-version.mjs tags-path --repo <owner/repo> -- <prefix>
+//     The tags API path decide needs: all tags for the default prefix (or
+//     ""), else the prefix's own (each segment URL-encoded, slashes kept).
 //   next-version.mjs strict  --version <v>
 //     Prints the version rebuilt from its parts (so equal to <v>) when <v>
 //     is strict; fails otherwise. Callers compare the output with <v>.
@@ -67,7 +75,11 @@ export const CEILING = 999;
 // The only version pattern. `\d` without the u flag is ASCII 0-9 only.
 const STRICT = /^(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})$/;
 
+/** The policy says no (exit 2 from the CLI, "policy: <reason>"). */
 export class PolicyError extends Error {}
+
+/** The call itself is wrong: a bad flag, mode or channel (exit 1). */
+export class UsageError extends Error {}
 
 /** Whether `v` is exactly MAJOR.MINOR.PATCH (each 0..999). */
 export function isStrictVersion(v) {
@@ -313,7 +325,40 @@ export function decide(
     prefix = DEFAULT_PREFIX,
   },
 ) {
-  defaultBump(channel); // a known channel, or a PolicyError
+  if (channel !== "staging" && channel !== "main") {
+    throw new UsageError(
+      `Unknown channel '${channel}'; expected staging or main.`,
+    );
+  }
+  if (!["", "patch", "minor", "major"].includes(bump)) {
+    throw new UsageError(
+      `Unknown bump '${bump}'; expected patch, minor or major.`,
+    );
+  }
+  if (mode !== "check" && mode !== "compute") {
+    throw new UsageError(`Unknown mode '${mode}'; expected check or compute.`);
+  }
+  if (
+    fromFiles !== "" &&
+    fromFiles !== undefined &&
+    !isStrictVersion(fromFiles)
+  ) {
+    throw new UsageError(
+      `--from-files ${JSON.stringify(fromFiles)} is not MAJOR.MINOR.PATCH.`,
+    );
+  }
+  if (mode === "check") {
+    if (proposed === "" || proposed === undefined) {
+      throw new UsageError("decide --mode check needs --proposed.");
+    }
+    // In check mode the files' version is the one BEFORE the change. The
+    // proposed one would make itself current and pass as "unchanged".
+    if (fromFiles && fromFiles === proposed) {
+      throw new UsageError(
+        "--from-files must be the version before the change, not the proposed one.",
+      );
+    }
+  }
   const major = allowMajor || (manual && bump === "major");
   const cur = currentVersion(refs, { prefix, fromFiles });
   let current = cur.version ?? "0.0.0";
@@ -326,9 +371,6 @@ export function decide(
   const first = cur.kind === "none" ? "first release, " : "";
 
   if (mode === "check") {
-    if (proposed === "" || proposed === undefined) {
-      throw new PolicyError("decide --mode check needs --proposed.");
-    }
     parseStrict(proposed);
     if (cur.kind === "untagged") {
       throw new PolicyError(
@@ -354,21 +396,14 @@ export function decide(
     // The first version tag of a repo with tags in another scheme.
     if (cur.kind === "untagged") current = cur.written || "0.0.0";
     if (cur.kind === "written" && cur.tagged) {
-      // Files ahead of the tags: the release they announce, when the
-      // policy allows it after the highest tag.
-      let why = "";
-      try {
-        why = check(cur.tagged, current, { channel, bump, allowMajor: major });
-      } catch (err) {
-        if (!(err instanceof PolicyError)) throw err;
-      }
-      if (why && why !== "unchanged") {
-        return {
-          version: current,
-          current: cur.tagged,
-          reason: `${why}, the version the repo writes (current: the highest tag ${prefix}${cur.tagged})`,
-        };
-      }
+      // Files ahead of the tags: the release they announce. They reached
+      // the branch through the required check (with its label) or an owner
+      // bypass, so compute tags exactly what they say, never past it.
+      return {
+        version: current,
+        current: cur.tagged,
+        reason: `the version the repo writes, ahead of the highest tag ${prefix}${cur.tagged}`,
+      };
     }
     const version = nextVersion(current, { channel, bump, manual });
     const kind = bump || defaultBump(channel);
@@ -378,22 +413,33 @@ export function decide(
       reason: `${first}next ${kind} (current: ${from})`,
     };
   }
-  throw new PolicyError(`Unknown mode '${mode}'; expected check or compute.`);
+  throw new UsageError(`Unknown mode '${mode}'; expected check or compute.`);
 }
 
 function args(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (!a.startsWith("--")) out._.push(a);
+    if (a === "--") {
+      // Everything after -- is a positional argument, even "-x" or "--x".
+      out._.push(...argv.slice(i + 1));
+      break;
+    } else if (!a.startsWith("--")) out._.push(a);
     else if (a === "--manual" || a === "--allow-major") {
       // Exactly "true" or "false"; a bare flag (last, or before another
       // --flag) is true. Anything else is refused, never read as true.
       const v = argv[i + 1];
       if (v === undefined || v.startsWith("--")) out[a.slice(2)] = true;
       else if (v === "true" || v === "false") out[a.slice(2)] = argv[++i];
-      else throw new PolicyError(`${a} takes true or false, not '${v}'.`);
-    } else out[a.slice(2)] = argv[++i] ?? "";
+      else throw new UsageError(`${a} takes true or false, not '${v}'.`);
+    } else {
+      // A value flag takes the next argument, which must not be a flag.
+      const v = argv[i + 1];
+      if (v === undefined || v.startsWith("--")) {
+        throw new UsageError(`${a} needs a value.`);
+      }
+      out[a.slice(2)] = argv[++i];
+    }
   }
   return out;
 }
@@ -433,6 +479,24 @@ async function main(argv) {
       });
       return `ok ${d.version} ${d.current} ${d.reason}`;
     }
+    case "tags-path": {
+      // tags-path --repo <owner/repo> -- <prefix>: the API path that lists
+      // the tags decide needs. The default prefix (and "") needs every
+      // tag; any other prefix only its own, each /-separated segment
+      // URL-encoded and the slashes kept.
+      const repo = a.repo ?? "";
+      if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) {
+        throw new UsageError(
+          `--repo ${JSON.stringify(repo)} is not owner/repo.`,
+        );
+      }
+      if (a._.length !== 2)
+        throw new UsageError("tags-path needs -- <prefix>.");
+      const prefix = a._[1];
+      const base = `repos/${repo}/git/matching-refs/tags`;
+      if (prefix === DEFAULT_PREFIX || prefix === "") return base;
+      return `${base}/${prefix.split("/").map(encodeURIComponent).join("/")}`;
+    }
     case "strict": {
       // Prints the version rebuilt from its parts; a caller compares it with
       // what it passed, so only a real answer counts.
@@ -444,11 +508,13 @@ async function main(argv) {
         prefix: a.prefix ?? DEFAULT_PREFIX,
         fromFiles: a["from-files"] ?? "",
       });
+      if (c.kind === "untagged")
+        return c.written ? `untagged ${c.written}` : "untagged";
       return c.version ? `${c.kind} ${c.version}` : c.kind;
     }
     default:
       throw new PolicyError(
-        "Usage: next-version.mjs decide|next|check|current|strict ...",
+        "Usage: next-version.mjs decide|next|check|current|strict|tags-path ...",
       );
   }
 }
@@ -473,9 +539,16 @@ if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).then(
     (out) => console.log(out),
     (err) => {
-      const msg = err instanceof PolicyError ? err.message : err.stack;
+      // Exit 2: the policy says no ("policy: <reason>"). Exit 1: a bad
+      // call or a crash. Callers treat anything but 0 and 2 as a hard error.
+      const policy = err instanceof PolicyError;
+      const msg = policy
+        ? `policy: ${err.message}`
+        : err instanceof UsageError
+          ? err.message
+          : err.stack;
       console.error(process.env.GITHUB_ACTIONS ? `::error::${msg}` : msg);
-      process.exit(1);
+      process.exit(policy ? 2 : 1);
     },
   );
 }

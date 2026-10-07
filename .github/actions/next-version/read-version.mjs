@@ -225,14 +225,17 @@ for kind, path in zip(args[0::2], args[1::2]):
             doc = json.loads(text, object_pairs_hook=keep_versions, parse_constant=no_constant)
         else:
             doc = tomllib.loads(text)
+        if kind == "package.json" and isinstance(doc, Obj) and len(doc.versions) > 1:
+            # Compared by the values, so a change to any of them is a change.
+            entries = {"": {"kind": "invalid", "raw": "duplicate version " + json.dumps(doc.versions)}}
+        else:
+            # Inside the try: repr() or json.dumps() of a deep value can
+            # raise RecursionError too.
+            entries = {t: version_in(doc, t, kind == "pyproject.toml" and t == "project") for t in tables}
+            json.dumps(entries)
     except (UnicodeDecodeError, ValueError, RecursionError, tomllib.TOMLDecodeError):
-        out.append({t: unreadable(data) for t in tables})
-        continue
-    if kind == "package.json" and isinstance(doc, Obj) and len(doc.versions) > 1:
-        # Compared by the values, so a change to any of them is a change.
-        out.append({"": {"kind": "invalid", "raw": "duplicate version " + json.dumps(doc.versions)}})
-        continue
-    out.append({t: version_in(doc, t, kind == "pyproject.toml" and t == "project") for t in tables})
+        entries = {t: unreadable(data) for t in tables}
+    out.append(entries)
 print(json.dumps(out))
 `;
 

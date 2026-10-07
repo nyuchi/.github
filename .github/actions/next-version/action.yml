@@ -69,9 +69,9 @@ inputs:
     default: ""
   current-from-files:
     description: >-
-      The highest version the repo already writes. The current version is
-      the higher of it and the highest version tag (both modes). Empty:
-      tags only.
+      The version the files held BEFORE this change (check mode: never the
+      proposed version; that is refused). Leave empty if unknown. The
+      current version is the higher of it and the highest version tag.
     required: false
     default: ""
   tag-prefix:
@@ -117,11 +117,12 @@ runs:
       run: |
         set -euo pipefail
         die() { echo "::error::$1"; exit 1; }
+        nv="$SCRIPT"
         # strict <version>: a strict version echoes itself; anything else
-        # (or no answer) is not one.
+        # (or no answer) is not one. The same in both actions.
         strict() {
           local out
-          out="$(node "$SCRIPT" strict --version "$1")" || return 1
+          out="$(node "$nv" strict --version "$1" 2>/dev/null)" || return 1
           [ "$out" = "$1" ]
         }
 
@@ -133,11 +134,11 @@ runs:
           strict "$CURRENT" || die "The current version is not MAJOR.MINOR.PATCH (each 0..999)."
           refs="refs/tags/$PREFIX$CURRENT"
         else
-          # The default prefix needs every tag (to tell an untagged repo);
-          # any other prefix only its own, filtered on the server.
-          tag_path="repos/$REPO/git/matching-refs/tags"
-          if [ "$PREFIX" != v ]; then
-            tag_path="$tag_path/$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
+          # The tags decide needs: every tag for the default prefix, else the
+          # prefix's own (next-version.mjs tags-path). The same in both actions.
+          if ! tag_path="$(node "$nv" tags-path --repo "$REPO" -- "$PREFIX")" \
+            || [[ "$tag_path" != "repos/$REPO/git/matching-refs/tags"* ]]; then
+            die "next-version tags-path gave no path."
           fi
           refs="$(gh api --paginate "$tag_path" --jq '.[].ref')"
         fi
@@ -156,10 +157,11 @@ runs:
         # Only stdout is the answer; stderr (the reason, or a crash) goes to
         # the log.
         err="$RUNNER_TEMP/next-version-err"
-        if ! out="$(printf '%s\n' "$refs" | node "$SCRIPT" decide "${args[@]}" 2> "$err")"; then
+        if ! out="$(printf '%s\n' "$refs" | node "$nv" decide "${args[@]}" 2> "$err")"; then
           sed 1d "$err" >&2  # the first line is the reason, reported by die
           reason="$(head -n 1 "$err")"
           reason="${reason#::error::}"
+          reason="${reason#policy: }"
           die "${reason:-next-version decide refused without a reason.}"
         fi
         if [ -s "$err" ]; then cat "$err" >&2; fi

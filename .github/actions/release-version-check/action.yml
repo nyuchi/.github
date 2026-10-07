@@ -151,11 +151,12 @@ runs:
         [[ "$BASE_SHA" =~ $sha_re ]] || die "The base commit is not a commit SHA."
         [[ "$HEAD_SHA" =~ $sha_re ]] || die "The head commit is not a commit SHA."
 
+        nv="$LIB/next-version.mjs"
         # strict <version>: a strict version echoes itself; anything else
-        # (or no answer) is not one.
+        # (or no answer) is not one. The same in both actions.
         strict() {
           local out
-          out="$(node "$LIB/next-version.mjs" strict --version "$1" 2>/dev/null)" || return 1
+          out="$(node "$nv" strict --version "$1" 2>/dev/null)" || return 1
           [ "$out" = "$1" ]
         }
 
@@ -235,11 +236,11 @@ runs:
         # Every version decision is next-version.mjs `decide`, the same
         # one the next-version action makes, over ALL tags (not
         # prefix-filtered) and the version written at the merge-base.
-        # The default prefix needs every tag (to tell an untagged repo); any
-        # other prefix only its own, filtered on the server.
-        tag_path="repos/$REPO/git/matching-refs/tags"
-        if [ "$PREFIX" != v ]; then
-          tag_path="$tag_path/$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
+        # The tags decide needs: every tag for the default prefix, else the
+        # prefix's own (next-version.mjs tags-path). The same in both actions.
+        if ! tag_path="$(node "$nv" tags-path --repo "$REPO" -- "$PREFIX")" \
+          || [[ "$tag_path" != "repos/$REPO/git/matching-refs/tags"* ]]; then
+          die "next-version tags-path gave no path."
         fi
         refs="$(gh api --paginate "$tag_path" --jq '.[].ref')" \
           || die "Could not read the repo's tags; re-run the check."
@@ -252,27 +253,35 @@ runs:
         # Only stdout is the answer; stderr (the reason, or a crash) goes to
         # the log.
         decide() {
-          local out err="$RUNNER_TEMP/rvc-decide-err"
-          if out="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" decide --mode "$1" \
-              --channel "$channel" --prefix "$PREFIX" --allow-major "$allow_major" \
-              ${from_files[@]+"${from_files[@]}"} "${@:2}" 2> "$err")"; then
-            if [ -s "$err" ]; then cat "$err" >&2; fi
-            [[ "$out" =~ $ok_re ]] || die "next-version decide gave no answer; re-run the check."
-            d_version="${BASH_REMATCH[1]}" d_current="${BASH_REMATCH[2]}" d_reason="${BASH_REMATCH[3]}"
-            if ! strict "$d_version" || ! strict "$d_current"; then
-              die "next-version decide gave a bad version; re-run the check."
-            fi
-            echo "decide $1: $out"
-            return 0
-          fi
-          # The first line is the reason (reported below); the rest, if any,
-          # goes to the log.
-          sed 1d "$err" >&2
-          d_reason="$(head -n 1 "$err")"
-          d_reason="${d_reason#::error::}"
-          [ -n "$d_reason" ] || die "next-version decide refused without a reason; re-run the check."
-          echo "decide $1: refused: $d_reason"
-          return 1
+          local out rc=0 err="$RUNNER_TEMP/rvc-decide-err"
+          out="$(printf '%s\n' "$refs" | node "$nv" decide --mode "$1" \
+            --channel "$channel" --prefix "$PREFIX" --allow-major "$allow_major" \
+            ${from_files[@]+"${from_files[@]}"} "${@:2}" 2> "$err")" || rc=$?
+          case "$rc" in
+            0)
+              if [ -s "$err" ]; then cat "$err" >&2; fi
+              [[ "$out" =~ $ok_re ]] || die "next-version decide gave no answer; re-run the check."
+              d_version="${BASH_REMATCH[1]}" d_current="${BASH_REMATCH[2]}" d_reason="${BASH_REMATCH[3]}"
+              if ! strict "$d_version" || ! strict "$d_current"; then
+                die "next-version decide gave a bad version; re-run the check."
+              fi
+              echo "decide $1: $out"
+              return 0 ;;
+            2)
+              # The policy says no: the first line is the reason (reported
+              # by the caller); the rest, if any, goes to the log.
+              sed 1d "$err" >&2
+              d_reason="$(head -n 1 "$err")"
+              d_reason="${d_reason#::error::}"
+              d_reason="${d_reason#policy: }"
+              [ -n "$d_reason" ] || die "next-version decide refused without a reason; re-run the check."
+              echo "decide $1: refused: $d_reason"
+              return 1 ;;
+            *)
+              # A bad call, a crash: never a refusal or a warning.
+              cat "$err" >&2
+              die "next-version decide failed (exit $rc, see the log); re-run the check." ;;
+          esac
         }
 
         # What the merge will be tagged with when it writes no version.
@@ -321,7 +330,11 @@ runs:
             behind)
               ok=false why="rebase onto $BASE_REF: it is now at $tip." ;;
             check)
-              if decide check --proposed "$head"; then
+              if [ "$head" = "$written" ]; then
+                # The version the repo already writes, in one more entry:
+                # not a new version (and --from-files may not equal it).
+                ok=true why="the version the repo already writes"
+              elif decide check --proposed "$head"; then
                 ok=true why="$d_reason"
               else
                 ok=false why="$d_reason"
