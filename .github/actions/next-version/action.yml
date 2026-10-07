@@ -16,6 +16,10 @@
 #   check  (`proposed` set) The version is written in the repo (package.json,
 #                           Cargo.toml, ...). Pass it, and the step fails
 #                           unless it is the version the policy allows next.
+#                           It must be strict (MAJOR.MINOR.PATCH, each
+#                           0..999) before anything else; only tags named
+#                           <prefix><strict version> count, so an
+#                           out-of-range tag like v2024.10.1 is ignored.
 #
 # Usage, pinned to a commit like every org action:
 #
@@ -94,14 +98,28 @@ runs:
         SCRIPT: ${{ github.action_path }}/next-version.mjs
       run: |
         set -euo pipefail
+        # A proposed version must be strict (MAJOR.MINOR.PATCH, each 0..999)
+        # before anything else, the "already tagged" shortcut included.
+        if [ -n "$PROPOSED" ]; then
+          node "$SCRIPT" strict --version "$PROPOSED" > /dev/null
+        fi
+
         current="$CURRENT"
         refs=""
+        has_tags=true
         if [ -z "$current" ]; then
           # matching-refs takes a URL-encoded prefix ('@' in npm tags).
           enc="$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
           refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$enc" --jq '.[].ref')"
+          count="$(printf '%s\n' "$refs" | node "$SCRIPT" count --prefix "$PREFIX")"
+          if ! [[ "$count" =~ ^[0-9]+$ ]]; then
+            echo "::error::next-version count gave no number."
+            exit 1
+          fi
+          [ "$count" -gt 0 ] || has_tags=false
           current="$(printf '%s\n' "$refs" | node "$SCRIPT" highest --prefix "$PREFIX")"
         fi
+        node "$SCRIPT" strict --version "$current" > /dev/null
         echo "current=$current" >> "$GITHUB_OUTPUT"
 
         if [ -n "$PROPOSED" ] && printf '%s\n' "$refs" | grep -qxF "refs/tags/$PREFIX$PROPOSED"; then
@@ -112,7 +130,12 @@ runs:
           allow_major=false
           [ "$MANUAL" = "true" ] && [ "$BUMP" = "major" ] && allow_major=true
           why="$(node "$SCRIPT" check --current "$current" --proposed "$PROPOSED" \
-            --channel "$CHANNEL" --bump "$BUMP" --allow-major "$allow_major")"
+            --channel "$CHANNEL" --bump "$BUMP" --allow-major "$allow_major" \
+            --has-tags "$has_tags")"
+          if [ -z "$why" ]; then
+            echo "::error::next-version check passed without a reason."
+            exit 1
+          fi
           version="$PROPOSED"
           echo "Version $version after $current on $CHANNEL: allowed ($why)."
         else

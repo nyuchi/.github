@@ -2,12 +2,14 @@
 // strict parser on every entry of version-fixtures.json (nyuchi/.github#90).
 //
 //   (a) isStrictVersion
-//   (b) read-version classification of package.json, Cargo.toml,
-//       pyproject.toml and VERSION, with the input embedded verbatim
-//   (c) the next-version.mjs CLI: `check` with the input as the proposed
-//       version, and `highest` / `count` with the tag v<input>
+//   (b) read-version classification of package.json, VERSION and every TOML
+//       entry, with the input embedded verbatim, in the usual spot and in
+//       each odd TOML shape (tomllib reads them all)
+//   (c) the next-version.mjs CLI: `strict`, `check` with the input as the
+//       proposed version (an invalid one fails as "not a version"), and
+//       `highest` / `count` with the tag v<input>
 //
-// node --test .github/actions/next-version/
+// node --test .github/actions/next-version/   (needs python3 >= 3.11)
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -15,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
 import { countTags, highest, isStrictVersion } from "./next-version.mjs";
-import { classifyFiles } from "./read-version.mjs";
+import { classifySets } from "./read-version.mjs";
 
 const FIXTURES = JSON.parse(
   readFileSync(new URL("./version-fixtures.json", import.meta.url), "utf8"),
@@ -37,37 +39,110 @@ test("the fixture table has the documented format", () => {
 });
 
 test("(a) isStrictVersion agrees with every fixture", () => {
-  for (const f of FIXTURES)
+  for (const f of FIXTURES) {
     assert.equal(isStrictVersion(f.input), f.valid, label(f));
+  }
 });
 
-test("(b) every version file agrees with every fixture", () => {
+// Where a version can be written: [entry, file, text with V for the input].
+const SHAPES = [
+  ["package.json", "package.json", null],
+  ["VERSION", "VERSION", null],
+  [
+    "Cargo.toml#package",
+    "Cargo.toml",
+    '[package]\nname = "x"\nversion = "V"\n',
+  ],
+  ["Cargo.toml#package", "Cargo.toml", "[package]\nversion = 'V'\n"],
+  ["Cargo.toml#package", "Cargo.toml", '["pack\\u0061ge"]\n"version" = "V"\n'],
+  ["Cargo.toml#package", "Cargo.toml", 'package.version = "V"\n'],
+  ["Cargo.toml#package", "Cargo.toml", 'package = { version = "V" }\n'],
+  [
+    "Cargo.toml#package",
+    "Cargo.toml",
+    `[package]\n# a ''' comment\ndescription = "'''"\nversion = "V"\n`,
+  ],
+  [
+    "Cargo.toml#package",
+    "Cargo.toml",
+    '[other]\nv = [\n["package"],\n]\n[package]\nversion = "V"\n',
+  ],
+  [
+    "Cargo.toml#workspace.package",
+    "Cargo.toml",
+    '[workspace.package]\nversion = "V"\n',
+  ],
+  [
+    "Cargo.toml#workspace.package",
+    "Cargo.toml",
+    'workspace = { package = { version = "V" } }\n',
+  ],
+  [
+    "Cargo.toml#workspace.package",
+    "Cargo.toml",
+    '[package]\nversion = "0.1.0"\n[workspace.package]\nversion = "V"\n',
+  ],
+  [
+    "pyproject.toml#project",
+    "pyproject.toml",
+    '[project]\nname = "x"\nversion = "V"\n',
+  ],
+  [
+    "pyproject.toml#project",
+    "pyproject.toml",
+    'project = { name = "x", version = "V" }\n',
+  ],
+  [
+    "pyproject.toml#tool.poetry",
+    "pyproject.toml",
+    '[tool.poetry]\nversion = "V"\n',
+  ],
+  [
+    "pyproject.toml#tool.poetry",
+    "pyproject.toml",
+    'tool = { poetry = { version = "V" } }\n',
+  ],
+];
+
+test("(b) every version file and TOML shape agrees with every fixture", () => {
+  const sets = [];
+  const want = [];
   for (const f of FIXTURES) {
-    const files = {
-      "package.json": JSON.stringify({ name: "x", version: f.input }),
-      "Cargo.toml": `[package]\nname = "x"\nversion = "${f.input}"\n`,
-      "pyproject.toml": `[project]\nname = "x"\nversion = "${f.input}"\n`,
-      // The usual one line ending after the value.
-      VERSION: `${f.input}\n`,
-    };
-    for (const [file, text] of Object.entries(files)) {
-      const c = classifyFiles({ [file]: text })[file];
-      assert.equal(
-        c.kind,
-        f.valid ? "valid" : "invalid",
-        `${file} ${label(f)}`,
-      );
-      if (f.valid) assert.equal(c.version, f.input, `${file} ${label(f)}`);
+    for (const [entry, file, shape] of SHAPES) {
+      let text;
+      if (file === "package.json") {
+        text = JSON.stringify({ name: "x", version: f.input });
+      } else if (file === "VERSION") {
+        text = `${f.input}\n`; // the usual one line ending
+      } else {
+        text = shape.replace("V", () => f.input);
+      }
+      sets.push({ [file]: text });
+      want.push({ f, entry, shape: shape ?? file });
     }
   }
+  // One python3 run for every TOML text.
+  const got = classifySets(sets);
+  got.forEach((c, i) => {
+    const { f, entry, shape } = want[i];
+    const what = `${entry} ${JSON.stringify(shape)} ${label(f)}`;
+    assert.equal(c[entry].kind, f.valid ? "valid" : "invalid", what);
+    if (f.valid) assert.equal(c[entry].version, f.input, what);
+  });
 });
 
 test("(c) the CLI agrees with every fixture", () => {
   for (const f of FIXTURES) {
-    // check: a valid version is a first release where there are no tags; an
-    // invalid one fails. argv cannot hold a NUL byte, so that fixture is
-    // checked through the function by (a) and (b) only.
+    // strict and check. argv cannot hold a NUL byte, so that fixture is
+    // checked through the functions by (a) and (b) only.
     if (!f.input.includes("\0")) {
+      const strict = spawnSync("node", [CLI, "strict", "--version", f.input], {
+        encoding: "utf8",
+      });
+      assert.equal(strict.status === 0, f.valid, `strict ${label(f)}`);
+      if (f.valid) assert.equal(strict.stdout.trim(), f.input);
+      // check: an invalid version fails as "not a version"; a valid one
+      // either passes (with a reason) or is refused by the policy.
       const r = spawnSync(
         "node",
         [CLI, "check", "--current", "0.0.0", "--proposed", f.input].concat([
@@ -76,8 +151,9 @@ test("(c) the CLI agrees with every fixture", () => {
         ]),
         { encoding: "utf8" },
       );
-      assert.equal(r.status === 0, f.valid, `check ${label(f)}: ${r.stderr}`);
-      if (f.valid) assert.equal(r.stdout.trim(), "first release");
+      const notVersion = r.status !== 0 && /is not a version/.test(r.stderr);
+      assert.equal(notVersion, !f.valid, `check ${label(f)}: ${r.stderr}`);
+      if (r.status === 0) assert.ok(r.stdout.trim(), "a reason is printed");
     }
 
     // highest and count, with the tag v<input>. Tag refs on stdin are one

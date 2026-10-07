@@ -39,14 +39,18 @@
 //   next-version.mjs check   --current 0.27.3 --proposed 0.28.0
 //                            --channel staging|main [--allow-major]
 //                            [--has-tags]
-//     --has-tags: the repo has a <prefix><version> tag (see `count`), so a
-//     current of 0.0.0 is checked against, not a first release.
+//     --has-tags: the repo has a <prefix><version> tag (see `count`). It only
+//     names the reason: without one, an allowed version is reported as the
+//     "first release", which is held to the same rule (0.0.1 on staging,
+//     0.1.0 on main, 1.0.0 with --allow-major) as every other release.
 //     Exits 0 when a version written into the repo is what the policy
 //     allows next; prints why not and exits 1 otherwise.
 //   next-version.mjs highest [--prefix v]   (tag refs on stdin)
 //     Prints the highest released version among the tags, or 0.0.0.
 //   next-version.mjs count   [--prefix v]   (tag refs on stdin)
 //     Prints how many tags are <prefix><strict version>.
+//   next-version.mjs strict  --version <v>
+//     Prints <v> when it is a strict version; fails otherwise.
 //
 // Tag refs on stdin are one per line: "refs/tags/<name>", "<name>", or
 // "<sha>\t<ref>" (ls-remote). Nothing is trimmed.
@@ -159,19 +163,22 @@ export function check(
 ) {
   // Strict, like everything else: a pre-release or build suffix is refused.
   const p = parse(proposed);
-  // A first release only where the repo has no <prefix><version> tag at all
-  // (hasTags false). With a v0.0.0 tag, the highest release is 0.0.0 and the
-  // version is checked against it like any other.
-  if (!hasTags && (!current || current === "0.0.0")) return "first release";
+  // No version tag at all: the first release is held to the same rule as
+  // any other, from 0.0.0. It is 0.0.1 on staging, 0.1.0 on main, or 1.0.0
+  // with the semver:major label; anything else is refused.
+  current = current || "0.0.0";
+  const first = !hasTags && current === "0.0.0" ? "first release, " : "";
   if (compare(core(p), current) === 0) return "unchanged";
 
   const major = `${parse(current).major + 1}.0.0`;
-  if (allowMajor && core(p) === major) return "next major";
+  if (allowMajor && core(p) === major) return `${first}next major`;
 
   // The usual next version; at minor 999 there is none, and that error
   // (which asks for a manual major) is the answer.
   const allowed = nextVersion(current, { channel, bump, manual: allowMajor });
-  if (core(p) === allowed) return `next ${bump || defaultBump(channel)}`;
+  if (core(p) === allowed) {
+    return `${first}next ${bump || defaultBump(channel)}`;
+  }
 
   const hint =
     core(p) === major && !allowMajor
@@ -259,24 +266,27 @@ async function main(argv) {
       });
     case "highest":
       return highest(await stdinLines(), a.prefix ?? "v");
+    case "strict":
+      return parseStrict(a.version) && a.version;
     case "count":
       return String(countTags(await stdinLines(), a.prefix ?? "v"));
     default:
       throw new PolicyError(
-        "Usage: next-version.mjs next|check|highest|count ...",
+        "Usage: next-version.mjs next|check|highest|count|strict ...",
       );
   }
 }
 
 // Run as a script (not imported). realpath, because import.meta.url is
 // resolved through symlinks (macOS's /var -> /private/var) and argv is not.
+// When it cannot tell, it runs: a silent no-op would look like an answer.
 const isMain = () => {
   try {
     return (
       import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
     );
   } catch {
-    return false;
+    return true;
   }
 };
 

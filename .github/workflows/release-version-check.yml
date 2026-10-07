@@ -14,6 +14,11 @@
 # action .github/actions/release-version-check; the policy itself is
 # .github/actions/next-version/next-version.mjs.
 #
+# It fails closed: a version it cannot read or verify is refused. A PR that
+# removes or resets a written version (a version moving into code, say), or
+# writes one in a repo whose tags are not v<MAJOR.MINOR.PATCH>, is refused
+# too; such a change needs an owner bypass of the check.
+#
 # HOW IT IS ENFORCED
 #
 # This file is meant to be named in an ENTERPRISE ruleset, in a "Require
@@ -28,8 +33,8 @@
 # repo the ruleset covers, from this repo's main branch.
 #
 #   - A ruleset-run workflow IGNORES the `on:` filters below (types, branches,
-#     paths). So the job decides for itself and always finishes: a merge
-#     queue run, or anything that is not a pull request, passes with a notice.
+#     paths). So the job decides for itself: a merge queue run passes with a
+#     notice, and any event but pull_request or merge_group fails.
 #   - NEVER put it on a ruleset that targets all branches. A "Require
 #     workflows to pass" rule also blocks direct pushes to the branches it
 #     covers, and every feature branch would become unpushable.
@@ -64,12 +69,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Nothing to check outside a pull request
-        if: github.event_name != 'pull_request'
+      # A merge queue run passes: its pull request already ran this check.
+      # Any event but pull_request or merge_group is unexpected and fails.
+      - name: Which event
+        id: event
         env:
           EVENT: ${{ github.event_name }}
         run: |
-          echo "::notice title=Release version check::Nothing to check on '$EVENT'; the pull request already ran this check."
+          case "$EVENT" in
+            pull_request) ;;
+            merge_group)
+              echo "::notice title=Release version check::Nothing to check in the merge queue; the pull request already ran this check." ;;
+            *)
+              echo "::error title=Release version check::unexpected event '$EVENT'; this check runs on pull_request and merge_group only."
+              exit 1 ;;
+          esac
 
       - name: Find this workflow's repository and commit
         id: src

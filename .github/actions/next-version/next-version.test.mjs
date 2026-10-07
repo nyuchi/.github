@@ -72,7 +72,8 @@ test("a manual override picks the bump", () => {
 test("check accepts the next version and refuses others", () => {
   assert.equal(check("0.27.3", "0.28.0", main), "next minor");
   assert.equal(check("0.27.3", "0.27.3", main), "unchanged");
-  assert.equal(check("", "3.1.4", main), "first release");
+  assert.throws(() => check("", "3.1.4", main), /allows 0.1.0/);
+  assert.equal(check("", "0.1.0", main), "first release, next minor");
   assert.throws(() => check("0.27.0", "0.27.1", main), /allows 0.28.0/);
   assert.throws(() => check("0.27.0", "0.29.0", main), PolicyError);
   assert.throws(() => check("0.27.0", "1.0.0", main), /bump: major/);
@@ -150,14 +151,27 @@ test("highest ignores pre-releases, other prefixes and junk", () => {
   assert.equal(highest([]), "0.0.0");
 });
 
-test("first release only where the repo has no semver tag", () => {
-  // No tags: whatever version comes first is the first release.
-  assert.equal(check("0.0.0", "5.0.0", main), "first release");
+test("a first release fails closed: the same rule from 0.0.0", () => {
+  // No version tag: 0.0.1 on staging, 0.1.0 on main, 1.0.0 with the label.
+  assert.equal(check("0.0.0", "0.0.1", staging), "first release, next patch");
+  assert.equal(check("0.0.0", "0.1.0", main), "first release, next minor");
   assert.equal(
-    check("0.0.0", "5.0.0", { ...main, hasTags: false }),
-    "first release",
+    check("0.0.0", "1.0.0", { ...main, allowMajor: true }),
+    "first release, next major",
   );
-  // A v0.0.0 tag: checked against 0.0.0.
+  assert.equal(
+    check("0.0.0", "1.0.0", { ...staging, allowMajor: true }),
+    "first release, next major",
+  );
+  for (const bad of ["5.0.0", "0.2.0", "1.0.0", "0.1.1", "3.1.4"]) {
+    assert.throws(() => check("0.0.0", bad, main), /allows 0.1.0/, bad);
+  }
+  assert.throws(() => check("0.0.0", "0.1.0", staging), /allows 0.0.1/);
+  assert.throws(
+    () => check("0.0.0", "2.0.0", { ...main, allowMajor: true }),
+    /allows 0.1.0/,
+  );
+  // A v0.0.0 tag: the same versions, reported as ordinary releases.
   const tagged = { ...main, hasTags: true };
   assert.throws(() => check("0.0.0", "5.0.0", tagged), /allows 0.1.0/);
   assert.equal(check("0.0.0", "0.1.0", tagged), "next minor");
@@ -273,12 +287,24 @@ test("the CLI prints the version and fails with a message", () => {
       "--current",
       "0.0.0",
       "--proposed",
-      "5.0.0",
+      "0.1.0",
       "--channel",
       "main",
     ),
-    "first release",
+    "first release, next minor",
   );
+  // strict: prints the version, or fails.
+  assert.equal(run("strict", "--version", "1.2.3"), "1.2.3");
+  for (const bad of ["v1.2.3", "1.2.3-rc.1", "", "--x"]) {
+    assert.throws(
+      () =>
+        execFileSync("node", [cli, "strict", "--version", bad], {
+          stdio: "pipe",
+        }),
+      /Command failed/,
+      bad,
+    );
+  }
   // Run through a symlink, the script still runs its CLI.
   const dir = mkdtempSync(join(tmpdir(), "next-version-"));
   try {
