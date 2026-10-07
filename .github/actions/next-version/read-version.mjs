@@ -1,38 +1,56 @@
 #!/usr/bin/env node
 // Read the version a repository writes down, from the text of its version
-// file. Used by release-version-check (nyuchi/.github#90) to see whether a
-// pull request changes the version, and to what.
+// files, and decide what release-version-check (nyuchi/.github#90) must do
+// with each one. The check is required on every PR, so it fails closed:
+// anything it cannot read as a version is refused, never skipped.
 //
 // The files it knows, each read on its own:
 //
 //   package.json    the root "version"
 //   Cargo.toml      [package] version, else [workspace.package] version
-//                   (`version.workspace = true` and dependency tables are not
-//                   versions of the repo and are skipped)
+//                   (`version.workspace = true`, `version = { workspace =
+//                   true }` and dependency tables name no version)
 //   pyproject.toml  [project] version, else [tool.poetry] version
 //                   (a `dynamic = ["version"]` project names none)
 //   VERSION         the first line, without a leading "v"
 //
-// Every function takes the file's text and returns the version string, or
-// null when the file names none (or is not valid). Nothing here throws on bad
-// input: a file that cannot be read is a file that names no version.
+// Each reader returns null when the file names no version, the version
+// string as written, or an Invalid when the file cannot be read as one
+// (broken JSON, a version that is not a string, a blank first line).
+// classify() then sorts every value into absent, valid (next-version.mjs's
+// parse() accepts it) or invalid ("banana" is invalid).
+//
+// assess() applies the rules to every file, base against head:
+//
+//   invalid    the head value is invalid and differs from the base value
+//   downgrade  the base and head are valid releases and the head is lower
+//   check      the head is valid, not the 0.0.0 placeholder, and differs
+//              from the base, in a new file or a changed one: the policy
+//              (next-version.mjs check) decides
+//   (skip)     anything else: absent at the head, unchanged, or 0.0.0
+//
+// 0.0.0 is a placeholder in every file (a private package.json, say) and is
+// never checked as a release, at the base or the head.
 //
 // The TOML reading is deliberately small: it tracks the current [table]
-// header and reads `version = "..."` or `version = '...'` lines in the tables
-// above. That is all a manifest's own version ever is, and it keeps the
-// script free of dependencies, like next-version.mjs beside it.
+// header and reads the `version` key of the tables above. That is all a
+// manifest's own version ever is, and it keeps the script free of
+// dependencies, like next-version.mjs beside it.
 //
 // Usage
 //   read-version.mjs files
 //     Prints VERSION_FILES, one per line (the list lives only here).
-//   read-version.mjs changed <base-dir> <head-dir>
+//   read-version.mjs assess <base-dir> <head-dir>
 //     Reads the files above from both directories and prints
-//     "<file>\t<base version or ->\t<head version>" for every file whose
-//     version the head changes; prints nothing when none does.
+//     "<file>\t<invalid|downgrade|check>\t<base>\t<head>" for every file that
+//     is not skipped. A value prints as "-" when absent and "!invalid" when
+//     invalid, so PR text never reaches the log or a tab split.
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+
+import { compare, parse } from "./next-version.mjs";
 
 export const VERSION_FILES = [
   "package.json",
@@ -41,29 +59,48 @@ export const VERSION_FILES = [
   "VERSION",
 ];
 
-const clean = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
+/** A file that cannot be read as a version; `raw` is what it holds. */
+export class Invalid {
+  constructor(raw) {
+    this.raw = String(raw);
+  }
+}
 
 /** The root "version" of a package.json. */
 export function fromPackageJson(text) {
+  const src = String(text).replace(/^﻿/, "");
+  let json;
   try {
-    const json = JSON.parse(String(text).replace(/^\uFEFF/, ""));
-    if (!json || typeof json !== "object" || Array.isArray(json)) return null;
-    return clean(json.version);
+    json = JSON.parse(src);
   } catch {
-    return null;
+    return new Invalid(src);
   }
+  if (!json || typeof json !== "object" || Array.isArray(json)) {
+    return new Invalid(src);
+  }
+  if (!("version" in json)) return null;
+  if (typeof json.version !== "string") {
+    return new Invalid(JSON.stringify(json.version));
+  }
+  return json.version.trim();
 }
 
 // A table header: [a.b] or [[a.b]], with optional spaces and a comment.
 const HEADER = /^\[(\[)?\s*([^\]]+?)\s*\](\])?\s*(?:#.*)?$/;
 // version = "x" or version = 'x', then optional comment.
-const VERSION_KEY =
+const VERSION_STRING =
   /^version\s*=\s*(?:"((?:[^"\\]|\\.)*)"|'([^']*)')\s*(?:#.*)?$/;
+// version = { workspace = true }: inherited, names no version here.
+const VERSION_INHERITED =
+  /^version\s*=\s*\{\s*workspace\s*=\s*true\s*\}\s*(?:#.*)?$/;
+// Any other `version = ...` in a wanted table cannot be read as a version.
+const VERSION_ANY = /^version\s*=/;
 
 /**
- * The `version` string in each named TOML table (`tables` like
- * ["package", "workspace.package"]), as { table: version }. Multi-line
- * strings are skipped over, so a header-like line inside one is not a header.
+ * The `version` in each named TOML table (`tables` like
+ * ["package", "workspace.package"]), as { table: string | Invalid }.
+ * Multi-line strings are skipped over, so a header-like line inside one is
+ * not a header.
  */
 function tomlVersions(text, tables) {
   const want = new Set(tables);
@@ -89,11 +126,10 @@ function tomlVersions(text, tables) {
       if (at !== -1 && line.indexOf(delim, at + 3) === -1) multiline = delim;
     }
     if (multiline || !want.has(table) || table in found) continue;
-    const m = VERSION_KEY.exec(line);
-    if (m) {
-      const v = clean(m[1] ?? m[2]);
-      if (v) found[table] = v;
-    }
+    const m = VERSION_STRING.exec(line);
+    if (m) found[table] = (m[1] ?? m[2]).trim();
+    else if (VERSION_INHERITED.test(line)) continue;
+    else if (VERSION_ANY.test(line)) found[table] = new Invalid(line);
   }
   return found;
 }
@@ -112,8 +148,9 @@ export function fromPyproject(text) {
 
 /** The first line of a VERSION file, trimmed, without a leading "v". */
 export function fromVersionFile(text) {
-  const first = String(text).split(/\r?\n/, 1)[0];
-  return clean(first?.trim().replace(/^v(?=\d)/i, ""));
+  const first = String(text).split(/\r?\n/, 1)[0] ?? "";
+  const v = first.trim().replace(/^v(?=\d)/i, "");
+  return v ? v : new Invalid(first);
 }
 
 const READERS = {
@@ -124,48 +161,79 @@ const READERS = {
 };
 
 /**
- * The version each of VERSION_FILES names.
- * @param {Record<string, string|null|undefined>} filesByName  file text by
- *   name; a missing or null entry is a file that is not there
- * @returns {Record<string, string|null>}  every VERSION_FILES entry, null
- *   when the file is not there or names no version
+ * Sort a reader's result: { kind: "absent" }, { kind: "valid", version }
+ * or { kind: "invalid", raw }.
  */
-export function versions(filesByName) {
+export function classify(value) {
+  if (value == null) return { kind: "absent" };
+  if (value instanceof Invalid) return { kind: "invalid", raw: value.raw };
+  try {
+    parse(value);
+    return { kind: "valid", version: value };
+  } catch {
+    return { kind: "invalid", raw: value };
+  }
+}
+
+/** Every VERSION_FILES entry, classified. A missing text is absent. */
+export function classifyFiles(filesByName) {
   const out = {};
   for (const file of VERSION_FILES) {
     const text = filesByName?.[file];
-    out[file] = text == null ? null : READERS[file](text);
+    out[file] = classify(text == null ? null : READERS[file](text));
   }
   return out;
 }
 
+/** 0.0.0 marks a file that is not the repo's version. */
+export function isPlaceholder(c) {
+  if (c.kind !== "valid") return false;
+  const v = parse(c.version);
+  return v.major === 0 && v.minor === 0 && v.patch === 0 && !v.pre;
+}
+
+const same = (a, b) =>
+  a.kind === b.kind &&
+  (a.kind === "absent" ||
+    (a.kind === "valid" ? a.version === b.version : a.raw === b.raw));
+
 /**
- * The version files to check: each one whose version the head changes.
- *
- *   - A file that had a version at the base and a different one at the head
- *     is checked.
- *   - A file whose version is new at the head is checked only when no file
- *     had a version at the base: then it is the repo's first written
- *     version. Otherwise it is a secondary file (a Rust repo adding a
- *     package.json with a placeholder "0.0.0") and is not the repo's
- *     version.
- *   - A file that loses its version at the head writes none and is not.
- *
- * Each one is checked on its own, so a placeholder package.json (say a
- * private 0.0.0) cannot hide a real bump in Cargo.toml or pyproject.toml.
- * @returns {{file: string, base: string|null, head: string}[]}
+ * What to do with each file. Only files that are not skipped are returned.
+ * @returns {{file: string, action: "invalid"|"downgrade"|"check",
+ *   base: object, head: object}[]}
  */
-export function changed(baseFiles, headFiles) {
-  const base = versions(baseFiles);
-  const head = versions(headFiles);
-  const first = VERSION_FILES.every((f) => !base[f]);
-  return VERSION_FILES.filter(
-    (f) => head[f] && head[f] !== base[f] && (base[f] || first),
-  ).map((file) => ({ file, base: base[file], head: head[file] }));
+export function assess(baseFiles, headFiles) {
+  const base = classifyFiles(baseFiles);
+  const head = classifyFiles(headFiles);
+  const out = [];
+  for (const file of VERSION_FILES) {
+    const b = base[file];
+    const h = head[file];
+    let action = null;
+    if (same(b, h)) action = null;
+    else if (h.kind === "invalid") action = "invalid";
+    else if (h.kind !== "valid" || isPlaceholder(h)) action = null;
+    else if (
+      b.kind === "valid" &&
+      !isPlaceholder(b) &&
+      compare(h.version, b.version) < 0
+    ) {
+      action = "downgrade";
+    } else action = "check";
+    if (action) out.push({ file, action, base: b, head: h });
+  }
+  return out;
 }
 
 /** The characters a version can hold. Anything else is not printed raw. */
 export const SAFE = /^[0-9A-Za-z.+-]+$/;
+
+/** How a classified value prints: "-", "!invalid" or the version. */
+export function show(c) {
+  if (c.kind === "absent") return "-";
+  if (c.kind === "invalid" || !SAFE.test(c.version)) return "!invalid";
+  return c.version;
+}
 
 function readDir(dir) {
   const files = {};
@@ -179,17 +247,13 @@ function readDir(dir) {
 function main(argv) {
   const [cmd, baseDir, headDir] = argv;
   if (cmd === "files") return VERSION_FILES.join("\n");
-  if (cmd === "changed" && baseDir && headDir) {
-    // One line per changed file: file, base version, head version. A version
-    // with characters no version holds is printed as "!invalid" (and a
-    // missing base as "-"), so PR text never reaches the log or a tab split.
-    const show = (v) => (v == null ? "-" : SAFE.test(v) ? v : "!invalid");
-    return changed(readDir(baseDir), readDir(headDir))
-      .map((c) => `${c.file}\t${show(c.base)}\t${show(c.head)}`)
+  if (cmd === "assess" && baseDir && headDir) {
+    return assess(readDir(baseDir), readDir(headDir))
+      .map((a) => `${a.file}\t${a.action}\t${show(a.base)}\t${show(a.head)}`)
       .join("\n");
   }
   throw new Error(
-    "Usage: read-version.mjs files | changed <base-dir> <head-dir>",
+    "Usage: read-version.mjs files | assess <base-dir> <head-dir>",
   );
 }
 

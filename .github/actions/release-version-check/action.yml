@@ -9,25 +9,36 @@
 # The policy itself is next-version.mjs (nyuchi/.github#80), called here as
 # is; nothing in this file restates it.
 #
+# It is a required check, so it FAILS CLOSED: whatever it cannot positively
+# verify, it refuses. Any API failure is a hard error asking for a re-run.
+#
 # What it does:
 #
-#   1. Reads every version file read-version.mjs knows (package.json,
-#      Cargo.toml, pyproject.toml, VERSION) at the PR's base commit and at
-#      its head commit, through the contents API of the base repo (a fork's
-#      head commit is reachable there too). Nothing from the PR is checked
+#   1. Confirms the PR's head commit exists in the repo (a fork's head commit
+#      is reachable there too), then reads every version file
+#      read-version.mjs knows (package.json, Cargo.toml, pyproject.toml,
+#      VERSION) at the base and the head through the contents API. After
+#      that, a 404 means the file is absent. Nothing from the PR is checked
 #      out or run.
-#   2. No file's version changes: the PR writes no version. It passes, and
-#      the step summary shows the version the merge will be tagged with
-#      (`next-version.mjs next` for the channel), or says it cannot be
+#   2. read-version.mjs assess sorts each file's base and head values into
+#      absent, valid semver or invalid, and decides per file:
+#        invalid    the head value is invalid and differs from the base:
+#                   refused, in every path
+#        downgrade  the head is lower than a valid base: refused
+#        check      the head is valid, not the 0.0.0 placeholder, and
+#                   differs from the base (new file or changed):
+#                   `next-version.mjs check` against the highest
+#                   <prefix><semver> tag decides; all must pass
+#   3. Nothing to do: the PR writes no version. It passes, and the summary
+#      shows the version the merge will be tagged with, or says it cannot be
 #      predicted when no tag is a <prefix><semver> release.
-#   3. Each file whose version changes is checked on its own with
-#      `next-version.mjs check` against the highest <prefix><semver> tag; all
-#      must pass. A file new to the head counts only when no file had a
-#      version before (read-version.mjs changed()). The failure message names
-#      the allowed version. A repo whose tags do not follow <prefix><semver>
-#      has nothing to check against and passes with a notice (a value that is
-#      not a version is still refused); a repo with no tags at all is a first
-#      release.
+#
+# 0.0.0 is a placeholder in every file and is never checked as a release. A
+# first release is only where the repo has no <prefix><semver> tag at all;
+# with a v0.0.0 tag or only pre-release tags, versions are checked against
+# 0.0.0. A repo whose tags follow another scheme has nothing to check
+# against: invalid values and downgrades are still refused, and the rest
+# passes with a notice.
 #
 # The channel is `main` when the PR targets the repo's default branch and
 # `staging` for any other base.
@@ -103,6 +114,7 @@ runs:
       run: |
         set -euo pipefail
         summary() { printf '%s\n' "$@" >> "$GITHUB_STEP_SUMMARY"; }
+        die() { echo "::error title=Release version check::$1"; exit 1; }
 
         channel=staging
         [ "$BASE_REF" = "$DEFAULT_BRANCH" ] && channel=main
@@ -111,15 +123,18 @@ runs:
         # failed read stops the check: it never quietly means "no label".
         allow_major=false
         if [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
-          if ! labels="$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name')"; then
-            echo "::error title=Release version check::Could not read the PR's labels; re-run the check."
-            exit 1
-          fi
+          labels="$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name')" \
+            || die "Could not read the PR's labels; re-run the check."
           if grep -qxF 'semver:major' <<<"$labels"; then allow_major=true; fi
         fi
 
+        # Both commits must exist before a 404 on a file can mean "absent".
+        for sha in "$BASE_SHA" "$HEAD_SHA"; do
+          gh api "repos/$REPO/commits/$sha" --jq .sha > /dev/null \
+            || die "Could not find commit $sha in $REPO; re-run the check."
+        done
+
         # fetch <sha> <path> <out>: 0 = got it, 1 = not there.
-        # Any other API failure stops the check rather than passing it.
         fetch() {
           local err="$RUNNER_TEMP/rvc-err"
           if gh api -H "Accept: application/vnd.github.raw" \
@@ -128,9 +143,8 @@ runs:
           fi
           rm -f "$3"
           if grep -q 'HTTP 404' "$err"; then return 1; fi
-          echo "::error::Could not read $2 at $1 in $REPO; re-run the check."
           cat "$err" >&2
-          exit 1
+          die "Could not read $2 at $1 in $REPO; re-run the check."
         }
 
         base_dir="$RUNNER_TEMP/rvc-base"
@@ -142,20 +156,23 @@ runs:
           fetch "$BASE_SHA" "$f" "$base_dir/$f" || true
           fetch "$HEAD_SHA" "$f" "$head_dir/$f" || true
         done <<<"$files"
-        # file <TAB> base version or - <TAB> head version, per changed file.
-        changes="$(node "$LIB/read-version.mjs" changed "$base_dir" "$head_dir")"
+        # file <TAB> invalid|downgrade|check <TAB> base <TAB> head
+        todo="$(node "$LIB/read-version.mjs" assess "$base_dir" "$head_dir")"
 
         # All tags. "<semver tags> <release tags>" tells no tags, tags in
         # another scheme and only pre-releases apart from a real 0.0.0.
-        refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags" --jq '.[].ref')"
+        refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags" --jq '.[].ref')" \
+          || die "Could not read the repo's tags; re-run the check."
         counts="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" count --prefix "$PREFIX")"
         read -r semver_tags release_tags <<<"$counts"
         current="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" highest --prefix "$PREFIX")"
-        highest_shown="\`$PREFIX$current\`"
-        [ "$release_tags" -eq 0 ] && highest_shown=none
+        has_tags=false
+        [ "$semver_tags" -gt 0 ] && has_tags=true
         # Tags, but none of them <prefix><semver>: nothing to check against.
         untagged=false
         [ -n "$refs" ] && [ "$semver_tags" -eq 0 ] && untagged=true
+        highest_shown="\`$PREFIX$current\`"
+        [ "$release_tags" -eq 0 ] && highest_shown=none
 
         summary "## Release version check" "" \
           "| | |" "|---|---|" \
@@ -163,7 +180,7 @@ runs:
           "| Highest tag | $highest_shown |" \
           "| semver:major | $allow_major |" ""
 
-        if [ -z "$changes" ]; then
+        if [ -z "$todo" ]; then
           echo "version=" >> "$GITHUB_OUTPUT"
           echo "result=unchanged" >> "$GITHUB_OUTPUT"
           if [ -n "$refs" ] && [ "$release_tags" -eq 0 ]; then
@@ -190,31 +207,35 @@ runs:
 
         summary "| File | Base | Head | Result |" "|---|---|---|---|"
         written=""
-        while IFS=$'\t' read -r file base head; do
-          written="${written:+$written }$head"
-        done <<<"$changes"
-        if [[ "$written" == *'!invalid'* ]]; then written=""; fi
-        echo "version=$written" >> "$GITHUB_OUTPUT"
-
         failed=0
-        while IFS=$'\t' read -r file base head; do
-          if [ "$head" = '!invalid' ]; then
-            why="the head does not hold a semantic version."
-            ok=false
-          elif [ "$untagged" = true ]; then
-            summary "| $file | $base | $head | not checked |"
-            continue
-          elif why="$(node "$LIB/next-version.mjs" check --current "$current" \
-              --proposed "$head" --channel "$channel" \
-              --allow-major "$allow_major" 2>&1)"; then
-            ok=true
-          else
-            ok=false
-            why="${why#::error::}"
-            case "$why" in
-              *"bump: major"*) why="$why On a pull request, the semver:major label allows a major." ;;
-            esac
-          fi
+        unchecked=0
+        while IFS=$'\t' read -r file action base head; do
+          [ "$head" = '!invalid' ] || written="${written:+$written }$head"
+          case "$action" in
+            invalid)
+              ok=false why="the head does not hold a semantic version." ;;
+            downgrade)
+              ok=false why="$head is lower than $base, the version at the base." ;;
+            check)
+              if [ "$untagged" = true ]; then
+                summary "| $file | $base | $head | nothing to check against |"
+                unchecked=$((unchecked + 1))
+                continue
+              fi
+              if why="$(node "$LIB/next-version.mjs" check --current "$current" \
+                  --proposed "$head" --channel "$channel" \
+                  --allow-major "$allow_major" --has-tags "$has_tags" 2>&1)"; then
+                ok=true
+              else
+                ok=false
+                why="${why#::error::}"
+                case "$why" in
+                  *"bump: major"*) why="$why On a pull request, the semver:major label allows a major." ;;
+                esac
+              fi ;;
+            *)
+              ok=false why="unknown action '$action'." ;;
+          esac
           if [ "$ok" = true ]; then
             summary "| $file | $base | $head | allowed ($why) |"
             echo "$file: $base -> $head after $current on $channel: allowed ($why)."
@@ -223,14 +244,15 @@ runs:
             summary "| $file | $base | $head | **refused**: $why |"
             echo "::error title=Release version check::$file: $why"
           fi
-        done <<<"$changes"
+        done <<<"$todo"
+        echo "version=$written" >> "$GITHUB_OUTPUT"
 
         if [ "$failed" -gt 0 ]; then
           summary "" "Set each refused file to the version the policy allows, or leave the" \
             "version alone and let the merge be tagged. A major needs the \`semver:major\` label."
           exit 1
         fi
-        if [ "$untagged" = true ]; then
+        if [ "$unchecked" -gt 0 ]; then
           summary "" "The tags do not follow \`$PREFIX<semver>\`; nothing to check against."
           echo "::notice title=Release version check::The tags do not follow $PREFIX<semver>; nothing to check against."
           echo "result=untagged" >> "$GITHUB_OUTPUT"

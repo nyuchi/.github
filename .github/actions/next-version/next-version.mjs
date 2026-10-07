@@ -17,6 +17,9 @@
 //     Prints the next version.
 //   next-version.mjs check   --current 0.27.3 --proposed 0.28.0
 //                            --channel staging|main [--allow-major]
+//                            [--has-tags]
+//     --has-tags: the repo has a <prefix><semver> tag (see `count`), so a
+//     current of 0.0.0 is checked against, not a first release.
 //     Exits 0 when a version written into the repo is what the policy
 //     allows next; prints why not and exits 1 otherwise.
 //   next-version.mjs highest [--prefix v]   (tag refs on stdin)
@@ -25,6 +28,7 @@
 //     Prints "<semver tags> <release tags>": how many tags are
 //     <prefix><semver>, and how many of those have no pre-release.
 
+import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const CEILING = 999;
@@ -119,10 +123,13 @@ function bumpMinor(v, why) {
 export function check(
   current,
   proposed,
-  { channel, allowMajor = false, bump = "" },
+  { channel, allowMajor = false, bump = "", hasTags = false },
 ) {
   const p = parse(proposed);
-  if (!current || current === "0.0.0") return "first release";
+  // A first release only where the repo has no <prefix><semver> tag at all
+  // (hasTags false). With a v0.0.0 tag or only pre-release tags, the highest
+  // release is 0.0.0 and the version is checked against it like any other.
+  if (!hasTags && (!current || current === "0.0.0")) return "first release";
   // The released version itself. A pre-release of it (0.27.3-rc.1 after
   // v0.27.3), or of anything below it, comes before it in semver and is
   // refused below like any other version the policy does not allow.
@@ -195,7 +202,7 @@ function args(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith("--")) out._.push(a);
-    else if (a === "--manual" || a === "--allow-major") {
+    else if (a === "--manual" || a === "--allow-major" || a === "--has-tags") {
       // A bare flag is true; an explicit value after it is consumed.
       const v = argv[i + 1];
       out[a.slice(2)] = v === "true" || v === "false" ? argv[++i] : true;
@@ -225,6 +232,7 @@ async function main(argv) {
         channel: a.channel,
         bump: a.bump ?? "",
         allowMajor: truthy(a["allow-major"]),
+        hasTags: truthy(a["has-tags"]),
       });
     case "highest":
       return highest(await stdinLines(), a.prefix ?? "v");
@@ -239,10 +247,19 @@ async function main(argv) {
   }
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+// Run as a script (not imported). realpath, because import.meta.url is
+// resolved through symlinks (macOS's /var -> /private/var) and argv is not.
+const isMain = () => {
+  try {
+    return (
+      import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+    );
+  } catch {
+    return false;
+  }
+};
+
+if (process.argv[1] && isMain()) {
   main(process.argv.slice(2)).then(
     (out) => console.log(out),
     (err) => {

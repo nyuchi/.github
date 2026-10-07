@@ -1,6 +1,9 @@
 // node --test .github/actions/next-version/
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
@@ -118,6 +121,27 @@ test("highest ignores pre-releases, other prefixes and junk", () => {
   assert.equal(highest([]), "0.0.0");
 });
 
+test("first release only where the repo has no semver tag", () => {
+  // No tags: whatever version comes first is the first release.
+  assert.equal(check("0.0.0", "5.0.0", main), "first release");
+  assert.equal(
+    check("0.0.0", "5.0.0", { ...main, hasTags: false }),
+    "first release",
+  );
+  // A v0.0.0 tag, or only pre-release tags: checked against 0.0.0.
+  const tagged = { ...main, hasTags: true };
+  assert.throws(() => check("0.0.0", "5.0.0", tagged), /allows 0.1.0/);
+  assert.equal(check("0.0.0", "0.1.0", tagged), "next minor");
+  assert.equal(
+    check("0.0.0", "0.0.1", { ...staging, hasTags: true }),
+    "next patch",
+  );
+  assert.equal(
+    check("0.0.0", "1.0.0", { ...tagged, allowMajor: true }),
+    "next major",
+  );
+});
+
 test("countTags tells other schemes and pre-releases apart", () => {
   assert.deepEqual(countTags([]), { semver: 0, releases: 0 });
   assert.deepEqual(countTags(["refs/tags/release-1", "refs/tags/vNext"]), {
@@ -209,6 +233,49 @@ test("the CLI prints the version and fails with a message", () => {
       ),
     /Command failed/,
   );
+  assert.throws(
+    () =>
+      execFileSync(
+        "node",
+        [cli, "check", "--current", "0.0.0", "--proposed", "5.0.0"].concat([
+          "--channel",
+          "main",
+          "--has-tags",
+        ]),
+        { stdio: "pipe" },
+      ),
+    /Command failed/,
+  );
+  assert.equal(
+    run(
+      "check",
+      "--current",
+      "0.0.0",
+      "--proposed",
+      "5.0.0",
+      "--channel",
+      "main",
+    ),
+    "first release",
+  );
+  // Run through a symlink, the script still runs its CLI.
+  const dir = mkdtempSync(join(tmpdir(), "next-version-"));
+  try {
+    const link = join(dir, "linked.mjs");
+    symlinkSync(cli, link);
+    assert.equal(
+      execFileSync(
+        "node",
+        [link, "next", "--current", "1.2.3", "--channel", "main"],
+        {
+          encoding: "utf8",
+        },
+      ).trim(),
+      "1.3.0",
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
   assert.equal(
     execFileSync("node", [cli, "count"], {
       input: "refs/tags/v1.0.0\nrefs/tags/v1.1.0-rc.1\nrefs/tags/nope\n",
