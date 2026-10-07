@@ -12,6 +12,7 @@ import {
   check,
   countTags,
   highest,
+  isMain,
   isStrictVersion,
   parse,
   parseStrict,
@@ -113,6 +114,16 @@ test("only strict versions: pre-releases and suffixes are refused", () => {
   assert.throws(() => check("v0.27.3", "0.28.0", main), /not a version/);
   // A downgrade to an older release is refused.
   assert.throws(() => check("0.27.5", "0.27.3", staging), /allows 0.27.6/);
+});
+
+test("isMain: not when imported, yes when it cannot tell", () => {
+  assert.equal(isMain(import.meta.url, ""), false);
+  assert.equal(isMain(import.meta.url, fileURLToPath(import.meta.url)), true);
+  assert.equal(
+    isMain("file:///elsewhere.mjs", fileURLToPath(import.meta.url)),
+    false,
+  );
+  assert.equal(isMain(import.meta.url, "/no/such/file.mjs"), true);
 });
 
 test("parseStrict and isStrictVersion", () => {

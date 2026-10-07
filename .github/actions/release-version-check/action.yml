@@ -1,6 +1,7 @@
-# Composite action: does a pull request write a version the org versioning
-# policy allows? The logic behind .github/workflows/release-version-check.yml
-# (nyuchi/.github#90), kept here so that workflow stays a thin wrapper.
+# Composite action: does a pull request (or a merge queue group) write a
+# version the org versioning policy allows? The logic behind
+# .github/workflows/release-version-check.yml (nyuchi/.github#90), kept here
+# so that workflow stays a thin wrapper.
 #
 #   Into `staging`               PATCH  x.y.z -> x.y.(z+1)
 #   Into the default branch      MINOR  x.y.z -> x.(y+1).0
@@ -14,72 +15,79 @@
 #
 # What it does:
 #
-#   1. Confirms the PR's base and head commits exist in the repo (a fork's
-#      head commit is reachable there too), then reads every version file
-#      read-version.mjs knows (package.json, Cargo.toml, pyproject.toml,
-#      VERSION) at both through the contents API. After that, a 404 means the
-#      file is absent. Nothing from the PR is checked out or run.
-#   2. read-version.mjs assess reads each entry (package.json, each TOML
-#      table through Python's tomllib, VERSION) on both sides as absent,
-#      valid or invalid. Valid means exactly MAJOR.MINOR.PATCH, each 0..999
-#      (next-version.mjs isStrictVersion, the one parser shared with the
-#      policy and the Nyuchi App); nothing is trimmed, and a duplicate key or
-#      a file tomllib refuses is invalid. Per entry:
-#        invalid    the head value is invalid and differs from the base
-#        removed    a real version (not 0.0.0) at the base is gone, reset to
-#                   0.0.0 or broken at the head
-#        downgrade  the head is lower than a real base version
-#        check      the head is a real version and differs from the base
-#                   (new or changed): `next-version.mjs check` against the
-#                   highest version tag decides; all must pass
-#      invalid, removed and downgrade are refused, always. Removing or
-#      resetting a version (a version moving into code, say) needs an owner
-#      bypass of the check.
-#   3. Nothing to do: the PR writes no version. It passes, and the summary
+#   1. Finds the merge-base of the base tip and the head (the compare API;
+#      a missing or malformed answer is a hard error). The PR is judged
+#      against what it started from, so a version bump that landed on the
+#      base after the PR branched is not mistaken for the PR's own change.
+#   2. Reads every version file read-version.mjs knows (package.json,
+#      Cargo.toml, pyproject.toml, VERSION) at the merge-base, the head and
+#      the base tip through the contents API. A 404 means the file is
+#      absent. Nothing from the PR is checked out or run.
+#   3. read-version.mjs assess reads each entry (package.json; each TOML
+#      table; VERSION) as absent, valid or invalid, with one JSON reader and
+#      one TOML reader (Python's json and tomllib) and one version parser
+#      (next-version.mjs isStrictVersion: MAJOR.MINOR.PATCH, each 0..999).
+#      Per entry:
+#        invalid    the head value is invalid and differs from the merge-base
+#        removed    a real version (not 0.0.0) at the merge-base is gone,
+#                   reset to 0.0.0 or broken at the head
+#        downgrade  the head is lower than the real merge-base version
+#        behind     the PR changes the version, but the base tip already
+#                   holds a higher one: rebase first
+#        check      the head is a real version and differs from the
+#                   merge-base (new or changed): `next-version.mjs check`
+#                   against the current version decides; all must pass
+#      invalid, removed, downgrade and behind are refused, always. Removing
+#      or resetting a version (a version moving into code, say) needs an
+#      owner bypass of the check.
+#   4. Nothing to do: the PR writes no version. It passes, and the summary
 #      shows the version the merge will be tagged with, or says it cannot be
 #      predicted when there is no version tag.
 #
-# A version tag is a tag named exactly <prefix><strict version>; any other
-# tag, pre-releases included, is ignored (so is an out-of-range one like
-# v2024.10.1). 0.0.0 is a placeholder in every file and is never checked as a
-# release. With no tags at all, the first version written is held to the
-# same rule from 0.0.0: 0.0.1 on staging, 0.1.0 on main, or 1.0.0 with the
-# label. A repo with tags but no version tag (another scheme, or only
-# pre-releases) cannot be verified: a PR that writes or changes a version
-# there is refused, and one that writes none passes.
+# The current version is the highest version tag, a tag named exactly
+# <prefix><strict version> (any other tag, pre-releases and out-of-range
+# ones like v2024.10.1 included, is ignored). With no tags at all, it is the
+# highest real version written at the merge-base, and 0.0.0 only when there
+# is none: a true first release, held to the same rule (0.0.1 on staging,
+# 0.1.0 on main, or 1.0.0 with the label). A repo with tags but no version
+# tag (another scheme, or only pre-releases) cannot be verified: a PR that
+# writes or changes a version there is refused, and one that writes none
+# passes. 0.0.0 is a placeholder in every file and never checked.
 #
 # Every answer read from a script is checked before it is used: the
-# read-version output starts with its header line, `count` is a number,
-# `highest` is a strict version and a passing `check` gives a reason. A
-# missing or malformed answer is a hard error.
+# read-version output starts with its header line and the `written` line,
+# `count` is a number, `strict` echoes the version it was given, and a
+# passing `check` gives a reason. A missing or malformed answer is a hard
+# error.
 #
-# The channel is `main` when the PR targets the repo's default branch and
+# The channel is `main` when the base is the repo's default branch and
 # `staging` for any other base.
 #
 # The `semver:major` label is read from the PR through the API when the job
 # runs, not from the event payload, so adding the label and pressing
-# "Re-run" is enough.
+# "Re-run" is enough. With no PR number (a merge queue head ref that does
+# not name one), no label is read, and a major is refused.
 #
 # Every value from the event arrives through an input and an env var, never
 # through `${{ }}` inside the script, so no PR title, branch name or label
-# can inject shell. Versions are only printed once they hold nothing but
-# version characters.
+# can inject shell. Only strict versions are ever printed.
 #
 # Reads with `token` (contents: read and pull-requests: read on the repo).
-# Writes nothing but the step summary.
+# Writes nothing but the step summary. Needs python3 >= 3.11 (tomllib),
+# which every GitHub-hosted Ubuntu runner has; without it the check fails.
 
 name: Release version check
 description: Check the version a pull request writes against the org versioning policy.
 
 inputs:
   base-ref:
-    description: Branch the PR targets (github.event.pull_request.base.ref).
+    description: Branch the PR (or merge group) targets, without refs/heads/.
     required: true
   base-sha:
-    description: Base commit (github.event.pull_request.base.sha).
+    description: Base branch tip (pull_request.base.sha or merge_group.base_sha).
     required: true
   head-sha:
-    description: Head commit (github.event.pull_request.head.sha).
+    description: Head commit (pull_request.head.sha or merge_group.head_sha).
     required: true
   default-branch:
     description: The repo's default branch (github.event.repository.default_branch).
@@ -128,6 +136,18 @@ runs:
         set -euo pipefail
         summary() { printf '%s\n' "$@" >> "$GITHUB_STEP_SUMMARY"; }
         die() { echo "::error title=Release version check::$1"; exit 1; }
+        sha_re='^[0-9a-f]{40}$'
+
+        [[ "$BASE_SHA" =~ $sha_re ]] || die "The base commit is not a commit SHA."
+        [[ "$HEAD_SHA" =~ $sha_re ]] || die "The head commit is not a commit SHA."
+
+        # strict <version>: a strict version echoes itself; anything else
+        # (or no answer) is not one.
+        strict() {
+          local out
+          out="$(node "$LIB/next-version.mjs" strict --version "$1" 2>/dev/null)" || return 1
+          [ "$out" = "$1" ]
+        }
 
         channel=staging
         [ "$BASE_REF" = "$DEFAULT_BRANCH" ] && channel=main
@@ -135,17 +155,17 @@ runs:
         # The label is read now, not from the event, so a re-run sees it. A
         # failed read stops the check: it never quietly means "no label".
         allow_major=false
-        if [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+        if [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
           labels="$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name')" \
             || die "Could not read the PR's labels; re-run the check."
           if grep -qxF 'semver:major' <<<"$labels"; then allow_major=true; fi
         fi
 
-        # Both commits must exist before a 404 on a file can mean "absent".
-        for sha in "$BASE_SHA" "$HEAD_SHA"; do
-          gh api "repos/$REPO/commits/$sha" --jq .sha > /dev/null \
-            || die "Could not find commit $sha in $REPO; re-run the check."
-        done
+        # The merge-base: what the PR started from. The compare API also
+        # proves both commits exist.
+        merge_base="$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA" --jq .merge_base_commit.sha)" \
+          || die "Could not compare the base and head commits; re-run the check."
+        [[ "$merge_base" =~ $sha_re ]] || die "The compare API gave no merge-base; re-run the check."
 
         # fetch <sha> <path> <out>: 0 = got it, 1 = not there.
         fetch() {
@@ -162,29 +182,39 @@ runs:
 
         # read-version's answers start with a header line; anything else
         # (empty, cut short, a script that did not run) is a hard error.
-        # header <expected> <output>
         header() {
           [ "${2%%$'\n'*}" = "$1" ] || die "read-version gave no answer ('$1' missing); re-run the check."
         }
 
-        base_dir="$RUNNER_TEMP/rvc-base"
-        head_dir="$RUNNER_TEMP/rvc-head"
-        rm -rf "$base_dir" "$head_dir"
-        mkdir -p "$base_dir" "$head_dir"
         files_out="$(node "$LIB/read-version.mjs" files)" \
           || die "read-version failed (see the log); re-run the check."
         header '# read-version files v1' "$files_out"
         files="$(sed 1d <<<"$files_out")"
         [ -n "$files" ] || die "read-version listed no version files."
+        dirs="$RUNNER_TEMP/rvc"
+        rm -rf "$dirs"
+        mkdir -p "$dirs/base" "$dirs/head" "$dirs/tip"
         while IFS= read -r f; do
-          fetch "$BASE_SHA" "$f" "$base_dir/$f" || true
-          fetch "$HEAD_SHA" "$f" "$head_dir/$f" || true
+          fetch "$merge_base" "$f" "$dirs/base/$f" || true
+          fetch "$HEAD_SHA" "$f" "$dirs/head/$f" || true
+          if [ "$BASE_SHA" = "$merge_base" ]; then
+            if [ -e "$dirs/base/$f" ]; then cp "$dirs/base/$f" "$dirs/tip/$f"; fi
+          else
+            fetch "$BASE_SHA" "$f" "$dirs/tip/$f" || true
+          fi
         done <<<"$files"
-        # entry <TAB> invalid|removed|downgrade|check <TAB> base <TAB> head
-        assess_out="$(node "$LIB/read-version.mjs" assess "$base_dir" "$head_dir")" \
+
+        # written <TAB> version or -, then per entry:
+        # entry <TAB> action <TAB> merge-base <TAB> head <TAB> tip
+        assess_out="$(node "$LIB/read-version.mjs" assess "$dirs/base" "$dirs/head" "$dirs/tip")" \
           || die "read-version could not read the version files (see the log); re-run the check."
-        header '# read-version assess v1' "$assess_out"
-        todo="$(sed 1d <<<"$assess_out")"
+        header '# read-version assess v2' "$assess_out"
+        body="$(sed 1d <<<"$assess_out")"
+        written_line="${body%%$'\n'*}"
+        [[ "$written_line" == written$'\t'* ]] || die "read-version gave no 'written' line; re-run the check."
+        written="${written_line#written$'\t'}"
+        [ "$written" = - ] || strict "$written" || die "read-version gave a bad 'written' version."
+        todo="$(sed 1d <<<"$body")"
 
         # All tags. A version tag is exactly <prefix><strict version>
         # (next-version.mjs); the count tells "no version tags" apart from a
@@ -194,37 +224,46 @@ runs:
         version_tags="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" count --prefix "$PREFIX")" \
           || die "next-version count failed; re-run the check."
         [[ "$version_tags" =~ ^[0-9]+$ ]] || die "next-version count gave no number; re-run the check."
-        current="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" highest --prefix "$PREFIX")" \
-          || die "next-version highest failed; re-run the check."
-        node "$LIB/next-version.mjs" strict --version "$current" > /dev/null \
-          || die "next-version highest gave no version; re-run the check."
-        has_tags=false
-        [ "$version_tags" -gt 0 ] && has_tags=true
-        # Tags, but none a version tag (another scheme, or only
-        # pre-releases): no version can be verified.
         untagged=false
-        [ -n "$refs" ] && [ "$version_tags" -eq 0 ] && untagged=true
-        highest_shown="\`$PREFIX$current\`"
-        [ "$version_tags" -eq 0 ] && highest_shown=none
+        has_tags=true
+        if [ "$version_tags" -gt 0 ]; then
+          current="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" highest --prefix "$PREFIX")" \
+            || die "next-version highest failed; re-run the check."
+          current_from="the highest tag"
+        elif [ -n "$refs" ]; then
+          # Tags, but none a version tag (another scheme, or only
+          # pre-releases): no version can be verified.
+          untagged=true
+          current=0.0.0
+          current_from="no version tag"
+        elif [ "$written" != - ]; then
+          # No tags at all, but a version is already written.
+          current="$written"
+          current_from="the version written at the merge-base"
+        else
+          has_tags=false
+          current=0.0.0
+          current_from="nothing yet: a first release"
+        fi
+        strict "$current" || die "next-version gave a bad current version; re-run the check."
 
         summary "## Release version check" "" \
           "| | |" "|---|---|" \
           "| Channel | \`$channel\` (base \`$BASE_REF\`, default \`$DEFAULT_BRANCH\`) |" \
-          "| Highest tag | $highest_shown |" \
+          "| Current version | \`$current\` ($current_from) |" \
           "| semver:major | $allow_major |" ""
 
         if [ -z "$todo" ]; then
           echo "version=" >> "$GITHUB_OUTPUT"
           echo "result=unchanged" >> "$GITHUB_OUTPUT"
           if [ "$untagged" = true ]; then
-            # Tags in another scheme, or only pre-releases: no promise.
             summary "This PR writes no new version. The next version cannot be" \
               "predicted from these tags: none is a \`$PREFIX<MAJOR.MINOR.PATCH>\` version tag."
             echo "No version change in this PR; the next version cannot be predicted from these tags."
           elif next="$(node "$LIB/next-version.mjs" next --current "$current" \
-              --channel "$channel" 2>&1)"; then
+              --channel "$channel" 2>&1)" && strict "$next"; then
             summary "This PR writes no new version. When it merges, the merge is" \
-              "tagged \`$PREFIX$next\` (the next $channel version after $highest_shown)."
+              "tagged \`$PREFIX$next\` (the next $channel version after \`$current\`)."
             echo "No version change in this PR; the merge will be tagged $PREFIX$next."
           else
             next="${next#::error::}"
@@ -238,18 +277,20 @@ runs:
           exit 0
         fi
 
-        summary "| Entry | Base | Head | Result |" "|---|---|---|---|"
-        written=""
+        summary "| Entry | Merge-base | Head | Base tip | Result |" "|---|---|---|---|---|"
+        written_now=""
         failed=0
-        while IFS=$'\t' read -r entry action base head; do
-          [ "$head" = '!invalid' ] || [ "$head" = - ] || written="${written:+$written }$head"
+        while IFS=$'\t' read -r entry action base head tip; do
+          [ "$head" = '!invalid' ] || [ "$head" = - ] || written_now="${written_now:+$written_now }$head"
           case "$action" in
             invalid)
               ok=false why="the head does not hold a version (MAJOR.MINOR.PATCH, each 0..999, nothing else)." ;;
             removed)
-              ok=false why="version removed or reset ($base at the base). That needs an owner bypass of this check." ;;
+              ok=false why="version removed or reset ($base at the merge-base). That needs an owner bypass of this check." ;;
             downgrade)
-              ok=false why="$head is lower than $base, the version at the base." ;;
+              ok=false why="$head is lower than $base, the version at the merge-base." ;;
+            behind)
+              ok=false why="rebase onto $BASE_REF: it is now at $tip." ;;
             check)
               if [ "$untagged" = true ]; then
                 ok=false
@@ -271,15 +312,15 @@ runs:
               ok=false why="unknown action '$action'." ;;
           esac
           if [ "$ok" = true ]; then
-            summary "| $entry | $base | $head | allowed ($why) |"
+            summary "| $entry | $base | $head | $tip | allowed ($why) |"
             echo "$entry: $base -> $head after $current on $channel: allowed ($why)."
           else
             failed=$((failed + 1))
-            summary "| $entry | $base | $head | **refused**: $why |"
+            summary "| $entry | $base | $head | $tip | **refused**: $why |"
             echo "::error title=Release version check::$entry: $why"
           fi
         done <<<"$todo"
-        echo "version=$written" >> "$GITHUB_OUTPUT"
+        echo "version=$written_now" >> "$GITHUB_OUTPUT"
 
         if [ "$failed" -gt 0 ]; then
           summary "" "Set each refused entry to the version the policy allows, or leave the" \

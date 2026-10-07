@@ -6,70 +6,71 @@
 //
 // The entries it knows, each read and judged on its own:
 //
-//   package.json                  the root "version" (a root key given
-//                                 twice is invalid: JSON.parse would keep
-//                                 the last one silently)
+//   package.json                  the root "version"
 //   Cargo.toml#package            [package] version
 //   Cargo.toml#workspace.package  [workspace.package] version
 //   pyproject.toml#project        [project] version
 //   pyproject.toml#tool.poetry    [tool.poetry] version
-//   VERSION                       the whole file: the version, then at
-//                                 most one line ending, nothing else
+//   VERSION                       exactly X.Y.Z, X.Y.Z\n or X.Y.Z\r\n
 //
-// TOML is read by Python's standard tomllib (python3 >= 3.11, on every
-// GitHub-hosted Ubuntu runner), the same TOML Cargo and Poetry read, so no
-// hand-written parser can see a different table. The file path goes to it as
-// an argument; the file's text never enters the script. A file tomllib
-// refuses (duplicate keys included) makes its entries invalid. A missing
-// python3 or tomllib is a hard error, never "absent". In a table,
-// `version.workspace = true` (inherited) is absent, a pyproject `dynamic`
-// list holding "version" is absent, and a version that is not a string is
-// invalid.
+// ONE READER PER FORMAT. JSON and TOML are read by Python's standard library
+// in one isolated python3 run (`-I`, an empty working directory, no PYTHON*
+// variables): json with a hook that refuses a duplicate key at any level,
+// and tomllib, the TOML 1.0 that Cargo's toml crate and Poetry read. File
+// paths go to it as arguments; a file's text never enters the script. A file
+// it cannot decode or parse (bad UTF-8, broken syntax, a duplicate key) makes
+// its entries invalid. A missing python3 or tomllib is a hard error, never
+// "absent". `version.workspace = true` (inherited) and a pyproject `dynamic`
+// version are absent; a version that is not a string is invalid.
 //
-// Nothing is trimmed and no "v" is stripped: a value is a version only if
-// next-version.mjs's isStrictVersion() accepts it (MAJOR.MINOR.PATCH, each
-// 0..999), the one parser shared with the policy and the Nyuchi App.
+// ONE VERSION PARSER. Nothing is trimmed and no "v" is stripped: a value is
+// a version only if next-version.mjs's isStrictVersion() accepts it
+// (MAJOR.MINOR.PATCH, each 0..999), the parser shared with the policy and
+// the Nyuchi App.
 //
-// assess() applies the rules to every entry, base against head:
+// assess() judges every entry at three commits: the merge-base of the PR
+// (what the PR started from), the PR head, and the base branch tip (what it
+// lands on):
 //
-//   invalid    the head value is invalid and differs from the base value
-//   removed    the base is a real version (valid, not 0.0.0) and the head
-//              drops it: absent, 0.0.0 or invalid. Removing or resetting a
+//   invalid    the head value is invalid and differs from the merge-base
+//   removed    a real version (not 0.0.0) at the merge-base is gone, reset
+//              to 0.0.0 or broken at the head. Removing or resetting a
 //              version (a version moving into code, say) needs an owner
 //              bypass of the check.
-//   downgrade  the base and head are real versions and the head is lower
-//   check      the head is valid, not the 0.0.0 placeholder, and differs
-//              from the base, new or changed: the policy decides
-//              (next-version.mjs check)
-//   (skip)     anything else: unchanged, or absent / 0.0.0 on both sides
+//   downgrade  the head is lower than the real merge-base version
+//   behind     the PR changes the version, but the base tip already holds
+//              a higher one: rebase first, so files and tags agree on merge
+//   check      the head is a real version, different from the merge-base
+//              (new or changed): the policy decides (next-version.mjs check)
+//   (skip)     anything else: unchanged by the PR, or absent / 0.0.0
 //
-// 0.0.0 is a placeholder in every file (a private package.json, say) and is
-// never checked as a release.
+// It also reports `written`: the highest real version at the merge-base
+// across all entries, which is the current version of a repo that has no
+// version tags yet.
 //
 // Usage (each prints a header line first, so a caller can tell a real
 // answer from an empty one)
 //   read-version.mjs files
 //     "# read-version files v1", then VERSION_FILES, one per line.
-//   read-version.mjs assess <base-dir> <head-dir>
-//     "# read-version assess v1", then
-//     "<entry>\t<invalid|removed|downgrade|check>\t<base>\t<head>" for every
-//     entry that is not skipped. A value prints as "-" when absent and
-//     "!invalid" when invalid, so PR text never reaches the log.
+//   read-version.mjs assess <merge-base-dir> <head-dir> <base-tip-dir>
+//     "# read-version assess v2", "written\t<version or ->", then
+//     "<entry>\t<action>\t<merge-base>\t<head>\t<tip>" for every entry that
+//     is not skipped. A value prints as "-" when absent and "!invalid" when
+//     invalid, so PR text never reaches the log.
 
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
-  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 
-import { compare, isStrictVersion } from "./next-version.mjs";
+import { compare, isMain, isStrictVersion } from "./next-version.mjs";
 
 export const VERSION_FILES = [
   "package.json",
@@ -78,22 +79,25 @@ export const VERSION_FILES = [
   "VERSION",
 ];
 
-/** The TOML tables read from each TOML file, in order. */
-export const TOML_TABLES = {
+/** The entries each file read by python3 holds. */
+const STRUCTURED = {
+  "package.json": [""],
   "Cargo.toml": ["package", "workspace.package"],
   "pyproject.toml": ["project", "tool.poetry"],
 };
 
+const entryName = (file, table) => (table ? `${file}#${table}` : file);
+
 /** Every entry, in the order they are judged and reported. */
 export const ENTRIES = [
-  "package.json",
-  ...TOML_TABLES["Cargo.toml"].map((t) => `Cargo.toml#${t}`),
-  ...TOML_TABLES["pyproject.toml"].map((t) => `pyproject.toml#${t}`),
+  ...Object.entries(STRUCTURED).flatMap(([file, tables]) =>
+    tables.map((t) => entryName(file, t)),
+  ),
   "VERSION",
 ];
 
 export const FILES_HEADER = "# read-version files v1";
-export const ASSESS_HEADER = "# read-version assess v1";
+export const ASSESS_HEADER = "# read-version assess v2";
 
 /** A value that cannot be read as a version; `raw` is what it holds. */
 export class Invalid {
@@ -102,92 +106,58 @@ export class Invalid {
   }
 }
 
-function rootKeyCounts(src) {
-  const counts = {};
-  let depth = 0;
-  let expectKey = false;
-  for (let i = 0; i < src.length; i++) {
-    const ch = src[i];
-    if (ch === '"') {
-      let j = i + 1;
-      while (src[j] !== '"') j += src[j] === "\\" ? 2 : 1;
-      const token = src.slice(i, j + 1);
-      if (depth === 1 && expectKey) {
-        const key = JSON.parse(token);
-        counts[key] = (counts[key] ?? 0) + 1;
-        expectKey = false;
-      }
-      i = j;
-    } else if (ch === "{" || ch === "[") {
-      depth++;
-      expectKey = depth === 1 && ch === "{";
-    } else if (ch === "}" || ch === "]") {
-      depth--;
-    } else if (ch === "," && depth === 1) {
-      expectKey = true;
-    }
-  }
-  return counts;
-}
-
-/** The root "version" of a package.json. */
-export function fromPackageJson(text) {
-  const src = String(text).replace(/^\uFEFF/, "");
-  let json;
-  try {
-    json = JSON.parse(src);
-  } catch {
-    return new Invalid(src);
-  }
-  if (!json || typeof json !== "object" || Array.isArray(json)) {
-    return new Invalid(src);
-  }
-  if (!Object.hasOwn(json, "version")) return null;
-  if ((rootKeyCounts(src).version ?? 0) > 1) return new Invalid(src);
-  if (typeof json.version !== "string") {
-    return new Invalid(JSON.stringify(json.version));
-  }
-  return json.version;
-}
-
 /**
- * A VERSION file: the version, then at most one line ending ("\n" or
- * "\r\n"). Nothing is trimmed; any other content makes the value invalid.
+ * A VERSION file is exactly the version, then nothing, "\n" or "\r\n".
+ * Returns the value to classify; anything else (a lone "\r", a second
+ * line, spaces) stays in it and makes it invalid.
  */
 export function fromVersionFile(text) {
-  let v = String(text);
-  if (v.endsWith("\n")) v = v.slice(0, -1);
-  if (v.endsWith("\r")) v = v.slice(0, -1);
+  const v = String(text);
+  if (v.endsWith("\r\n")) return v.slice(0, -2);
+  if (v.endsWith("\n")) return v.slice(0, -1);
   return v;
 }
 
-// Runs in python3 with the TOML file paths as arguments. For each path it
-// prints, as JSON, either {"error": ...} (tomllib refused the file) or the
-// version of each table named in TABLES. Exit 3: no tomllib.
-const TOML_SCRIPT = String.raw`
-import json, sys
+// Runs in an isolated python3 (-I) with "<file> <path>" argument pairs. For
+// each it prints, as JSON, the value of each entry of the file:
+// {"kind": "absent"} | {"kind": "string", "value": ...} |
+// {"kind": "invalid", "raw": ...}. Exit 3: no tomllib.
+const PY = String.raw`
+import hashlib, json, sys
 try:
     import tomllib
 except ImportError:
     sys.stderr.write("python3 has no tomllib (needs Python 3.11 or later)\n")
     sys.exit(3)
-TABLES = json.loads(sys.argv[1])
-def entry(data, dotted, pyproject_project):
-    node = data
-    for part in dotted.split("."):
+STRUCTURED = json.loads(sys.argv[1])
+class Duplicate(ValueError):
+    pass
+def no_duplicates(pairs):
+    out = {}
+    for k, v in pairs:
+        if k in out:
+            raise Duplicate("duplicate key " + repr(k))
+        out[k] = v
+    return out
+def no_constant(name):
+    raise ValueError("not JSON: " + name)
+def unreadable(data):
+    return {"kind": "invalid", "raw": "unreadable " + hashlib.sha256(data).hexdigest()}
+def version_in(node, dotted, project):
+    for part in [p for p in dotted.split(".") if p]:
         if not isinstance(node, dict):
             return {"kind": "invalid", "raw": dotted + " is not a table"}
         if part not in node:
             return {"kind": "absent"}
         node = node[part]
     if not isinstance(node, dict):
-        return {"kind": "invalid", "raw": dotted + " is not a table"}
-    dynamic = node.get("dynamic") if pyproject_project else None
-    dyn = isinstance(dynamic, list) and "version" in dynamic
+        return {"kind": "invalid", "raw": (dotted or "the root") + " is not an object"}
+    dynamic = node.get("dynamic") if project else None
+    is_dynamic = isinstance(dynamic, list) and "version" in dynamic
     if "version" not in node:
         return {"kind": "absent"}
     v = node["version"]
-    if dyn:
+    if is_dynamic:
         return {"kind": "invalid", "raw": "version is both set and dynamic"}
     if isinstance(v, str):
         return {"kind": "string", "value": v}
@@ -195,65 +165,92 @@ def entry(data, dotted, pyproject_project):
         return {"kind": "absent"}
     return {"kind": "invalid", "raw": repr(v)}
 out = []
-for kind, path in zip(sys.argv[2::2], sys.argv[3::2]):
+args = sys.argv[2:]
+for kind, path in zip(args[0::2], args[1::2]):
+    tables = STRUCTURED[kind]
+    with open(path, "rb") as f:
+        data = f.read()
     try:
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
-    except tomllib.TOMLDecodeError as e:
-        out.append({"error": str(e)})
+        text = data.decode("utf-8")
+        if kind == "package.json":
+            if text.startswith("﻿"):
+                text = text[1:]
+            doc = json.loads(text, object_pairs_hook=no_duplicates, parse_constant=no_constant)
+        else:
+            doc = tomllib.loads(text)
+    except (UnicodeDecodeError, ValueError, tomllib.TOMLDecodeError):
+        out.append({t: unreadable(data) for t in tables})
         continue
-    out.append({t: entry(data, t, kind == "pyproject.toml" and t == "project")
-                for t in TABLES[kind]})
+    out.append({t: version_in(doc, t, kind == "pyproject.toml" and t == "project") for t in tables})
 print(json.dumps(out))
 `;
 
+/** process.env without PYTHON* variables. */
+function pythonEnv() {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(([k]) => !k.startsWith("PYTHON")),
+  );
+}
+
 /**
- * Read TOML texts with tomllib, all in one python3 run.
- * @param {{file: "Cargo.toml"|"pyproject.toml", text: string|Buffer}[]} items
+ * Read package.json, Cargo.toml and pyproject.toml texts, all in one
+ * isolated python3 run.
+ * @param {{file: string, data: string|Buffer}[]} items
  * @returns {Record<string, string|Invalid|null>[]}  per item, the value of
- *   each of its TOML_TABLES (null = absent)
+ *   each of its entries (null = absent)
  */
-export function readTomlTexts(items) {
+export function readStructured(items) {
   if (items.length === 0) return [];
-  const dir = mkdtempSync(join(tmpdir(), "read-version-toml-"));
+  const root = mkdtempSync(join(tmpdir(), "read-version-"));
   try {
+    const files = join(root, "files");
+    const cwd = join(root, "cwd"); // empty: nothing to import from
+    mkdirSync(files);
+    mkdirSync(cwd);
     const args = [];
     items.forEach((it, i) => {
-      const path = join(dir, `${i}.toml`);
-      writeFileSync(path, it.text);
+      const path = join(files, String(i));
+      writeFileSync(path, it.data);
       args.push(it.file, path);
     });
     const r = spawnSync(
       "python3",
-      ["-c", TOML_SCRIPT, JSON.stringify(TOML_TABLES), ...args],
-      { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+      ["-I", "-c", PY, JSON.stringify(STRUCTURED), ...args],
+      {
+        cwd,
+        env: pythonEnv(),
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      },
     );
-    if (r.error)
-      throw new Error(`Cannot run python3 to read TOML: ${r.error.message}`);
+    if (r.error) {
+      throw new Error(
+        `Cannot run python3 to read the files: ${r.error.message}`,
+      );
+    }
     if (r.status !== 0) {
-      throw new Error(`python3 could not read TOML: ${r.stderr.trim()}`);
+      throw new Error(`python3 could not read the files: ${r.stderr.trim()}`);
     }
     const out = JSON.parse(r.stdout);
     if (!Array.isArray(out) || out.length !== items.length) {
-      throw new Error("python3 gave no answer for every TOML file.");
+      throw new Error("python3 gave no answer for every file.");
     }
     return out.map((res, i) => {
       const values = {};
-      for (const t of TOML_TABLES[items[i].file]) {
-        if (res.error !== undefined) {
-          // The whole text, so any change to a broken file is a change.
-          values[t] = new Invalid(`toml error: ${items[i].text}`);
-          continue;
-        }
+      for (const t of STRUCTURED[items[i].file]) {
         const e = res[t];
-        if (e.kind === "absent") values[t] = null;
-        else if (e.kind === "string") values[t] = e.value;
-        else values[t] = new Invalid(e.raw);
+        const name = entryName(items[i].file, t);
+        if (!e || typeof e !== "object")
+          throw new Error(`No answer for ${name}.`);
+        if (e.kind === "absent") values[name] = null;
+        else if (e.kind === "string") values[name] = e.value;
+        else if (e.kind === "invalid") values[name] = new Invalid(e.raw);
+        else throw new Error(`Unknown answer for ${name}.`);
       }
       return values;
     });
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
   }
 }
 
@@ -269,32 +266,26 @@ export function classify(value) {
 }
 
 /**
- * Every ENTRIES entry, classified, for each file set in `sets` (one python3
- * run for all of them). A missing text is a missing file: its entries are
- * absent.
- * @param {Record<string, string|null|undefined>[]} sets
+ * Every entry, classified, for each file set in `sets` (one python3 run for
+ * all of them). A missing text is a missing file: its entries are absent.
+ * @param {Record<string, string|Buffer|null|undefined>[]} sets
  */
 export function classifySets(sets) {
-  const toml = [];
+  const items = [];
   sets.forEach((files, s) => {
-    for (const file of Object.keys(TOML_TABLES)) {
-      const text = files?.[file];
-      if (text != null) toml.push({ s, file, text });
+    for (const file of Object.keys(STRUCTURED)) {
+      const data = files?.[file];
+      if (data != null) items.push({ s, file, data });
     }
   });
-  const read = readTomlTexts(toml);
+  const read = readStructured(items);
   return sets.map((files, s) => {
-    const values = {
-      "package.json":
-        files?.["package.json"] == null
-          ? null
-          : fromPackageJson(files["package.json"]),
-      VERSION: files?.VERSION == null ? null : fromVersionFile(files.VERSION),
-    };
-    toml.forEach((it, i) => {
-      if (it.s !== s) return;
-      for (const [t, v] of Object.entries(read[i]))
-        values[`${it.file}#${t}`] = v;
+    const values = {};
+    if (files?.VERSION != null) {
+      values.VERSION = fromVersionFile(files.VERSION);
+    }
+    items.forEach((it, i) => {
+      if (it.s === s) Object.assign(values, read[i]);
     });
     const out = {};
     for (const e of ENTRIES) out[e] = classify(values[e] ?? null);
@@ -319,35 +310,51 @@ const same = (a, b) =>
   (a.kind === "absent" ||
     (a.kind === "valid" ? a.version === b.version : a.raw === b.raw));
 
-/** What to do with each entry, from both sides already classified. */
-export function judge(base, head) {
+const ABSENT = { kind: "absent" };
+
+/**
+ * What to do with each entry, from the merge-base, head and base tip
+ * already classified. Only entries that are not skipped are returned.
+ */
+export function judge(base, head, tip = {}) {
   const out = [];
   for (const entry of ENTRIES) {
-    const b = base[entry];
-    const h = head[entry];
+    const b = base[entry] ?? ABSENT;
+    const h = head[entry] ?? ABSENT;
+    const t = tip[entry] ?? ABSENT;
     let action = null;
     if (same(b, h)) action = null;
     else if (h.kind === "invalid") action = "invalid";
     else if (isReal(b) && !isReal(h)) action = "removed";
     else if (!isReal(h)) action = null;
-    else if (isReal(b) && compare(h.version, b.version) < 0)
+    else if (isReal(b) && compare(h.version, b.version) < 0) {
       action = "downgrade";
-    else action = "check";
-    if (action) out.push({ entry, action, base: b, head: h });
+    } else if (isReal(t) && compare(t.version, h.version) > 0) {
+      action = "behind";
+    } else action = "check";
+    if (action) out.push({ entry, action, base: b, head: h, tip: t });
   }
   return out;
 }
 
+/** The highest real version written in any entry, or null. */
+export function written(classified) {
+  let best = null;
+  for (const c of Object.values(classified)) {
+    if (isReal(c) && (best === null || compare(c.version, best) > 0)) {
+      best = c.version;
+    }
+  }
+  return best;
+}
+
 /**
- * What to do with each entry. Only entries that are not skipped are
- * returned.
- * @returns {{entry: string,
- *   action: "invalid"|"removed"|"downgrade"|"check",
- *   base: object, head: object}[]}
+ * Judge a PR: its merge-base, head and base tip file sets.
+ * @returns {{written: string|null, actions: object[]}}
  */
-export function assess(baseFiles, headFiles) {
-  const [base, head] = classifySets([baseFiles, headFiles]);
-  return judge(base, head);
+export function assess(baseFiles, headFiles, tipFiles = baseFiles) {
+  const [base, head, tip] = classifySets([baseFiles, headFiles, tipFiles]);
+  return { written: written(base), actions: judge(base, head, tip) };
 }
 
 /**
@@ -363,43 +370,31 @@ function readDir(dir) {
   const files = {};
   for (const name of VERSION_FILES) {
     const path = join(dir, name);
-    // TOML stays bytes, so tomllib judges the file exactly as written.
+    // Bytes, so python3 judges the file exactly as written.
     if (existsSync(path)) {
       files[name] =
-        name in TOML_TABLES ? readFileSync(path) : readFileSync(path, "utf8");
+        name === "VERSION" ? readFileSync(path, "utf8") : readFileSync(path);
     }
   }
   return files;
 }
 
 function main(argv) {
-  const [cmd, baseDir, headDir] = argv;
+  const [cmd, baseDir, headDir, tipDir] = argv;
   if (cmd === "files") return [FILES_HEADER, ...VERSION_FILES].join("\n");
-  if (cmd === "assess" && baseDir && headDir) {
-    const lines = assess(readDir(baseDir), readDir(headDir)).map(
-      (a) => `${a.entry}\t${a.action}\t${show(a.base)}\t${show(a.head)}`,
+  if (cmd === "assess" && baseDir && headDir && tipDir) {
+    const r = assess(readDir(baseDir), readDir(headDir), readDir(tipDir));
+    const lines = r.actions.map((a) =>
+      [a.entry, a.action, show(a.base), show(a.head), show(a.tip)].join("\t"),
     );
-    return [ASSESS_HEADER, ...lines].join("\n");
+    return [ASSESS_HEADER, `written\t${r.written ?? "-"}`, ...lines].join("\n");
   }
   throw new Error(
-    "Usage: read-version.mjs files | assess <base-dir> <head-dir>",
+    "Usage: read-version.mjs files | assess <merge-base-dir> <head-dir> <base-tip-dir>",
   );
 }
 
-// Run as a script (not imported). realpath, because import.meta.url is
-// resolved through symlinks (macOS's /var -> /private/var) and argv is not.
-// When it cannot tell, it runs: a silent no-op would look like "nothing".
-const isMain = () => {
-  try {
-    return (
-      import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
-    );
-  } catch {
-    return true;
-  }
-};
-
-if (process.argv[1] && isMain()) {
+if (isMain(import.meta.url)) {
   try {
     console.log(main(process.argv.slice(2)));
   } catch (err) {

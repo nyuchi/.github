@@ -22,55 +22,68 @@ import {
   assess,
   classify,
   classifyFiles,
-  fromPackageJson,
   fromVersionFile,
   isPlaceholder,
+  judge,
+  written,
 } from "./read-version.mjs";
 
 const CLI = fileURLToPath(new URL("./read-version.mjs", import.meta.url));
-const invalid = (v) => assert.ok(v instanceof Invalid, `${v} is Invalid`);
+const pj = (text) => classifyFiles({ "package.json": text })["package.json"];
 const cargo = (text) => classifyFiles({ "Cargo.toml": text });
 const py = (text) => classifyFiles({ "pyproject.toml": text });
 const valid = (version) => ({ kind: "valid", version });
 const ABSENT = { kind: "absent" };
 const kind = (c) => c.kind;
 
-test("package.json: the root version only", () => {
-  assert.equal(fromPackageJson('{"name":"a","version":"1.2.3"}'), "1.2.3");
-  assert.equal(
-    fromPackageJson(
+test("package.json: the root version only, read by python's json", () => {
+  assert.deepEqual(pj('{"name":"a","version":"1.2.3"}'), valid("1.2.3"));
+  assert.deepEqual(
+    pj(
       JSON.stringify({
         name: "a",
         dependencies: { b: "2.0.0" },
         workspaces: { version: "9.9.9" },
       }),
     ),
-    null,
+    ABSENT,
   );
-  // Nothing is trimmed: the value is exactly what is written.
-  assert.equal(fromPackageJson('{"version": "  0.4.0 "}'), "  0.4.0 ");
-  assert.equal(fromPackageJson('{"private":true}'), null);
-  assert.equal(fromPackageJson('﻿{"version":"1.0.1"}'), "1.0.1");
-  // Fails closed: anything that cannot be read as a version is Invalid.
-  assert.equal(fromPackageJson('{"version": ""}'), "");
-  invalid(fromPackageJson('{"version": 28}'));
-  invalid(fromPackageJson('{"version": null}'));
-  invalid(fromPackageJson("[]"));
-  invalid(fromPackageJson("null"));
-  invalid(fromPackageJson("{ not json"));
-  invalid(fromPackageJson(""));
+  assert.deepEqual(pj('{"private":true}'), ABSENT);
+  assert.deepEqual(pj('\uFEFF{"version":"1.0.1"}'), valid("1.0.1"));
+  // Nothing is trimmed, and anything that is not a version is invalid.
+  for (const bad of [
+    '{"version": "  0.4.0 "}',
+    '{"version": ""}',
+    '{"version": 28}',
+    '{"version": null}',
+    '{"version": NaN}',
+    "[]",
+    "null",
+    "{ not json",
+    "",
+  ]) {
+    assert.equal(kind(pj(bad)), "invalid", bad);
+  }
+  // Bad UTF-8 is invalid, not a crash.
+  assert.equal(kind(pj(Buffer.from([0x7b, 0xff, 0x7d]))), "invalid");
 });
 
-test("package.json: a duplicate root version is invalid", () => {
-  invalid(fromPackageJson('{"version":"1.0.0","version":"2.0.0"}'));
-  invalid(fromPackageJson('{"\\u0076ersion":"1.0.0","version":"1.0.0"}'));
-  // Nested or quoted "version" text is not a root key.
+test("package.json: a duplicate key at any level is invalid", () => {
+  assert.equal(kind(pj('{"version":"1.0.0","version":"2.0.0"}')), "invalid");
   assert.equal(
-    fromPackageJson(
+    kind(pj('{"\\u0076ersion":"1.0.0","version":"1.0.0"}')),
+    "invalid",
+  );
+  assert.equal(kind(pj('{"version":"1.0.0","a":{"b":1,"b":2}}')), "invalid");
+  // Nested or quoted "version" text is not a root key.
+  assert.deepEqual(
+    pj(
       '{"a":{"version":"9.9.9"},"b":"\\"version\\"","c":["version"],"version":"1.0.0"}',
     ),
-    "1.0.0",
+    valid("1.0.0"),
   );
+  // A changed broken file is a change: each is fingerprinted.
+  assert.notDeepEqual(pj("{ broken"), pj("{ broken too"));
 });
 
 test("VERSION: the version, then at most one line ending", () => {
@@ -80,7 +93,19 @@ test("VERSION: the version, then at most one line ending", () => {
   assert.equal(fromVersionFile("  1.2.3  \r\n"), "  1.2.3  ");
   assert.equal(fromVersionFile("v0.4.0\n"), "v0.4.0");
   assert.equal(fromVersionFile("1.2.3\n\n"), "1.2.3\n");
-  for (const t of ["v0.4.0\n", "1.2.3\n\n", "\n1.0.0\n", "", " 1.2.3\n"]) {
+  // Exactly X.Y.Z, X.Y.Z\n or X.Y.Z\r\n: a lone \r stays and is invalid.
+  assert.equal(fromVersionFile("1.2.3\r"), "1.2.3\r");
+  assert.equal(fromVersionFile("1.2.3\n\r\n"), "1.2.3\n");
+  for (const t of [
+    "v0.4.0\n",
+    "1.2.3\n\n",
+    "\n1.0.0\n",
+    "",
+    " 1.2.3\n",
+    "1.2.3\r",
+    "1.2.3\r\r\n",
+    "1.2.3\n\r\n",
+  ]) {
     assert.equal(classify(fromVersionFile(t)).kind, "invalid", t);
   }
 });
@@ -237,7 +262,8 @@ test("classify: absent, valid or invalid", () => {
 test("assess: the rules, entry by entry", () => {
   const pkg = (v) => JSON.stringify({ private: true, version: v });
   const ct = (v) => `[package]\nversion = "${v}"\n`;
-  const actions = (b, h) => assess(b, h).map((a) => `${a.entry}:${a.action}`);
+  const actions = (b, h, t = b) =>
+    assess(b, h, t).actions.map((a) => `${a.entry}:${a.action}`);
 
   // Nothing changes: nothing to do, even for an odd value.
   assert.deepEqual(actions({ VERSION: "banana" }, { VERSION: "banana" }), []);
@@ -315,32 +341,83 @@ test("assess: the rules, entry by entry", () => {
   );
   // A placeholder going away is not a removal.
   assert.deepEqual(actions({ "package.json": pkg("0.0.0") }, {}), []);
-  // A lower version than the base is a downgrade.
+  // A lower version than the merge-base is a downgrade.
   assert.deepEqual(actions({ VERSION: "0.27.4" }, { VERSION: "0.27.3" }), [
     "VERSION:downgrade",
   ]);
+  // Judged against the merge-base: a bump that landed on the base tip after
+  // the PR branched is not the PR's downgrade or removal.
+  assert.deepEqual(
+    actions(
+      { VERSION: "0.27.3" },
+      { VERSION: "0.27.3" },
+      { VERSION: "0.27.4" },
+    ),
+    [],
+  );
+  assert.deepEqual(
+    actions({ VERSION: "0.27.3" }, { VERSION: "0.27.3" }, {}),
+    [],
+  );
+  // But a PR that changes the version while the tip is higher must rebase.
+  assert.deepEqual(
+    actions(
+      { VERSION: "0.27.3" },
+      { VERSION: "0.27.4" },
+      { VERSION: "0.27.5" },
+    ),
+    ["VERSION:behind"],
+  );
+  assert.deepEqual(
+    actions(
+      { VERSION: "0.27.3" },
+      { VERSION: "0.27.4" },
+      { VERSION: "0.27.4" },
+    ),
+    ["VERSION:check"],
+  );
+});
+
+test("written: the highest real version at the merge-base", () => {
+  const c = (files) => classifyFiles(files);
+  assert.equal(written(c({})), null);
+  assert.equal(written(c({ VERSION: "0.0.0" })), null);
+  assert.equal(
+    written(
+      c({
+        VERSION: "0.3.0",
+        "Cargo.toml": '[package]\nversion = "0.4.0"\n',
+        "package.json": '{"version":"banana"}',
+      }),
+    ),
+    "0.4.0",
+  );
+  assert.equal(assess({ VERSION: "1.2.3" }, {}).written, "1.2.3");
+  assert.deepEqual(judge({}, {}), []);
 });
 
 test("the CLI prints a header, then its answer", () => {
   const root = mkdtempSync(join(tmpdir(), "read-version-"));
   const base = join(root, "base");
   const head = join(root, "head");
+  const tip = join(root, "tip");
   try {
-    mkdirSync(base);
-    mkdirSync(head);
+    for (const d of [base, head, tip]) mkdirSync(d);
     const run = (...a) =>
       execFileSync("node", [CLI, ...a], { encoding: "utf8" }).trimEnd();
+    const assessed = () => run("assess", base, head, tip);
     assert.equal(run("files"), [FILES_HEADER, ...VERSION_FILES].join("\n"));
-    assert.equal(run("assess", base, head), ASSESS_HEADER);
+    assert.equal(assessed(), `${ASSESS_HEADER}\nwritten\t-`);
     writeFileSync(join(head, "VERSION"), "0.2.0\n");
     assert.equal(
-      run("assess", base, head),
-      `${ASSESS_HEADER}\nVERSION\tcheck\t-\t0.2.0`,
+      assessed(),
+      `${ASSESS_HEADER}\nwritten\t-\nVERSION\tcheck\t-\t0.2.0\t-`,
     );
     writeFileSync(join(base, "VERSION"), "0.3.0\n");
+    writeFileSync(join(tip, "VERSION"), "0.3.1\n");
     assert.equal(
-      run("assess", base, head),
-      `${ASSESS_HEADER}\nVERSION\tdowngrade\t0.3.0\t0.2.0`,
+      assessed(),
+      `${ASSESS_HEADER}\nwritten\t0.3.0\nVERSION\tdowngrade\t0.3.0\t0.2.0\t0.3.1`,
     );
     // PR text that is not a version is never printed raw.
     writeFileSync(
@@ -348,12 +425,12 @@ test("the CLI prints a header, then its answer", () => {
       JSON.stringify({ version: "1.0.0\n::warning::x" }),
     );
     assert.equal(
-      run("assess", base, head),
-      `${ASSESS_HEADER}\npackage.json\tinvalid\t-\t!invalid\nVERSION\tdowngrade\t0.3.0\t0.2.0`,
+      assessed(),
+      `${ASSESS_HEADER}\nwritten\t0.3.0\npackage.json\tinvalid\t-\t!invalid\t-\nVERSION\tdowngrade\t0.3.0\t0.2.0\t0.3.1`,
     );
     assert.throws(() => execFileSync("node", [CLI], { stdio: "pipe" }));
     assert.throws(() =>
-      execFileSync("node", [CLI, "assess", base], { stdio: "pipe" }),
+      execFileSync("node", [CLI, "assess", base, head], { stdio: "pipe" }),
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -374,7 +451,7 @@ test("no python3 or no tomllib is a hard error, not absent", () => {
     const run = (path) =>
       spawnSync(
         process.execPath,
-        [CLI, "assess", join(root, "b"), join(root, "h")],
+        [CLI, "assess", join(root, "b"), join(root, "h"), join(root, "b")],
         {
           encoding: "utf8",
           env: { ...process.env, PATH: path },
@@ -393,6 +470,28 @@ test("no python3 or no tomllib is a hard error, not absent", () => {
     r = run(bin);
     assert.notEqual(r.status, 0);
     assert.match(r.stderr, /tomllib/);
+    // python3 runs isolated: PYTHON* variables do not reach it.
+    writeFileSync(
+      join(bin, "python3"),
+      '#!/bin/sh\nenv | grep -q "^PYTHON" && { echo "PYTHON leaked" >&2; exit 9; }\n' +
+        'case "$1" in -I) ;; *) echo "not isolated" >&2; exit 9;; esac\n' +
+        '[ -z "$(ls -A .)" ] || { echo "cwd not empty" >&2; exit 9; }\nexit 4\n',
+    );
+    r = spawnSync(
+      process.execPath,
+      [CLI, "assess", join(root, "b"), join(root, "h"), join(root, "b")],
+      {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: bin,
+          PYTHONPATH: "/x",
+          PYTHONSTARTUP: "/y",
+        },
+      },
+    );
+    assert.notEqual(r.status, 0);
+    assert.doesNotMatch(r.stderr, /PYTHON leaked|not isolated|cwd not empty/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

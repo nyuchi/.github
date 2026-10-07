@@ -47,7 +47,9 @@ test("(a) isStrictVersion agrees with every fixture", () => {
 // Where a version can be written: [entry, file, text with V for the input].
 const SHAPES = [
   ["package.json", "package.json", null],
-  ["VERSION", "VERSION", null],
+  // VERSION: the input, then "\n" or "\r\n" (the endings it accepts).
+  ["VERSION", "VERSION", "V\n"],
+  ["VERSION", "VERSION", "V\r\n"],
   [
     "Cargo.toml#package",
     "Cargo.toml",
@@ -112,8 +114,6 @@ test("(b) every version file and TOML shape agrees with every fixture", () => {
       let text;
       if (file === "package.json") {
         text = JSON.stringify({ name: "x", version: f.input });
-      } else if (file === "VERSION") {
-        text = `${f.input}\n`; // the usual one line ending
       } else {
         text = shape.replace("V", () => f.input);
       }
@@ -129,6 +129,21 @@ test("(b) every version file and TOML shape agrees with every fixture", () => {
     assert.equal(c[entry].kind, f.valid ? "valid" : "invalid", what);
     if (f.valid) assert.equal(c[entry].version, f.input, what);
   });
+});
+
+test("(b) VERSION: a lone trailing \\r is never a version", () => {
+  const sets = FIXTURES.map((f) => ({ VERSION: `${f.input}\r` }));
+  classifySets(sets).forEach((c, i) => {
+    assert.equal(c.VERSION.kind, "invalid", label(FIXTURES[i]));
+  });
+  const [ok, crlf, cr] = classifySets([
+    { VERSION: "1.2.3" },
+    { VERSION: "1.2.3\r\n" },
+    { VERSION: "1.2.3\r" },
+  ]);
+  assert.equal(ok.VERSION.kind, "valid");
+  assert.equal(crlf.VERSION.kind, "valid");
+  assert.equal(cr.VERSION.kind, "invalid");
 });
 
 test("(c) the CLI agrees with every fixture", () => {

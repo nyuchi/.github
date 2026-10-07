@@ -36,14 +36,21 @@ extract "$workflow" '.jobs.check.steps[] | select(.id == "event") | .run' \
   '[s for s in d["jobs"]["check"]["steps"] if s.get("id") == "event"][0]["run"]' > "$work/event.sh"
 test -s "$work/run.sh" && test -s "$work/next.sh" && test -s "$work/event.sh"
 
+# Commits: the base tip, the PR head, and a separate merge-base when the
+# base moved on after the PR branched.
+TIP=1111111111111111111111111111111111111111
+HEAD=2222222222222222222222222222222222222222
+MB=3333333333333333333333333333333333333333
+
 # A fake gh that behaves like the real one for the calls the scripts make:
-#   repos/o/r/commits/<sha>              {"sha": ...} when $FIX/<sha>/ exists, else 404
+#   repos/o/r/compare/<tip>...<head>     {"merge_base_commit": {"sha": $FIX/merge-base}}
 #   repos/o/r/contents/<path>?ref=<sha>  the raw file $FIX/<sha>/<path>, else 404
 #   repos/o/r/git/matching-refs/tags[/p] $FIX/tags.json
 #   repos/o/r/issues/<n>/labels          $FIX/labels.json
 # --jq is applied with jq; --paginate is accepted (every answer is one page).
 # Failure modes, by marker file in $FIX: fail-labels (502), fail-commit (404
-# for the head commit), fail-contents (500), fail-tags (500).
+# from compare), bad-merge-base (compare answers no SHA), fail-contents (500),
+# fail-tags (500).
 mkdir -p "$work/bin"
 cat > "$work/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
@@ -62,11 +69,13 @@ done
 fail() { echo "gh: $1" >&2; exit 1; }
 answer() { if [ -n "$jq_expr" ]; then jq -r "$jq_expr"; else cat; fi; }
 case "$url" in
-  repos/o/r/commits/*)
-    sha="${url##*/}"
-    if [ "$sha" = H ] && [ -e "$FIX/fail-commit" ]; then fail "Not Found (HTTP 404)"; fi
-    [ -d "$FIX/$sha" ] || fail "Not Found (HTTP 404)"
-    printf '{"sha":"%s"}' "$sha" | answer ;;
+  repos/o/r/compare/*)
+    [ -e "$FIX/fail-commit" ] && fail "Not Found (HTTP 404)"
+    if [ -e "$FIX/bad-merge-base" ]; then
+      printf '{"merge_base_commit":null}' | answer
+    else
+      printf '{"merge_base_commit":{"sha":"%s"}}' "$(cat "$FIX/merge-base")" | answer
+    fi ;;
   repos/o/r/contents/*)
     [ -e "$FIX/fail-contents" ] && fail "Server Error (HTTP 500)"
     path="${url#*/contents/}"
@@ -91,8 +100,9 @@ ln -s "$lib" "$work/lib-link"
 
 # Broken scripts, to prove every answer is checked before it is used:
 #   lib-empty  read-version prints nothing at all
-#   lib-stub   next-version answers `count` with STUB_COUNT, or `check`
-#              with an empty reason when STUB_CHECK_EMPTY is set
+#   lib-stub   next-version answers `count` with STUB_COUNT, `check` with an
+#              empty reason when STUB_CHECK_EMPTY is set, or `strict` with
+#              STUB_STRICT
 mkdir -p "$work/lib-empty" "$work/lib-stub"
 cp "$lib/next-version.mjs" "$work/lib-empty/next-version.mjs"
 printf '#!/usr/bin/env node\n' > "$work/lib-empty/read-version.mjs"
@@ -110,6 +120,8 @@ if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(self)) {
     console.log(process.env.STUB_COUNT);
   } else if (cmd === "check" && process.env.STUB_CHECK_EMPTY) {
     console.log("");
+  } else if (cmd === "strict" && process.env.STUB_STRICT !== undefined) {
+    console.log(process.env.STUB_STRICT);
   } else {
     const real = self.replace(/next-version\.mjs$/, "next-version-real.mjs");
     const r = spawnSync(process.execPath, [real, ...process.argv.slice(2)], {
@@ -139,20 +151,33 @@ report() {
 }
 
 # fixture <dir> <tags> <labels> [spec]...: writes files, tags and labels.
-# spec: B:<file>=<text> | H:<file>=<text> | fail-labels | fail-commit |
-#       fail-contents | fail-tags | lib=<link|empty|stub> | env:NAME=value
+# spec: B:<file>=<text>  at the merge-base (also the tip, unless T: is used)
+#       T:<file>=<text>  at the base tip, which then moved on from the
+#                        merge-base (a T:- spec alone: an empty tip)
+#       H:<file>=<text>  at the head
+#       fail-labels | fail-commit | bad-merge-base | fail-contents |
+#       fail-tags | lib=<link|empty|stub> | env:NAME=value
 fixture() {
-  local fix="$1" tags="$2" labels="$3" spec side rest
+  local fix="$1" tags="$2" labels="$3" spec side rest moved=false base_dir
   shift 3
-  mkdir -p "$fix/B" "$fix/H"
+  for spec in "$@"; do [[ "$spec" == T:* ]] && moved=true; done
+  mkdir -p "$fix/$TIP" "$fix/$HEAD" "$fix/$MB"
+  if [ "$moved" = true ]; then base_dir="$MB"; else base_dir="$TIP"; fi
+  echo "$base_dir" > "$fix/merge-base"
   : > "$fix/env"
   for spec in "$@"; do
     case "$spec" in
-      fail-*) touch "$fix/$spec"; continue ;;
+      fail-* | bad-merge-base) touch "$fix/$spec"; continue ;;
       lib=*) echo "${spec#lib=}" > "$fix/lib"; continue ;;
       env:*) echo "${spec#env:}" >> "$fix/env"; continue ;;
+      T:-) continue ;;
     esac
     side="${spec%%:*}" rest="${spec#*:}"
+    case "$side" in
+      B) side="$base_dir" ;;
+      T) side="$TIP" ;;
+      H) side="$HEAD" ;;
+    esac
     printf '%s' "${rest#*=}" > "$fix/$side/${rest%%=*}"
   done
   # shellcheck disable=SC2086 # split the lists into words on purpose
@@ -172,15 +197,18 @@ case_() {
   if [ -s "$fix/lib" ]; then use_lib="$work/lib-$(cat "$fix/lib")"; fi
   local -a extra=()
   while IFS= read -r line; do [ -n "$line" ] && extra+=("$line"); done < "$fix/env"
-  out="$(env ${extra[@]+"${extra[@]}"} PATH="$work/bin:$PATH" FIX="$fix" RUNNER_TEMP="$rt" \
+  # env: specs come last, so they can override the defaults.
+  out="$(env PATH="$work/bin:$PATH" FIX="$fix" RUNNER_TEMP="$rt" \
     GITHUB_OUTPUT="$rt/out" GITHUB_STEP_SUMMARY="$rt/summary" GITHUB_ACTIONS=true \
-    BASE_REF="$base_ref" BASE_SHA=B HEAD_SHA=H DEFAULT_BRANCH=main PR_NUMBER=7 \
-    REPO=o/r PREFIX=v GH_TOKEN=fake LIB="$use_lib" bash -e "$work/run.sh" 2>&1)" || rc=$?
+    BASE_REF="$base_ref" BASE_SHA="$TIP" HEAD_SHA="$HEAD" DEFAULT_BRANCH=main PR_NUMBER=7 \
+    REPO=o/r PREFIX=v GH_TOKEN=fake LIB="$use_lib" ${extra[@]+"${extra[@]}"} \
+    bash -e "$work/run.sh" 2>&1)" || rc=$?
   result="$(sed -n 's/^result=//p' "$rt/out" | tail -1)"
   report "$label" "$want_rc" "$want_result" "$want_text" "$rc" "${result:--}" "$out"
 }
 
-# next_ <label> <want exit> <want version|-> <want text> <channel> <current> <proposed> <tags>
+# next_ <label> <want exit> <want version|-> <want text> <channel> <current>
+#       <proposed> <tags> [current-from-files]
 next_() {
   local label="$1" want_rc="$2" want_version="$3" want_text="$4"
   n=$((n + 1))
@@ -189,18 +217,32 @@ next_() {
   mkdir -p "$rt"
   : > "$rt/out"
   out="$(PATH="$work/bin:$PATH" FIX="$fix" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
-    CHANNEL="$5" BUMP="" MANUAL=false CURRENT="$6" PROPOSED="$7" PREFIX=v REPO=o/r \
+    CHANNEL="$5" BUMP="" MANUAL=false CURRENT="$6" PROPOSED="$7" FROM_FILES="${9:-}" PREFIX=v REPO=o/r \
     GH_TOKEN=fake SCRIPT="$lib/next-version.mjs" bash -e "$work/next.sh" 2>&1)" || rc=$?
   version="$(sed -n 's/^version=//p' "$rt/out" | tail -1)"
   report "next-version: $label" "$want_rc" "$want_version" "$want_text" "$rc" "${version:--}" "$out"
 }
 
-# event_ <label> <want exit> <want text> <event>
+# event_ <label> <want exit> <want pr-number|-> <want text> <event> [NAME=value]...
+# The pull_request / merge_group values default to a well-formed event.
 event_() {
+  local label="$1" want_rc="$2" want_pr="$3" want_text="$4" event="$5"
+  shift 5
   n=$((n + 1))
-  local out rc=0
-  out="$(EVENT="$4" bash -e "$work/event.sh" 2>&1)" || rc=$?
-  report "workflow: $1" "$2" - "$3" "$rc" - "$out"
+  local rt="$work/rt$n" out rc=0 pr
+  mkdir -p "$rt"
+  : > "$rt/out"
+  out="$(env PR_BASE_REF=main PR_BASE_SHA="$TIP" PR_HEAD_SHA="$HEAD" PR_NUMBER=7 \
+    MG_BASE_REF=refs/heads/main MG_BASE_SHA="$TIP" MG_HEAD_SHA="$HEAD" \
+    MG_HEAD_REF="refs/heads/gh-readonly-queue/main/pr-42-$HEAD" "$@" \
+    EVENT="$event" GITHUB_OUTPUT="$rt/out" bash -e "$work/event.sh" 2>&1)" || rc=$?
+  pr="$(sed -n 's/^pr-number=//p' "$rt/out" | tail -1)"
+  if [ "$rc" = 0 ] && ! { grep -qx "base-sha=$TIP" "$rt/out" \
+    && grep -qx "head-sha=$HEAD" "$rt/out" && grep -qx "base-ref=main" "$rt/out"; }; then
+    out="$out (outputs missing)"
+    rc=99
+  fi
+  report "workflow: $label" "$want_rc" "$want_pr" "$want_text" "$rc" "${pr:--}" "$out"
 }
 
 # The usual paths.
@@ -240,8 +282,10 @@ case_ "only a v0.0.0 tag: a jump to 5.0.0 is refused" 1 - "the policy allows 0.1
 # Fail closed: API failures are hard errors.
 case_ "a failed labels read is a hard error" 1 - "Could not read the PR's labels" \
   main "v0.27.3" "" fail-labels "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3)"
-case_ "a head commit that cannot be found is a hard error" 1 - "Could not find commit H" \
+case_ "a head commit that cannot be found is a hard error" 1 - "Could not compare the base and head" \
   staging "v0.27.3" "" fail-commit "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3)"
+case_ "a compare without a merge-base is a hard error" 1 - "gave no merge-base" \
+  staging "v0.27.3" "" bad-merge-base "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3)"
 case_ "a contents read that fails (500) is a hard error" 1 - "Could not read package.json" \
   staging "v0.27.3" "" fail-contents "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3)"
 case_ "a tags read that fails is a hard error" 1 - "Could not read the repo's tags" \
@@ -256,6 +300,12 @@ case_ "an empty count is a hard error" 1 - "count gave no number" \
   staging "v0.27.3" "" lib=stub env:STUB_COUNT= "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "a check that passes without a reason is a hard error" 1 - "passed without a reason" \
   staging "v0.27.3" "" lib=stub env:STUB_CHECK_EMPTY=1 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a strict that does not echo the version is a hard error" 1 - "bad 'written' version" \
+  staging "v0.27.3" "" lib=stub env:STUB_STRICT=9.9.9 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "an empty strict answer is a hard error" 1 - "bad 'written' version" \
+  staging "v0.27.3" "" lib=stub env:STUB_STRICT= "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a strict that does not echo the current version is a hard error" 1 - "bad current version" \
+  staging "v0.27.3" "" lib=stub env:STUB_STRICT=9.9.9 "H:VERSION=0.27.4"
 case_ "the stub passes through when nothing is stubbed" 0 allowed "allowed (next patch)" \
   staging "v0.27.3" "" lib=stub "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 
@@ -325,6 +375,26 @@ case_ "both Cargo tables, only the second bumped wrong, is refused" 1 - "Cargo.t
   "B:Cargo.toml=$(printf '[package]\nversion = "0.4.0"\n[workspace.package]\nversion = "0.4.0"\n')" \
   "H:Cargo.toml=$(printf '[package]\nversion = "0.4.0"\n[workspace.package]\nversion = "0.6.0"\n')"
 
+# Judged against the merge-base; rebase when the base tip is ahead.
+case_ "a bump landed on the base after the PR branched: no downgrade" 0 unchanged "No version change" \
+  staging "v0.27.4" "" "B:VERSION=0.27.3" "T:VERSION=0.27.4" "H:VERSION=0.27.3"
+case_ "a version file added on the base after the PR branched: no removal" 0 unchanged "No version change" \
+  staging "v0.27.4" "" "T:VERSION=0.27.4"
+case_ "a PR bump behind a higher base tip must rebase" 1 - "rebase onto staging: it is now at 0.27.5" \
+  staging "v0.27.5" "" "B:VERSION=0.27.3" "T:VERSION=0.27.5" "H:VERSION=0.27.4"
+case_ "a PR bump equal to the base tip passes as unchanged" 0 allowed "unchanged" \
+  staging "v0.27.4" "" "B:VERSION=0.27.3" "T:VERSION=0.27.4" "H:VERSION=0.27.4"
+
+# No tags at all, but a version already written: that is the current one.
+case_ "no tags, 0.27.3 written: 0.27.4 is the next patch" 0 allowed "allowed (next patch)" \
+  staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "no tags, 0.27.3 written: 0.0.1 is a downgrade" 1 - "0.0.1 is lower than 0.27.3" \
+  staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.0.1"
+case_ "no tags, 0.27.3 written elsewhere: a new file at 0.0.1 is refused" 1 - "the policy allows 0.27.4" \
+  staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.27.3" "H:package.json=$(pj 0.0.1)"
+case_ "no tags, no change: the next tag follows the written version" 0 unchanged "will be tagged v0.28.0" \
+  main "" "" "B:VERSION=0.27.3" "H:VERSION=0.27.3"
+
 # Downgrades.
 case_ "a downgrade from 0.27.4 to 0.27.3 is refused" 1 - "0.27.3 is lower than 0.27.4" \
   staging "v0.27.3" "" "B:package.json=$(pj 0.27.4)" "H:package.json=$(pj 0.27.3)"
@@ -375,12 +445,32 @@ next_ "no tags: the first release fails closed" 1 - "the policy allows 0.0.1" st
 next_ "no tags: 0.0.1 is the first release" 0 0.0.1 "first release, next patch" staging "" 0.0.1 ""
 next_ "a v0.0.0 tag: checked against 0.0.0" 0 0.1.0 "allowed (next minor)" main "" 0.1.0 "v0.0.0"
 next_ "out-of-range tags are ignored" 0 0.0.1 "Version 0.0.0 -> 0.0.1" staging "" "" "v2024.10.1"
+next_ "untagged (another scheme): a proposed version is refused" 1 - "can't be verified" staging "" 0.0.1 "release-1"
+next_ "untagged (pre-releases only): a proposed version is refused" 1 - "can't be verified" staging "" 0.0.1 "v1.0.0-rc.1"
+next_ "no tags, current-from-files 0.27.3: 0.27.4 is allowed" 0 0.27.4 "allowed (next patch)" staging "" 0.27.4 "" 0.27.3
+next_ "no tags, current-from-files 0.27.3: 0.0.1 is refused" 1 - "the policy allows 0.27.4" staging "" 0.0.1 "" 0.27.3
+next_ "no tags, current-from-files empty: a true first release" 0 0.0.1 "first release, next patch" staging "" 0.0.1 ""
+next_ "a non-strict current-from-files is refused" 1 - "current-from-files is not" staging "" 0.0.1 "" v0.27.3
 
 # The workflow's event step.
-event_ "pull_request goes on" 0 "" pull_request
-event_ "merge_group passes with a notice" 0 "::notice" merge_group
-event_ "push is an unexpected event" 1 "unexpected event 'push'" push
-event_ "workflow_dispatch is an unexpected event" 1 "unexpected event" workflow_dispatch
+event_ "pull_request goes on" 0 7 "" pull_request
+event_ "merge_group is checked again, PR number from the queue ref" 0 42 "" merge_group
+event_ "merge_group with a base branch holding a slash" 0 42 "" merge_group \
+  MG_HEAD_REF="refs/heads/gh-readonly-queue/main/pr-42-$HEAD"
+event_ "merge_group with an unreadable queue ref: no PR number, major refused" 0 - \
+  "a major version will be refused" merge_group MG_HEAD_REF=refs/heads/something-else
+event_ "merge_group with a PR number of 0 is not a PR number" 0 - "a major version will be refused" \
+  merge_group MG_HEAD_REF="refs/heads/gh-readonly-queue/main/pr-0-$HEAD"
+event_ "merge_group without a base commit fails" 1 - "no base commit" merge_group MG_BASE_SHA=
+event_ "pull_request without a head commit fails" 1 - "no head commit" pull_request PR_HEAD_SHA=abc
+event_ "push is an unexpected event" 1 - "unexpected event 'push'" push
+event_ "workflow_dispatch is an unexpected event" 1 - "unexpected event" workflow_dispatch
+
+# A merge queue group, end to end: the PR number's label allows a major.
+case_ "merge queue: a major with the PR's label is allowed" 0 allowed "allowed (next major)" \
+  main "v0.27.3" "semver:major" "B:VERSION=0.27.3" "H:VERSION=1.0.0"
+case_ "merge queue: no PR number, a major is refused" 1 - "the policy allows 0.28.0" \
+  main "v0.27.3" "semver:major" env:PR_NUMBER= "B:VERSION=0.27.3" "H:VERSION=1.0.0"
 
 if [ "$fails" -ne 0 ]; then
   echo "$fails of $n case(s) failed."

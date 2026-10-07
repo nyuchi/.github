@@ -20,6 +20,12 @@
 #                           0..999) before anything else; only tags named
 #                           <prefix><strict version> count, so an
 #                           out-of-range tag like v2024.10.1 is ignored.
+#                           Like release-version-check, it refuses when the
+#                           repo has tags but none is a version tag (the
+#                           version cannot be verified). With no tags at all,
+#                           `current-from-files` (the version the repo
+#                           already writes, if any) is the current version;
+#                           empty means a true first release from 0.0.0.
 #
 # Usage, pinned to a commit like every org action:
 #
@@ -57,6 +63,12 @@ inputs:
     description: Highest released version. Empty reads it from the repo's tags.
     required: false
     default: ""
+  current-from-files:
+    description: >-
+      Check mode, repo with no tags at all: the highest version the repo
+      already writes, used as the current version. Empty: 0.0.0.
+    required: false
+    default: ""
   tag-prefix:
     description: Prefix of the version tags.
     required: false
@@ -92,16 +104,26 @@ runs:
         MANUAL: ${{ inputs.manual }}
         PROPOSED: ${{ inputs.proposed }}
         CURRENT: ${{ inputs.current }}
+        FROM_FILES: ${{ inputs.current-from-files }}
         PREFIX: ${{ inputs.tag-prefix }}
         REPO: ${{ inputs.repository }}
         GH_TOKEN: ${{ inputs.token }}
         SCRIPT: ${{ github.action_path }}/next-version.mjs
       run: |
         set -euo pipefail
-        # A proposed version must be strict (MAJOR.MINOR.PATCH, each 0..999)
-        # before anything else, the "already tagged" shortcut included.
+        die() { echo "::error::$1"; exit 1; }
+        # strict <version>: a strict version echoes itself; anything else
+        # (or no answer) is not one.
+        strict() {
+          local out
+          out="$(node "$SCRIPT" strict --version "$1")" || return 1
+          [ "$out" = "$1" ]
+        }
+
+        # A proposed version must be strict before anything else, the
+        # "already tagged" shortcut included.
         if [ -n "$PROPOSED" ]; then
-          node "$SCRIPT" strict --version "$PROPOSED" > /dev/null
+          strict "$PROPOSED" || die "The proposed version is not MAJOR.MINOR.PATCH (each 0..999)."
         fi
 
         current="$CURRENT"
@@ -112,14 +134,21 @@ runs:
           enc="$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
           refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$enc" --jq '.[].ref')"
           count="$(printf '%s\n' "$refs" | node "$SCRIPT" count --prefix "$PREFIX")"
-          if ! [[ "$count" =~ ^[0-9]+$ ]]; then
-            echo "::error::next-version count gave no number."
-            exit 1
+          [[ "$count" =~ ^[0-9]+$ ]] || die "next-version count gave no number."
+          if [ "$count" -gt 0 ]; then
+            current="$(printf '%s\n' "$refs" | node "$SCRIPT" highest --prefix "$PREFIX")"
+          elif [ -n "$refs" ] && [ -n "$PROPOSED" ]; then
+            msg="This repo's tags don't follow $PREFIX<MAJOR.MINOR.PATCH>, so the version can't be verified;"
+            die "$msg tag releases as $PREFIX<version>."
+          elif [ -n "$FROM_FILES" ] && [ -n "$PROPOSED" ]; then
+            strict "$FROM_FILES" || die "current-from-files is not MAJOR.MINOR.PATCH (each 0..999)."
+            current="$FROM_FILES"
+          else
+            has_tags=false
+            current=0.0.0
           fi
-          [ "$count" -gt 0 ] || has_tags=false
-          current="$(printf '%s\n' "$refs" | node "$SCRIPT" highest --prefix "$PREFIX")"
         fi
-        node "$SCRIPT" strict --version "$current" > /dev/null
+        strict "$current" || die "The current version is not MAJOR.MINOR.PATCH (each 0..999)."
         echo "current=$current" >> "$GITHUB_OUTPUT"
 
         if [ -n "$PROPOSED" ] && printf '%s\n' "$refs" | grep -qxF "refs/tags/$PREFIX$PROPOSED"; then
@@ -132,15 +161,13 @@ runs:
           why="$(node "$SCRIPT" check --current "$current" --proposed "$PROPOSED" \
             --channel "$CHANNEL" --bump "$BUMP" --allow-major "$allow_major" \
             --has-tags "$has_tags")"
-          if [ -z "$why" ]; then
-            echo "::error::next-version check passed without a reason."
-            exit 1
-          fi
+          [ -n "$why" ] || die "next-version check passed without a reason."
           version="$PROPOSED"
           echo "Version $version after $current on $CHANNEL: allowed ($why)."
         else
           version="$(node "$SCRIPT" next --current "$current" --channel "$CHANNEL" \
             --bump "$BUMP" --manual "$MANUAL")"
+          strict "$version" || die "next-version next gave no version."
           echo "Version $current -> $version on $CHANNEL${BUMP:+ (bump: $BUMP)}."
         fi
         echo "version=$version" >> "$GITHUB_OUTPUT"

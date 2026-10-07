@@ -50,7 +50,8 @@
 //   next-version.mjs count   [--prefix v]   (tag refs on stdin)
 //     Prints how many tags are <prefix><strict version>.
 //   next-version.mjs strict  --version <v>
-//     Prints <v> when it is a strict version; fails otherwise.
+//     Prints the version rebuilt from its parts (so equal to <v>) when <v>
+//     is strict; fails otherwise. Callers compare the output with <v>.
 //
 // Tag refs on stdin are one per line: "refs/tags/<name>", "<name>", or
 // "<sha>\t<ref>" (ls-remote). Nothing is trimmed.
@@ -266,8 +267,12 @@ async function main(argv) {
       });
     case "highest":
       return highest(await stdinLines(), a.prefix ?? "v");
-    case "strict":
-      return parseStrict(a.version) && a.version;
+    case "strict": {
+      // Prints the version rebuilt from its parts; a caller compares it with
+      // what it passed, so only a real answer counts.
+      const v = parseStrict(a.version);
+      return `${v.major}.${v.minor}.${v.patch}`;
+    }
     case "count":
       return String(countTags(await stdinLines(), a.prefix ?? "v"));
     default:
@@ -277,20 +282,23 @@ async function main(argv) {
   }
 }
 
-// Run as a script (not imported). realpath, because import.meta.url is
-// resolved through symlinks (macOS's /var -> /private/var) and argv is not.
-// When it cannot tell, it runs: a silent no-op would look like an answer.
-const isMain = () => {
+/**
+ * Whether the module at `metaUrl` is the script node was started with (not
+ * imported). realpath, because import.meta.url is resolved through symlinks
+ * (macOS's /var -> /private/var) and argv is not. When it cannot tell, it
+ * says yes: a silent no-op would look like an answer. Shared with
+ * read-version.mjs.
+ */
+export function isMain(metaUrl, argv1 = process.argv[1]) {
+  if (!argv1) return false;
   try {
-    return (
-      import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
-    );
+    return metaUrl === pathToFileURL(realpathSync(argv1)).href;
   } catch {
     return true;
   }
-};
+}
 
-if (process.argv[1] && isMain()) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).then(
     (out) => console.log(out),
     (err) => {
