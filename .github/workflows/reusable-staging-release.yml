@@ -54,6 +54,8 @@
 #                 its real line (a legacy v4.0.1 above v0.27.0, say) that
 #                 cannot be deleted under the tag ruleset.
 # ref             Commit to tag (default: the commit that started the run).
+#                 It must be on `staging`: the branch name, or a commit that
+#                 `staging` contains.
 # create-release  Also create a GitHub pre-release with generated notes, so
 #                 the beta build is visible without marking it latest
 #                 (default: true).
@@ -64,6 +66,20 @@
 # previous        The highest version before this one.
 # created         'true' when this run created the tag ('false' when the
 #                 commit already carried a version tag, e.g. a re-run).
+#
+# Guard
+# -----
+# The run fails before computing anything unless it tags staging (or is a
+# main release, below), so a "Run workflow" click left on the default branch
+# (main) cannot tag a main commit as a beta patch (nyuchi/.github#80). Allowed:
+#   - no `ref`, and the run started on refs/heads/staging;
+#   - `ref` set, and the commit it names is on `staging`;
+#   - no `ref`, the run started on refs/heads/main, `bump` is minor or
+#     major, and `create-release` is false: a main release, which publishes
+#     its own latest release (mukoko-dev/super-app-web's main-release.yml).
+#     A staging-version.yml run left on main never qualifies: it keeps
+#     create-release at its default, true.
+# test-actions.yml runs this guard's script.
 
 name: Reusable / Staging release
 
@@ -125,7 +141,49 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
+          # An explicit ref is checked against staging's history, so fetch it.
+          fetch-depth: ${{ inputs.ref != '' && '0' || '1' }}
           persist-credentials: false
+
+      # Keep this step's script self-contained: test-actions.yml extracts it
+      # by id and runs it against a staging and a main ref.
+      - name: Refuse anything but staging
+        id: guard
+        env:
+          RUN_REF: ${{ github.ref }}
+          INPUT_REF: ${{ inputs.ref }}
+          BUMP: ${{ inputs.bump }}
+          CREATE_RELEASE: ${{ inputs.create-release }}
+        run: |
+          set -euo pipefail
+          if [ -z "$INPUT_REF" ]; then
+            # A main release: a minor (or a manual major) on main, from a caller
+            # that publishes the release itself (create-release: false).
+            if [ "$RUN_REF" = "refs/heads/main" ] && [ "$CREATE_RELEASE" = "false" ] \
+              && { [ "$BUMP" = minor ] || [ "$BUMP" = major ]; }; then
+              echo "Run started on main with bump: ${BUMP}; tagging the main release at $(git rev-parse HEAD)."
+              exit 0
+            fi
+            if [ "$RUN_REF" != "refs/heads/staging" ]; then
+              msg="This run started on ${RUN_REF:-an unknown ref}, not refs/heads/staging."
+              msg+=" Staging releases tag staging commits only. Re-run it on the staging branch"
+              msg+=" (Run workflow > Use workflow from: staging), or pass ref: with a commit on staging."
+              echo "::error::$msg"
+              exit 1
+            fi
+            echo "Run started on staging; tagging $(git rev-parse HEAD)."
+            exit 0
+          fi
+          head="$(git rev-parse HEAD)"
+          if ! git rev-parse --verify --quiet refs/remotes/origin/staging >/dev/null; then
+            echo "::error::ref: ${INPUT_REF} was passed, but this repo has no staging branch to check it against."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$head" refs/remotes/origin/staging; then
+            echo "::error::ref: ${INPUT_REF} resolves to ${head}, which is not on staging. Staging releases tag staging commits only."
+            exit 1
+          fi
+          echo "ref: ${INPUT_REF} resolves to ${head}, on staging; tagging it."
 
       - name: Compute the next version
         id: v
