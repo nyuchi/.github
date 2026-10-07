@@ -1,0 +1,237 @@
+# Dependency review: the enterprise-required dependency check
+# (nyuchi/.github#94).
+#
+# Two jobs, both diff-aware, so a pull request that changes no dependency
+# passes:
+#
+#   review  actions/dependency-review-action. It compares the dependency
+#           graph of the base and head and fails on a newly added package
+#           with a known advisory of severity `high` or above (runtime and
+#           development scopes). The graph covers npm, pnpm, Yarn, Cargo,
+#           pip, Poetry, uv and the other ecosystems GitHub supports.
+#   audit   a second opinion from each ecosystem's own auditor, run only on
+#           the lockfiles the pull request changes:
+#             package-lock.json / npm-shrinkwrap.json  npm audit (high+)
+#             pnpm-lock.yaml                           pnpm audit (high+)
+#             Cargo.lock                               cargo audit (any)
+#             uv.lock                                  pip-audit (any), via uv export
+#             requirements*.txt                        pip-audit (any)
+#           yarn.lock, bun.lock and poetry.lock are left to `review` and
+#           named in the job summary. RustSec and PyPI advisories often
+#           carry no severity, so those auditors fail on any advisory.
+#
+# HOW IT IS ENFORCED
+#
+# An ENTERPRISE ruleset names this file in a "Require workflows to pass"
+# rule (repository nyuchi/.github, ref refs/heads/main, targets
+# ~DEFAULT_BRANCH and staging). GitHub then runs it on every pull request
+# into those branches in every repo the ruleset covers. A ruleset-run
+# workflow ignores `on:` filters, so each job checks the event itself:
+# pull_request and merge_group are checked, anything else passes with a
+# notice. NEVER put it on a ruleset that targets all branches (a required
+# workflow also blocks direct pushes to the branches it covers).
+#
+# Every action is pinned to a commit. Nothing here runs the pull request's
+# code: the auditors read lockfiles only (pip-audit runs with --no-deps
+# --disable-pip, so it installs nothing), and the token is read-only.
+
+name: Dependency review
+
+on:
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: dependency-review-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  review:
+    name: review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve the range to review
+        id: range
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          MG_BASE: ${{ github.event.merge_group.base_sha }}
+          MG_HEAD: ${{ github.event.merge_group.head_sha }}
+        run: |
+          case "$EVENT" in
+            pull_request) base=$PR_BASE head=$PR_HEAD ;;
+            merge_group) base=$MG_BASE head=$MG_HEAD ;;
+            *)
+              echo "::notice::Dependency review checks pull requests and merge queue groups; nothing to do on '$EVENT'."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+          for sha in "$base" "$head"; do
+            [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Unexpected commit id '$sha'."; exit 1; }
+          done
+          { echo "base=$base"; echo "head=$head"; echo "skip=false"; } >> "$GITHUB_OUTPUT"
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294  # v5.0.0
+        if: steps.range.outputs.skip == 'false'
+        with:
+          base-ref: ${{ steps.range.outputs.base }}
+          head-ref: ${{ steps.range.outputs.head }}
+          fail-on-severity: high
+          fail-on-scopes: runtime, development
+          # A required workflow can run on a fork's pull request, where the
+          # token is read-only; the summary goes to the job summary instead.
+          comment-summary-in-pr: never
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: List the lockfiles this change touches
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MG_BASE: ${{ github.event.merge_group.base_sha }}
+          MG_HEAD: ${{ github.event.merge_group.head_sha }}
+        run: |
+          set -euo pipefail
+          changed="$RUNNER_TEMP/changed.txt"
+          case "$EVENT" in
+            pull_request)
+              [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo "::error::Unexpected PR number."; exit 1; }
+              # The files API stops at 3000 files; a bigger change is audited in full.
+              gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate \
+                --jq '.[] | select(.status != "removed") | .filename' > "$changed"
+              if [ "$(wc -l < "$changed")" -ge 3000 ]; then echo "all=true" >> "$GITHUB_OUTPUT"; fi
+              ;;
+            merge_group)
+              [[ "$MG_BASE" =~ ^[0-9a-f]{40}$ && "$MG_HEAD" =~ ^[0-9a-f]{40}$ ]] \
+                || { echo "::error::Unexpected merge group range."; exit 1; }
+              # The compare API lists at most 300 files; a bigger group is audited in full.
+              gh api "repos/$REPO/compare/$MG_BASE...$MG_HEAD" \
+                --jq '.files[] | select(.status != "removed") | .filename' > "$changed"
+              if [ "$(wc -l < "$changed")" -ge 300 ]; then echo "all=true" >> "$GITHUB_OUTPUT"; fi
+              ;;
+            *)
+              echo "::notice::The audit checks pull requests and merge queue groups; nothing to do on '$EVENT'."
+              : > "$changed"
+              ;;
+          esac
+          echo "list=$changed" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Choose the auditors
+        id: pick
+        env:
+          LIST: ${{ steps.files.outputs.list }}
+          ALL: ${{ steps.files.outputs.all }}
+        run: |
+          set -euo pipefail
+          targets="$RUNNER_TEMP/targets.txt"
+          if [ "$ALL" = "true" ]; then
+            git ls-files > "$RUNNER_TEMP/all.txt"
+            src="$RUNNER_TEMP/all.txt"
+          else
+            src="$LIST"
+          fi
+          # Keep lockfiles that exist in the checkout (a path in the list is
+          # data from the pull request, so it is only ever quoted).
+          : > "$targets"
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            case "$(basename -- "$f")" in
+              package-lock.json|npm-shrinkwrap.json|pnpm-lock.yaml|Cargo.lock|uv.lock|requirements*.txt|yarn.lock|bun.lock|bun.lockb|poetry.lock)
+                printf '%s\n' "$f" >> "$targets" ;;
+            esac
+          done < "$src"
+          has() { grep -Eq "$1" "$targets" && echo true || echo false; }
+          {
+            echo "targets=$targets"
+            echo "any=$( [ -s "$targets" ] && echo true || echo false )"
+            echo "cargo=$(has '(^|/)Cargo\.lock$')"
+            echo "python=$(has '(^|/)(uv\.lock|requirements[^/]*\.txt)$')"
+          } >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@031bfc83e95968e35021f0e138651dba756b815e  # cargo-audit
+        if: steps.pick.outputs.cargo == 'true'
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        if: steps.pick.outputs.python == 'true'
+      - name: Audit the changed lockfiles
+        if: steps.pick.outputs.any == 'true'
+        env:
+          TARGETS: ${{ steps.pick.outputs.targets }}
+          PNPM_VERSION: 10.34.6
+          PIP_AUDIT_VERSION: 2.10.1
+        run: |
+          set -uo pipefail
+          root=$PWD
+          failed=0
+          summary() { printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"; }
+          summary "### Dependency audit of changed lockfiles"
+          summary ""
+          summary "| Lockfile | Auditor | Result |"
+          summary "|---|---|---|"
+          while IFS= read -r f; do
+            dir=$(dirname -- "$f")
+            name=$(basename -- "$f")
+            tool=""
+            cd -- "$root/$dir" || { failed=1; continue; }
+            case "$name" in
+              package-lock.json|npm-shrinkwrap.json)
+                tool="npm audit"
+                npm audit --package-lock-only --audit-level=high
+                ;;
+              pnpm-lock.yaml)
+                tool="pnpm audit"
+                # Audit with one pinned pnpm, not the version the repo names.
+                npm_config_manage_package_manager_versions=false \
+                  npx --yes "pnpm@$PNPM_VERSION" audit --audit-level high
+                ;;
+              Cargo.lock)
+                tool="cargo audit"
+                cargo audit --file "$name"
+                ;;
+              uv.lock)
+                tool="pip-audit (uv export)"
+                req="$RUNNER_TEMP/uv-req-$RANDOM.txt"
+                if uv export --frozen --no-hashes --format requirements-txt \
+                    --all-extras --all-groups --no-emit-workspace --no-header --no-annotate -o "$req" > /dev/null; then
+                  # Local path and editable entries are first-party code, not PyPI packages.
+                  grep -Ev '^(-e |\./|\.\./|/)|@ file:' "$req" > "$req.pypi" || true
+                  uvx "pip-audit==$PIP_AUDIT_VERSION" -r "$req.pypi" --no-deps --disable-pip --progress-spinner off
+                else
+                  false
+                fi
+                ;;
+              requirements*.txt)
+                tool="pip-audit"
+                uvx "pip-audit==$PIP_AUDIT_VERSION" -r "$name" --no-deps --disable-pip --progress-spinner off
+                ;;
+              *)
+                tool="(dependency review only)"
+                true
+                ;;
+            esac
+            rc=$?
+            cd -- "$root" || exit 1
+            if [ "$rc" -eq 0 ]; then
+              summary "| \`$f\` | $tool | pass |"
+            else
+              failed=1
+              echo "::error file=$f::$tool reported advisories, or could not read this lockfile."
+              summary "| \`$f\` | $tool | **fail** |"
+            fi
+          done < "$TARGETS"
+          exit "$failed"
+      - name: Nothing to audit
+        if: steps.pick.outputs.any != 'true'
+        run: echo "No lockfile changed; nothing to audit." >> "$GITHUB_STEP_SUMMARY"
