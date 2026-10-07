@@ -2,8 +2,17 @@
 # reusable-staging-release.yml.
 #
 # next-version holds the org's versioning policy (patch on staging, minor on
-# main, major by hand, 999 ceiling); its tests run on Node's built-in runner,
-# with no install step.
+# main, major by hand, 999 ceiling), and read-version.mjs beside it reads a
+# repo's version from package.json, Cargo.toml, pyproject.toml or VERSION;
+# their tests run on Node's built-in runner, with no install step.
+# version-fixtures.test.mjs feeds every entry of version-fixtures.json (the
+# table the Nyuchi App also tests against) to the strict parser, every
+# version-file reader and the CLI, which must all agree.
+#
+# release-version-check runs the action's script against a fake gh in
+# test.sh (refused and allowed versions, labels, tag schemes, version files),
+# then runs the action itself on this repo's own merge commit, which writes no
+# version, so it must pass as "unchanged".
 #
 # staging-release-guard extracts the "Refuse anything but staging" step's
 # script from reusable-staging-release.yml and runs it in a scratch repo, on a
@@ -17,12 +26,14 @@ on:
     paths:
       - ".github/actions/**"
       - ".github/workflows/reusable-staging-release.yml"
+      - ".github/workflows/release-version-check.yml"
       - ".github/workflows/test-actions.yml"
   push:
     branches: [main, staging]
     paths:
       - ".github/actions/**"
       - ".github/workflows/reusable-staging-release.yml"
+      - ".github/workflows/release-version-check.yml"
       - ".github/workflows/test-actions.yml"
   workflow_dispatch:
 
@@ -43,7 +54,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Unit tests
-        run: node --test .github/actions/next-version/next-version.test.mjs
+        run: >-
+          node --test
+          .github/actions/next-version/next-version.test.mjs
+          .github/actions/next-version/read-version.test.mjs
+          .github/actions/next-version/version-fixtures.test.mjs
       - name: The action computes from this repo's tags
         id: next
         uses: ./.github/actions/next-version
@@ -60,6 +75,29 @@ jobs:
           CURRENT: ${{ steps.next.outputs.current }}
           VERSION: ${{ steps.next.outputs.version }}
         run: echo "Tags say $CURRENT; the next staging version is $VERSION."
+
+  release-version-check:
+    name: release-version-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Refusal and pass paths, against a fake gh
+        run: bash .github/actions/release-version-check/test.sh
+      - name: A commit with no version file passes as unchanged
+        id: rvc
+        uses: ./.github/actions/release-version-check
+        with:
+          base-ref: staging
+          base-sha: ${{ github.sha }}
+          head-sha: ${{ github.sha }}
+          default-branch: main
+      - name: Result
+        env:
+          RESULT: ${{ steps.rvc.outputs.result }}
+        run: test "$RESULT" = unchanged
 
   staging-release-guard:
     name: staging-release guard
