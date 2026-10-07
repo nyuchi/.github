@@ -7,7 +7,7 @@
 //       each odd TOML shape (tomllib reads them all)
 //   (c) the next-version.mjs CLI: `strict`, `check` with the input as the
 //       proposed version (an invalid one fails as "not a version"), and
-//       `highest` / `count` with the tag v<input>
+//       `current` with the tag v<input>
 //
 // node --test .github/actions/next-version/   (needs python3 >= 3.11)
 import assert from "node:assert/strict";
@@ -185,13 +185,16 @@ test("(c) the CLI agrees with every fixture", () => {
       assert.equal(highest([ref]), f.valid ? f.input : "0.0.0", label(f));
       continue;
     }
-    const run = (cmd) =>
-      execFileSync("node", [CLI, cmd], {
-        input: `${ref}\nrefs/tags/v0.0.0\n`,
-        encoding: "utf8",
-      }).trim();
-    assert.equal(run("count"), f.valid ? "2" : "1", `count ${label(f)}`);
-    assert.equal(run("highest"), f.valid ? f.input : "0.0.0", label(f));
+    // The CLI's `current` beside a v0.0.0 tag: the tag counts or not.
+    const got = execFileSync("node", [CLI, "current"], {
+      input: `${ref}\nrefs/tags/v0.0.0\n`,
+      encoding: "utf8",
+    }).trim();
+    assert.equal(
+      got,
+      `tagged ${f.valid ? f.input : "0.0.0"}`,
+      `current ${label(f)}`,
+    );
   }
 });
 

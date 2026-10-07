@@ -12,6 +12,7 @@ import {
   check,
   countTags,
   currentVersion,
+  decide,
   highest,
   isMain,
   isStrictVersion,
@@ -75,7 +76,7 @@ test("check accepts the next version and refuses others", () => {
   assert.equal(check("0.27.3", "0.28.0", main), "next minor");
   assert.equal(check("0.27.3", "0.27.3", main), "unchanged");
   assert.throws(() => check("", "3.1.4", main), /allows 0.1.0/);
-  assert.equal(check("", "0.1.0", main), "first release, next minor");
+  assert.equal(check("", "0.1.0", main), "next minor");
   assert.throws(() => check("0.27.0", "0.27.1", main), /allows 0.28.0/);
   assert.throws(() => check("0.27.0", "0.29.0", main), PolicyError);
   assert.throws(() => check("0.27.0", "1.0.0", main), /bump: major/);
@@ -163,17 +164,16 @@ test("highest ignores pre-releases, other prefixes and junk", () => {
   assert.equal(highest([]), "0.0.0");
 });
 
-test("a first release fails closed: the same rule from 0.0.0", () => {
-  // No version tag: 0.0.1 on staging, 0.1.0 on main, 1.0.0 with the label.
-  assert.equal(check("0.0.0", "0.0.1", staging), "first release, next patch");
-  assert.equal(check("0.0.0", "0.1.0", main), "first release, next minor");
+test("from 0.0.0 the rule is the same: 0.0.1, 0.1.0 or 1.0.0", () => {
+  assert.equal(check("0.0.0", "0.0.1", staging), "next patch");
+  assert.equal(check("0.0.0", "0.1.0", main), "next minor");
   assert.equal(
     check("0.0.0", "1.0.0", { ...main, allowMajor: true }),
-    "first release, next major",
+    "next major",
   );
   assert.equal(
     check("0.0.0", "1.0.0", { ...staging, allowMajor: true }),
-    "first release, next major",
+    "next major",
   );
   for (const bad of ["5.0.0", "0.2.0", "1.0.0", "0.1.1", "3.1.4"]) {
     assert.throws(() => check("0.0.0", bad, main), /allows 0.1.0/, bad);
@@ -183,17 +183,179 @@ test("a first release fails closed: the same rule from 0.0.0", () => {
     () => check("0.0.0", "2.0.0", { ...main, allowMajor: true }),
     /allows 0.1.0/,
   );
-  // A v0.0.0 tag: the same versions, reported as ordinary releases.
-  const tagged = { ...main, hasTags: true };
-  assert.throws(() => check("0.0.0", "5.0.0", tagged), /allows 0.1.0/);
-  assert.equal(check("0.0.0", "0.1.0", tagged), "next minor");
+});
+
+test("decide: check mode", () => {
+  const t = (...v) => v.map((x) => `refs/tags/${x}`);
+  const d = (refs, o) => decide(refs, { mode: "check", ...o });
+  // The next version after the highest tag.
+  assert.deepEqual(d(t("v0.27.3"), { ...staging, proposed: "0.27.4" }), {
+    version: "0.27.4",
+    current: "0.27.3",
+    reason: "next patch (current: the highest tag v0.27.3)",
+  });
+  assert.throws(
+    () => d(t("v0.27.3"), { ...staging, proposed: "0.28.0" }),
+    /allows 0.27.4/,
+  );
+  // Already tagged only when it IS the current version ...
+  assert.match(
+    d(t("v0.27.3"), { ...staging, proposed: "0.27.3" }).reason,
+    /already tagged/,
+  );
+  // ... so a downgrade to an old tag is refused.
+  assert.throws(
+    () => d(t("v0.27.3", "v0.27.5"), { ...staging, proposed: "0.27.3" }),
+    /allows 0.27.6/,
+  );
+  // A major with the label (allowMajor) or a manual bump: major.
+  assert.match(
+    d(t("v0.27.3"), { ...main, proposed: "1.0.0", allowMajor: true }).reason,
+    /next major/,
+  );
+  assert.match(
+    d(t("v0.27.3"), { ...main, proposed: "1.0.0", manual: true, bump: "major" })
+      .reason,
+    /next major/,
+  );
+  assert.throws(
+    () => d(t("v0.27.3"), { ...main, proposed: "1.0.0" }),
+    /bump: major/,
+  );
+  // No tags: the first release, from 0.0.0 ...
+  assert.match(
+    d([], { ...staging, proposed: "0.0.1" }).reason,
+    /^first release, next patch/,
+  );
+  assert.throws(() => d([], { ...staging, proposed: "5.0.0" }), /allows 0.0.1/);
+  // ... or from the files.
   assert.equal(
-    check("0.0.0", "0.0.1", { ...staging, hasTags: true }),
-    "next patch",
+    d([], { ...staging, proposed: "1.4.3", fromFiles: "1.4.2" }).current,
+    "1.4.2",
+  );
+  assert.throws(
+    () => d([], { ...staging, proposed: "0.0.1", fromFiles: "1.4.2" }),
+    /allows 1.4.3/,
+  );
+  // Files ahead of the tags: the files win, no deadlock.
+  const ahead = d(t("v0.27.3"), {
+    ...staging,
+    proposed: "0.27.5",
+    fromFiles: "0.27.4",
+  });
+  assert.equal(ahead.current, "0.27.4");
+  assert.match(ahead.reason, /next patch/);
+  // Files behind the tags: the tags win.
+  assert.equal(
+    d(t("v0.27.3"), { ...staging, proposed: "0.27.4", fromFiles: "0.20.0" })
+      .current,
+    "0.27.3",
+  );
+  // Untagged (default prefix): cannot be verified.
+  for (const tags of [t("release-1"), t("v1.0.0-rc.1"), t("v2024.10.1")]) {
+    assert.throws(
+      () => d(tags, { ...staging, proposed: "0.0.1" }),
+      /can't be verified/,
+    );
+  }
+  // A custom prefix ignores other tags: a component's first release works.
+  assert.match(
+    d(t("v3.0.0", "release-1"), { ...main, proposed: "0.1.0", prefix: "web-v" })
+      .reason,
+    /^first release, next minor/,
   );
   assert.equal(
-    check("0.0.0", "1.0.0", { ...tagged, allowMajor: true }),
-    "next major",
+    d(t("v3.0.0", "web-v0.1.0"), {
+      ...main,
+      proposed: "0.2.0",
+      prefix: "web-v",
+    }).current,
+    "0.1.0",
+  );
+  // But its own odd tags still make it untagged.
+  assert.throws(
+    () => d(t("web-vNext"), { ...main, proposed: "0.1.0", prefix: "web-v" }),
+    /can't be verified/,
+  );
+  // Strict inputs only.
+  assert.throws(
+    () => d([], { ...staging, proposed: "v0.0.1" }),
+    /not a version/,
+  );
+  assert.throws(
+    () => d([], { ...staging, proposed: "0.0.1", fromFiles: "1.4" }),
+    /not a version/,
+  );
+  assert.throws(() => d([], { ...staging }), /needs --proposed/);
+  assert.throws(
+    () => d([], { channel: "prod", proposed: "0.0.1" }),
+    /Unknown channel/,
+  );
+});
+
+test("decide: compute mode", () => {
+  const t = (...v) => v.map((x) => `refs/tags/${x}`);
+  const d = (refs, o) => decide(refs, { mode: "compute", ...o });
+  assert.equal(d(t("v0.27.3"), staging).version, "0.27.4");
+  assert.equal(d(t("v0.27.3"), main).version, "0.28.0");
+  assert.equal(d([], staging).version, "0.0.1");
+  assert.match(d([], staging).reason, /^first release/);
+  // from-files counts in compute mode too: files 1.4.2, no tags -> 1.4.3.
+  assert.equal(d([], { ...staging, fromFiles: "1.4.2" }).version, "1.4.3");
+  assert.equal(
+    d(t("v0.1.0"), { ...main, fromFiles: "1.4.2" }).version,
+    "1.5.0",
+  );
+  // Untagged: starts from the files, or 0.0.1.
+  assert.equal(d(t("release-1"), staging).version, "0.0.1");
+  assert.equal(
+    d(t("release-1"), { ...staging, fromFiles: "2.0.0" }).version,
+    "2.0.1",
+  );
+  // A custom prefix ignores the rest.
+  assert.equal(d(t("v9.0.0"), { ...main, prefix: "web-v" }).version, "0.1.0");
+  // A major only on a manual run.
+  assert.throws(() => d(t("v0.27.3"), { ...main, bump: "major" }), /by hand/);
+  assert.equal(
+    d(t("v0.27.3"), { ...main, bump: "major", manual: true }).version,
+    "1.0.0",
+  );
+  assert.throws(
+    () => d([], { channel: "staging", mode: "other" }),
+    /Unknown mode/,
+  );
+  // The CLI prints one line.
+  const cli = fileURLToPath(new URL("./next-version.mjs", import.meta.url));
+  const run = (input, ...a) =>
+    execFileSync("node", [cli, "decide", ...a], { input, encoding: "utf8" });
+  assert.equal(
+    run("refs/tags/v0.1.0\n", "--mode", "compute", "--channel", "staging"),
+    "ok 0.1.1 0.1.0 next patch (current: the highest tag v0.1.0)\n",
+  );
+  assert.equal(
+    run("", "--mode", "check", "--channel", "main", "--proposed", "0.1.0"),
+    "ok 0.1.0 0.0.0 first release, next minor (current: nothing yet)\n",
+  );
+  assert.throws(
+    () =>
+      execFileSync(
+        "node",
+        [
+          cli,
+          "decide",
+          "--mode",
+          "check",
+          "--channel",
+          "main",
+          "--proposed",
+          "0.2.0",
+        ],
+        {
+          input: "",
+          stdio: "pipe",
+        },
+      ),
+    /Command failed/,
   );
 });
 
@@ -235,10 +397,15 @@ test("current: the one current-version rule", () => {
         "refs/tags/v0.27.10",
         "refs/tags/v1.0.0-rc.1",
       ],
-      { fromFiles: "9.0.0" },
+      { fromFiles: "0.1.0" },
     ),
     { kind: "tagged", version: "0.27.10" },
   );
+  // Files ahead of the tags win.
+  assert.deepEqual(cur(["refs/tags/v0.27.10"], { fromFiles: "9.0.0" }), {
+    kind: "written",
+    version: "9.0.0",
+  });
   assert.deepEqual(
     cur(["refs/tags/pkg@1.2.3", "refs/tags/v0.1.0"], { prefix: "pkg@" }),
     {
@@ -346,7 +513,6 @@ test("the CLI prints the version and fails with a message", () => {
         [cli, "check", "--current", "0.0.0", "--proposed", "5.0.0"].concat([
           "--channel",
           "main",
-          "--has-tags",
         ]),
         { stdio: "pipe" },
       ),
@@ -362,8 +528,15 @@ test("the CLI prints the version and fails with a message", () => {
       "--channel",
       "main",
     ),
-    "first release, next minor",
+    "next minor",
   );
+  // count and highest are functions, not CLI commands.
+  for (const gone of ["count", "highest"]) {
+    assert.throws(
+      () => execFileSync("node", [cli, gone], { input: "", stdio: "pipe" }),
+      /Command failed/,
+    );
+  }
   // strict: prints the version, or fails.
   assert.equal(run("strict", "--version", "1.2.3"), "1.2.3");
   for (const bad of ["v1.2.3", "1.2.3-rc.1", "", "--x"]) {
@@ -395,18 +568,11 @@ test("the CLI prints the version and fails with a message", () => {
     rmSync(dir, { recursive: true, force: true });
   }
   assert.equal(
-    execFileSync("node", [cli, "count"], {
-      input: "refs/tags/v1.0.0\nrefs/tags/v1.1.0-rc.1\nrefs/tags/nope\n",
-      encoding: "utf8",
-    }).trim(),
-    "1",
-  );
-  assert.equal(
-    execFileSync("node", [cli, "highest"], {
+    execFileSync("node", [cli, "current"], {
       input: "x\trefs/tags/v1.0.0\ny\trefs/tags/v1.0.10\n",
       encoding: "utf8",
     }).trim(),
-    "1.0.10",
+    "tagged 1.0.10",
   );
   assert.throws(
     () =>

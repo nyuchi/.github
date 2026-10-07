@@ -109,8 +109,8 @@ ln -s "$lib" "$work/lib-link"
 
 # Broken scripts, to prove every answer is checked before it is used:
 #   lib-empty  read-version prints nothing at all
-#   lib-stub   next-version answers `current` with STUB_CURRENT, `check` with an
-#              empty reason when STUB_CHECK_EMPTY is set, or `strict` with
+#   lib-stub   next-version answers `decide` with STUB_DECIDE (or fails with
+#              no reason when STUB_DECIDE_FAIL is set), or `strict` with
 #              STUB_STRICT
 mkdir -p "$work/lib-empty" "$work/lib-stub"
 cp "$lib/next-version.mjs" "$work/lib-empty/next-version.mjs"
@@ -125,10 +125,10 @@ import { fileURLToPath } from "node:url";
 const self = fileURLToPath(import.meta.url);
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(self)) {
   const cmd = process.argv[2];
-  if (cmd === "current" && process.env.STUB_CURRENT !== undefined) {
-    console.log(process.env.STUB_CURRENT);
-  } else if (cmd === "check" && process.env.STUB_CHECK_EMPTY) {
-    console.log("");
+  if (cmd === "decide" && process.env.STUB_DECIDE_FAIL) {
+    process.exit(1);
+  } else if (cmd === "decide" && process.env.STUB_DECIDE !== undefined) {
+    console.log(process.env.STUB_DECIDE);
   } else if (cmd === "strict" && process.env.STUB_STRICT !== undefined) {
     console.log(process.env.STUB_STRICT);
   } else {
@@ -222,7 +222,7 @@ case_() {
 }
 
 # next_ <label> <want exit> <want version|-> <want text> <channel> <current>
-#       <proposed> <tags> [current-from-files]
+#       <proposed> <tags> [current-from-files]   (NEXT_PREFIX: the tag prefix)
 next_() {
   local label="$1" want_rc="$2" want_version="$3" want_text="$4"
   n=$((n + 1))
@@ -231,7 +231,8 @@ next_() {
   mkdir -p "$rt"
   : > "$rt/out"
   out="$(PATH="$work/bin:$PATH" FIX="$fix" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
-    CHANNEL="$5" BUMP="" MANUAL=false CURRENT="$6" PROPOSED="$7" FROM_FILES="${9:-}" PREFIX=v REPO=o/r \
+    CHANNEL="$5" BUMP="" MANUAL=false CURRENT="$6" PROPOSED="$7" FROM_FILES="${9:-}" \
+    PREFIX="${NEXT_PREFIX:-v}" REPO=o/r \
     GH_TOKEN=fake SCRIPT="$lib/next-version.mjs" bash -e "$work/next.sh" 2>&1)" || rc=$?
   version="$(sed -n 's/^version=//p' "$rt/out" | tail -1)"
   report "next-version: $label" "$want_rc" "$want_version" "$want_text" "$rc" "${version:--}" "$out"
@@ -264,15 +265,15 @@ case_ "no version change on staging" 0 unchanged "will be tagged v0.27.4" \
   staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3)"
 case_ "no version file, release to main" 0 unchanged "will be tagged v0.28.0" \
   main "v0.27.3 v0.27.4" ""
-case_ "next patch on staging" 0 allowed "allowed (next patch)" \
+case_ "next patch on staging" 0 allowed "allowed (next patch" \
   staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.4)"
 case_ "minor on staging is refused" 1 - "the policy allows 0.27.4" \
   staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.28.0)"
-case_ "next minor on main, above staging tags" 0 allowed "allowed (next minor)" \
+case_ "next minor on main, above staging tags" 0 allowed "allowed (next minor" \
   main "v0.27.3 v0.27.5" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.28.0)"
 case_ "major without the label is refused" 1 - "the semver:major label allows a major" \
   main "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 1.0.0)"
-case_ "major with the label is allowed" 0 allowed "allowed (next major)" \
+case_ "major with the label is allowed" 0 allowed "allowed (next major" \
   main "v0.27.3" "bug semver:major" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 1.0.0)"
 case_ "pre-release of the released version is refused" 1 - "does not hold a version" \
   main "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3-rc.1)"
@@ -308,27 +309,29 @@ case_ "a tags read that fails is a hard error" 1 - "Could not read the repo's ta
 # Fail closed: every script answer is checked.
 case_ "an empty read-version answer is a hard error" 1 - "read-version gave no answer" \
   staging "v0.27.3" "" lib=empty "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3)"
-case_ "a current answer that is not one of the four is a hard error" 1 - "current gave no answer" \
-  staging "v0.27.3" "" lib=stub env:STUB_CURRENT=abc "B:VERSION=0.27.3" "H:VERSION=0.27.4"
-case_ "an empty current answer is a hard error" 1 - "current gave no answer" \
-  staging "v0.27.3" "" lib=stub env:STUB_CURRENT= "B:VERSION=0.27.3" "H:VERSION=0.27.4"
-case_ "a tagged answer without a version is a hard error" 1 - "bad current version" \
-  staging "v0.27.3" "" lib=stub "env:STUB_CURRENT=tagged v0.27.3" "B:VERSION=0.27.3" "H:VERSION=0.27.4"
-case_ "a check that passes without a reason is a hard error" 1 - "passed without a reason" \
-  staging "v0.27.3" "" lib=stub env:STUB_CHECK_EMPTY=1 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a decide answer that is not 'ok ...' is a hard error" 1 - "decide gave no answer" \
+  staging "v0.27.3" "" lib=stub env:STUB_DECIDE=abc "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "an empty decide answer is a hard error" 1 - "decide gave no answer" \
+  staging "v0.27.3" "" lib=stub env:STUB_DECIDE= "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a decide answer without a reason is a hard error" 1 - "decide gave no answer" \
+  staging "v0.27.3" "" lib=stub "env:STUB_DECIDE=ok 0.27.4 0.27.3" "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a decide answer with a bad version is a hard error" 1 - "decide gave a bad version" \
+  staging "v0.27.3" "" lib=stub "env:STUB_DECIDE=ok v0.27.4 0.27.3 next patch" "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a decide refusal without a reason is a hard error" 1 - "refused without a reason" \
+  staging "v0.27.3" "" lib=stub env:STUB_DECIDE_FAIL=1 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "a strict that does not echo the version is a hard error" 1 - "bad 'written' version" \
   staging "v0.27.3" "" lib=stub env:STUB_STRICT=9.9.9 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "an empty strict answer is a hard error" 1 - "bad 'written' version" \
   staging "v0.27.3" "" lib=stub env:STUB_STRICT= "B:VERSION=0.27.3" "H:VERSION=0.27.4"
-case_ "a strict that does not echo the current version is a hard error" 1 - "bad current version" \
+case_ "a strict that does not echo decide's version is a hard error" 1 - "decide gave a bad version" \
   staging "v0.27.3" "" lib=stub env:STUB_STRICT=9.9.9 "H:VERSION=0.27.4"
-case_ "the stub passes through when nothing is stubbed" 0 allowed "allowed (next patch)" \
+case_ "the stub passes through when nothing is stubbed" 0 allowed "allowed (next patch" \
   staging "v0.27.3" "" lib=stub "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 
 # The scripts still run through a symlinked path.
 case_ "through a symlink, a wrong version is still refused" 1 - "the policy allows 0.27.4" \
   staging "v0.27.3" "" lib=link "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.28.0)"
-case_ "through a symlink, the next patch is still allowed" 0 allowed "allowed (next patch)" \
+case_ "through a symlink, the next patch is still allowed" 0 allowed "allowed (next patch" \
   staging "v0.27.3" "" lib=link "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.4)"
 
 # Invalid values are refused in every path; an unchanged one is not new.
@@ -352,9 +355,9 @@ case_ "only pre-release tags: a bump is refused" 1 - "can't be verified" \
   staging "v1.0.0-rc.1" "" "H:package.json=$(pj 0.0.1)"
 case_ "out-of-range tags (v2024.10.1): a bump is refused" 1 - "can't be verified" \
   staging "v2024.10.1" "" "B:VERSION=2024.10.1" "H:VERSION=0.0.1"
-case_ "tags in another scheme, no change: passes, no promise" 0 unchanged "cannot be predicted" \
+case_ "tags in another scheme, no change: passes; the first version tag follows the files" 0 unchanged "will be tagged v0.1.1" \
   staging "release-1" "" "B:package.json=$(pj 0.1.0)" "H:package.json=$(pj 0.1.0)"
-case_ "only pre-release tags, no change: passes, no promise" 0 unchanged "cannot be predicted" \
+case_ "only pre-release tags, no change: passes; the first version tag follows the files" 0 unchanged "will be tagged v0.1.1" \
   staging "v1.0.0-rc.1" "" "B:package.json=$(pj 0.1.0)" "H:package.json=$(pj 0.1.0)"
 case_ "only pre-release tags: an invalid head is refused" 1 - "does not hold a version" \
   staging "v1.0.0-rc.1" "" "H:package.json=$(pj 5.0.0-rc.2)"
@@ -403,10 +406,10 @@ case_ "a version file replaced by a symlink is refused" 1 - "does not hold a ver
   staging "v0.27.3" "" "B:VERSION=0.27.3" Hlink:VERSION
 
 # package.json: only a duplicate root "version" refuses; a BOM is fine.
-case_ "other duplicate keys in package.json do not refuse the PR" 0 allowed "allowed (next patch)" \
+case_ "other duplicate keys in package.json do not refuse the PR" 0 allowed "allowed (next patch" \
   staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" \
   'H:package.json={"name":"a","name":"b","scripts":{"x":"1","x":"2"},"version":"0.27.4"}'
-case_ "a BOM before Cargo.toml is fine" 0 allowed "allowed (next patch)" \
+case_ "a BOM before Cargo.toml is fine" 0 allowed "allowed (next patch" \
   staging "v0.27.3" "" "B:Cargo.toml=$(cargo 0.27.3)" "H:Cargo.toml=$(printf '\357\273\277'; cargo 0.27.4)"
 
 # Judged against the merge-base; rebase when the base tip is ahead.
@@ -416,11 +419,11 @@ case_ "a version file added on the base after the PR branched: no removal" 0 unc
   staging "v0.27.4" "" "T:VERSION=0.27.4"
 case_ "a PR bump behind a higher base tip must rebase" 1 - "rebase onto staging: it is now at 0.27.5" \
   staging "v0.27.5" "" "B:VERSION=0.27.3" "T:VERSION=0.27.5" "H:VERSION=0.27.4"
-case_ "a PR bump equal to the base tip passes as unchanged" 0 allowed "unchanged" \
+case_ "a PR bump equal to the tagged base tip passes as already tagged" 0 allowed "already tagged v0.27.4" \
   staging "v0.27.4" "" "B:VERSION=0.27.3" "T:VERSION=0.27.4" "H:VERSION=0.27.4"
 
 # No tags at all, but a version already written: that is the current one.
-case_ "no tags, 0.27.3 written: 0.27.4 is the next patch" 0 allowed "allowed (next patch)" \
+case_ "no tags, 0.27.3 written: 0.27.4 is the next patch" 0 allowed "allowed (next patch" \
   staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "no tags, 0.27.3 written: 0.0.1 is a downgrade" 1 - "0.0.1 is lower than 0.27.3" \
   staging "" "" "B:VERSION=0.27.3" "H:VERSION=0.0.1"
@@ -471,31 +474,38 @@ case_ "an escaped header is read (and checked)" 1 - "Cargo.toml#package: Version
   "H:Cargo.toml=$(printf '["pack\\u0061ge"]\nversion = "9.0.0"\n')"
 
 # The next-version composite action.
-next_ "a strict proposed version is checked" 0 0.28.0 "allowed (next minor)" main 0.27.3 0.28.0 ""
+next_ "a strict proposed version is checked" 0 0.28.0 ": next minor" main 0.27.3 0.28.0 ""
 next_ "a non-strict proposed version is refused first" 1 - "is not a version" main "" v0.28.0 "v0.28.0"
 next_ "a pre-release proposed version is refused" 1 - "is not a version" main 0.27.3 0.28.0-rc.1 ""
-next_ "an already-tagged strict version passes" 0 0.27.3 "already tagged" staging "" 0.27.3 "v0.27.3 v0.27.4"
+next_ "the current, tagged version passes as already tagged" 0 0.27.4 "already tagged" staging "" 0.27.4 "v0.27.3 v0.27.4"
+next_ "an older tagged version is a downgrade, refused" 1 - "the policy allows 0.27.5" staging "" 0.27.3 "v0.27.3 v0.27.4"
+next_ "files ahead of the tags: no deadlock" 0 0.27.6 "next patch" staging "" 0.27.6 "v0.27.4" 0.27.5
+next_ "compute mode honours current-from-files" 0 1.4.3 "next patch" staging "" "" "" 1.4.2
+NEXT_PREFIX=web-v next_ "a custom prefix ignores other tags" 0 0.1.0 "first release" main "" "" "v3.0.0 release-1"
+NEXT_PREFIX=web-v next_ "a custom prefix counts its own tags" 0 0.3.0 "next minor" main "" "" "v3.0.0 web-v0.2.0"
 next_ "no tags: the first release fails closed" 1 - "the policy allows 0.0.1" staging "" 5.0.0 ""
 next_ "no tags: 0.0.1 is the first release" 0 0.0.1 "first release, next patch" staging "" 0.0.1 ""
-next_ "a v0.0.0 tag: checked against 0.0.0" 0 0.1.0 "allowed (next minor)" main "" 0.1.0 "v0.0.0"
+next_ "a v0.0.0 tag: checked against 0.0.0" 0 0.1.0 ": next minor" main "" 0.1.0 "v0.0.0"
 next_ "out-of-range tags are ignored" 0 0.0.1 "Version 0.0.0 -> 0.0.1" staging "" "" "v2024.10.1"
 next_ "untagged (another scheme): a proposed version is refused" 1 - "can't be verified" staging "" 0.0.1 "release-1"
 next_ "untagged (pre-releases only): a proposed version is refused" 1 - "can't be verified" staging "" 0.0.1 "v1.0.0-rc.1"
-next_ "no tags, current-from-files 0.27.3: 0.27.4 is allowed" 0 0.27.4 "allowed (next patch)" staging "" 0.27.4 "" 0.27.3
+next_ "no tags, current-from-files 0.27.3: 0.27.4 is allowed" 0 0.27.4 ": next patch" staging "" 0.27.4 "" 0.27.3
 next_ "no tags, current-from-files 0.27.3: 0.0.1 is refused" 1 - "the policy allows 0.27.4" staging "" 0.0.1 "" 0.27.3
 next_ "no tags, current-from-files empty: a true first release" 0 0.0.1 "first release, next patch" staging "" 0.0.1 ""
-next_ "a non-strict current-from-files is refused" 1 - "current-from-files is not" staging "" 0.0.1 "" v0.27.3
+next_ "a non-strict current-from-files is refused" 1 - "is not a version" staging "" 0.0.1 "" v0.27.3
 
-# THE current-version rule: both actions classify the same tag sets the same.
+# THE decision: both actions decide the same on the same tags and files,
+# in compute mode (what the merge is tagged) and in check mode (a PR that
+# writes 0.4.1).
 # same_rule_ <label> <tags> [written]
 same_rule_() {
-  local label="$1" tags="$2" written="${3:-}" a b fix rt out
+  local label="$1" tags="$2" written="${3:-}" fix rt out a_compute a_check b_compute b_check
   n=$((n + 1))
   fix="$work/fix$n" rt="$work/rt$n"
   if [ -n "$written" ]; then
-    fixture "$fix" "$tags" "" "B:VERSION=$written" "H:VERSION=$written"
+    fixture "$fix" "$tags" "" "B:VERSION=$written" "H:VERSION=0.4.1"
   else
-    fixture "$fix" "$tags" ""
+    fixture "$fix" "$tags" "" "H:VERSION=0.4.1"
   fi
   mkdir -p "$rt"
   : > "$rt/out"
@@ -503,15 +513,26 @@ same_rule_() {
     GITHUB_STEP_SUMMARY="$rt/summary" GITHUB_ACTIONS=true BASE_REF=staging BASE_SHA="$TIP" \
     HEAD_SHA="$HEAD" DEFAULT_BRANCH=main PR_NUMBER='' REPO=o/r PREFIX=v GH_TOKEN=fake \
     LIB="$lib" bash -e "$work/run.sh" 2>&1)" || true
-  a="$(sed -n 's/^current-rule: //p' <<<"$out")"
-  out="$(PATH="$work/bin:$PATH" FIX="$fix" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
-    CHANNEL=staging BUMP="" MANUAL=false CURRENT="" PROPOSED=0.99.0 FROM_FILES="$written" \
-    PREFIX=v REPO=o/r GH_TOKEN=fake SCRIPT="$lib/next-version.mjs" bash -e "$work/next.sh" 2>&1)" || true
-  b="$(sed -n 's/^current-rule: //p' <<<"$out")"
-  if [ -n "$a" ] && [ "$a" = "$b" ]; then
-    echo "ok   both actions: $label ($a)"
+  a_compute="$(sed -n 's/^decide compute: //p' <<<"$out")"
+  a_check="$(sed -n 's/^decide check: //p' <<<"$out")"
+  # next_run <proposed>: the next-version action's decide line.
+  next_run() {
+    PATH="$work/bin:$PATH" FIX="$fix" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
+      CHANNEL=staging BUMP="" MANUAL=false CURRENT="" PROPOSED="$1" FROM_FILES="$written" \
+      PREFIX=v REPO=o/r GH_TOKEN=fake SCRIPT="$lib/next-version.mjs" bash -e "$work/next.sh" 2>&1 || true
+  }
+  b_compute="$(next_run "" | sed -n 's/^decide compute: //p')"
+  # A refusal is reported as ::error::<reason> by the next-version action.
+  out="$(next_run 0.4.1)"
+  b_check="$(sed -n 's/^decide check: //p' <<<"$out")"
+  [ -n "$b_check" ] || b_check="refused: $(sed -n 's/^::error:://p' <<<"$out")"
+  if [ -n "$a_compute" ] && [ "$a_compute" = "$b_compute" ] && [ -n "$a_check" ] \
+    && [ "$a_check" = "$b_check" ]; then
+    echo "ok   both actions: $label (compute: $a_compute | check: $a_check)"
   else
-    echo "FAIL both actions: $label: release-version-check '$a', next-version '$b'"
+    echo "FAIL both actions: $label:"
+    echo "     release-version-check: compute '$a_compute', check '$a_check'"
+    echo "     next-version:          compute '$b_compute', check '$b_check'"
     fails=$((fails + 1))
   fi
 }
@@ -525,6 +546,7 @@ same_rule_ "pre-releases only" "v1.0.0-rc.1 v1.0.0-beta" 0.4.0
 same_rule_ "out of range" "v2024.10.1"
 same_rule_ "another prefix" "pkg@1.0.0" 0.4.0
 same_rule_ "mixed" "v1.0.0-rc.1 v0.3.0 release-9"
+same_rule_ "files ahead of the tags" "v0.3.0" 0.4.0
 
 # The workflow's event step.
 event_ "pull_request goes on" 0 7 "" pull_request
@@ -541,7 +563,7 @@ event_ "push is an unexpected event" 1 - "unexpected event 'push'" push
 event_ "workflow_dispatch is an unexpected event" 1 - "unexpected event" workflow_dispatch
 
 # A merge queue group, end to end: the PR number's label allows a major.
-case_ "merge queue: a major with the PR's label is allowed" 0 allowed "allowed (next major)" \
+case_ "merge queue: a major with the PR's label is allowed" 0 allowed "allowed (next major" \
   main "v0.27.3" "semver:major" "B:VERSION=0.27.3" "H:VERSION=1.0.0"
 case_ "merge queue: no PR number, a major is refused" 1 - "the policy allows 0.28.0" \
   main "v0.27.3" "semver:major" env:PR_NUMBER= "B:VERSION=0.27.3" "H:VERSION=1.0.0"

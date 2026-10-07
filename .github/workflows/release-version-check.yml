@@ -38,7 +38,10 @@
 #   - In the merge queue it checks again, against the group's base and head
 #     (merge_group.base_sha / head_sha). The PR number comes from the queue's
 #     head ref (gh-readonly-queue/<base>/pr-<N>-<sha>), to read the
-#     semver:major label; when it cannot be read, a major is refused.
+#     semver:major label; when it cannot be read, a major is refused. A
+#     group can hold several PRs while the ref names only the last, so a
+#     major release merges alone (merge queue batch size 1, or merge it
+#     outside a batch).
 #   - NEVER put it on a ruleset that targets all branches. A "Require
 #     workflows to pass" rule also blocks direct pushes to the branches it
 #     covers, and every feature branch would become unpushable.
@@ -101,8 +104,12 @@ jobs:
               number=""
               re='^refs/heads/gh-readonly-queue/.+/pr-([1-9][0-9]*)-[0-9a-f]{40}$'
               if [[ "$MG_HEAD_REF" =~ $re ]]; then number="${BASH_REMATCH[1]}"; fi
+              # A group can hold several PRs; its ref names only the last.
+              note="a major release merges alone (merge queue batch size 1, or merge it outside a batch)."
               if [ -z "$number" ]; then
-                echo "::warning title=Release version check::No PR number in the merge queue ref; a major version will be refused."
+                echo "::warning title=Release version check::No PR number in the merge queue ref; a major version will be refused: $note"
+              else
+                echo "::notice title=Release version check::Merge queue: a major is allowed only when PR #$number has semver:major; $note"
               fi ;;
             *)
               fail "unexpected event '$EVENT'; this check runs on pull_request and merge_group only." ;;

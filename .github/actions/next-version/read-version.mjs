@@ -12,6 +12,7 @@
 //   pyproject.toml#project        [project] version
 //   pyproject.toml#tool.poetry    [tool.poetry] version
 //   VERSION                       exactly X.Y.Z, X.Y.Z\n or X.Y.Z\r\n
+//                                 (after one leading BOM)
 //
 // ONE READER PER FORMAT. JSON and TOML are read by Python's standard library
 // in one isolated python3 run (`-I`, an empty working directory, no PYTHON*
@@ -151,7 +152,8 @@ export function fromContents(json, expectedPath) {
  * line, spaces) stays in it and makes it invalid.
  */
 export function fromVersionFile(text) {
-  const v = String(text);
+  // One leading byte order mark is not part of it, as for JSON and TOML.
+  const v = String(text).replace(/^\uFEFF/, "");
   if (v.endsWith("\r\n")) return v.slice(0, -2);
   if (v.endsWith("\n")) return v.slice(0, -1);
   return v;

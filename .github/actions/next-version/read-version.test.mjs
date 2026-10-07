@@ -210,6 +210,9 @@ test("VERSION: the version, then at most one line ending", () => {
   assert.equal(fromVersionFile("1.2.3\n\n"), "1.2.3\n");
   // Exactly X.Y.Z, X.Y.Z\n or X.Y.Z\r\n: a lone \r stays and is invalid.
   assert.equal(fromVersionFile("1.2.3\r"), "1.2.3\r");
+  // One leading BOM is stripped, as for JSON and TOML; only one.
+  assert.equal(fromVersionFile("\uFEFF1.2.3\n"), "1.2.3");
+  assert.equal(classify(fromVersionFile("\uFEFF\uFEFF1.2.3")).kind, "invalid");
   assert.equal(fromVersionFile("1.2.3\n\r\n"), "1.2.3\n");
   for (const t of [
     "v0.4.0\n",
