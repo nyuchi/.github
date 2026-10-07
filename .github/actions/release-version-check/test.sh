@@ -44,7 +44,10 @@ MB=3333333333333333333333333333333333333333
 
 # A fake gh that behaves like the real one for the calls the scripts make:
 #   repos/o/r/compare/<tip>...<head>     {"merge_base_commit": {"sha": $FIX/merge-base}}
-#   repos/o/r/contents/<path>?ref=<sha>  the raw file $FIX/<sha>/<path>, else 404
+#   repos/o/r/contents/<path>?ref=<sha>  the JSON for $FIX/<sha>/<path>: a file
+#                                        (base64), [] for a directory, a
+#                                        symlink when <path>.symlink exists;
+#                                        else 404
 #   repos/o/r/git/matching-refs/tags[/p] $FIX/tags.json
 #   repos/o/r/issues/<n>/labels          $FIX/labels.json
 # --jq is applied with jq; --paginate is accepted (every answer is one page).
@@ -81,8 +84,14 @@ case "$url" in
     path="${url#*/contents/}"
     ref="${path#*\?ref=}"
     path="${path%%\?ref=*}"
-    [ -f "$FIX/$ref/$path" ] || fail "Not Found (HTTP 404)"
-    cat "$FIX/$ref/$path" ;;
+    file="$FIX/$ref/$path"
+    if [ -e "$file.symlink" ]; then printf '{"type":"symlink","path":"%s"}' "$path"; exit 0; fi
+    if [ -d "$file" ]; then printf '[]'; exit 0; fi
+    [ -f "$file" ] || fail "Not Found (HTTP 404)"
+    # The contents API's JSON: a file, base64.
+    node -e 'const b = require("fs").readFileSync(process.argv[1]);
+      process.stdout.write(JSON.stringify({ type: "file", path: process.argv[2],
+        encoding: "base64", size: b.length, content: b.toString("base64") }));' "$file" "$path" ;;
   repos/o/r/git/matching-refs/tags | repos/o/r/git/matching-refs/tags/*)
     [ -e "$FIX/fail-tags" ] && fail "Server Error (HTTP 500)"
     answer < "$FIX/tags.json" ;;
@@ -100,7 +109,7 @@ ln -s "$lib" "$work/lib-link"
 
 # Broken scripts, to prove every answer is checked before it is used:
 #   lib-empty  read-version prints nothing at all
-#   lib-stub   next-version answers `count` with STUB_COUNT, `check` with an
+#   lib-stub   next-version answers `current` with STUB_CURRENT, `check` with an
 #              empty reason when STUB_CHECK_EMPTY is set, or `strict` with
 #              STUB_STRICT
 mkdir -p "$work/lib-empty" "$work/lib-stub"
@@ -116,8 +125,8 @@ import { fileURLToPath } from "node:url";
 const self = fileURLToPath(import.meta.url);
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(self)) {
   const cmd = process.argv[2];
-  if (cmd === "count" && process.env.STUB_COUNT !== undefined) {
-    console.log(process.env.STUB_COUNT);
+  if (cmd === "current" && process.env.STUB_CURRENT !== undefined) {
+    console.log(process.env.STUB_CURRENT);
   } else if (cmd === "check" && process.env.STUB_CHECK_EMPTY) {
     console.log("");
   } else if (cmd === "strict" && process.env.STUB_STRICT !== undefined) {
@@ -155,6 +164,8 @@ report() {
 #       T:<file>=<text>  at the base tip, which then moved on from the
 #                        merge-base (a T:- spec alone: an empty tip)
 #       H:<file>=<text>  at the head
+#       Bdir:<file> / Hdir:<file>    a directory at that path
+#       Hlink:<file>                 a symlink at that path (head)
 #       fail-labels | fail-commit | bad-merge-base | fail-contents |
 #       fail-tags | lib=<link|empty|stub> | env:NAME=value
 fixture() {
@@ -171,6 +182,9 @@ fixture() {
       lib=*) echo "${spec#lib=}" > "$fix/lib"; continue ;;
       env:*) echo "${spec#env:}" >> "$fix/env"; continue ;;
       T:-) continue ;;
+      Bdir:*) mkdir -p "$fix/$base_dir/${spec#Bdir:}"; continue ;;
+      Hdir:*) mkdir -p "$fix/$HEAD/${spec#Hdir:}"; continue ;;
+      Hlink:*) touch "$fix/$HEAD/${spec#Hlink:}.symlink"; continue ;;
     esac
     side="${spec%%:*}" rest="${spec#*:}"
     case "$side" in
@@ -294,10 +308,12 @@ case_ "a tags read that fails is a hard error" 1 - "Could not read the repo's ta
 # Fail closed: every script answer is checked.
 case_ "an empty read-version answer is a hard error" 1 - "read-version gave no answer" \
   staging "v0.27.3" "" lib=empty "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3)"
-case_ "a count that is not a number is a hard error" 1 - "count gave no number" \
-  staging "v0.27.3" "" lib=stub env:STUB_COUNT=abc "B:VERSION=0.27.3" "H:VERSION=0.27.4"
-case_ "an empty count is a hard error" 1 - "count gave no number" \
-  staging "v0.27.3" "" lib=stub env:STUB_COUNT= "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a current answer that is not one of the four is a hard error" 1 - "current gave no answer" \
+  staging "v0.27.3" "" lib=stub env:STUB_CURRENT=abc "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "an empty current answer is a hard error" 1 - "current gave no answer" \
+  staging "v0.27.3" "" lib=stub env:STUB_CURRENT= "B:VERSION=0.27.3" "H:VERSION=0.27.4"
+case_ "a tagged answer without a version is a hard error" 1 - "bad current version" \
+  staging "v0.27.3" "" lib=stub "env:STUB_CURRENT=tagged v0.27.3" "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "a check that passes without a reason is a hard error" 1 - "passed without a reason" \
   staging "v0.27.3" "" lib=stub env:STUB_CHECK_EMPTY=1 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "a strict that does not echo the version is a hard error" 1 - "bad 'written' version" \
@@ -375,6 +391,24 @@ case_ "both Cargo tables, only the second bumped wrong, is refused" 1 - "Cargo.t
   "B:Cargo.toml=$(printf '[package]\nversion = "0.4.0"\n[workspace.package]\nversion = "0.4.0"\n')" \
   "H:Cargo.toml=$(printf '[package]\nversion = "0.4.0"\n[workspace.package]\nversion = "0.6.0"\n')"
 
+# Only a file is a file: a directory or symlink there is invalid, unless it is
+# the same on both sides.
+case_ "a directory named VERSION on both sides passes" 0 unchanged "No version change" \
+  staging "v0.27.3" "" Bdir:VERSION Hdir:VERSION
+case_ "a directory named VERSION added by the PR is refused" 1 - "does not hold a version" \
+  staging "v0.27.3" "" Hdir:VERSION
+case_ "a version file replaced by a directory is refused" 1 - "does not hold a version" \
+  staging "v0.27.3" "" "B:Cargo.toml=$(cargo 0.27.3)" Hdir:Cargo.toml
+case_ "a version file replaced by a symlink is refused" 1 - "does not hold a version" \
+  staging "v0.27.3" "" "B:VERSION=0.27.3" Hlink:VERSION
+
+# package.json: only a duplicate root "version" refuses; a BOM is fine.
+case_ "other duplicate keys in package.json do not refuse the PR" 0 allowed "allowed (next patch)" \
+  staging "v0.27.3" "" "B:package.json=$(pj 0.27.3)" \
+  'H:package.json={"name":"a","name":"b","scripts":{"x":"1","x":"2"},"version":"0.27.4"}'
+case_ "a BOM before Cargo.toml is fine" 0 allowed "allowed (next patch)" \
+  staging "v0.27.3" "" "B:Cargo.toml=$(cargo 0.27.3)" "H:Cargo.toml=$(printf '\357\273\277'; cargo 0.27.4)"
+
 # Judged against the merge-base; rebase when the base tip is ahead.
 case_ "a bump landed on the base after the PR branched: no downgrade" 0 unchanged "No version change" \
   staging "v0.27.4" "" "B:VERSION=0.27.3" "T:VERSION=0.27.4" "H:VERSION=0.27.3"
@@ -451,6 +485,46 @@ next_ "no tags, current-from-files 0.27.3: 0.27.4 is allowed" 0 0.27.4 "allowed 
 next_ "no tags, current-from-files 0.27.3: 0.0.1 is refused" 1 - "the policy allows 0.27.4" staging "" 0.0.1 "" 0.27.3
 next_ "no tags, current-from-files empty: a true first release" 0 0.0.1 "first release, next patch" staging "" 0.0.1 ""
 next_ "a non-strict current-from-files is refused" 1 - "current-from-files is not" staging "" 0.0.1 "" v0.27.3
+
+# THE current-version rule: both actions classify the same tag sets the same.
+# same_rule_ <label> <tags> [written]
+same_rule_() {
+  local label="$1" tags="$2" written="${3:-}" a b fix rt out
+  n=$((n + 1))
+  fix="$work/fix$n" rt="$work/rt$n"
+  if [ -n "$written" ]; then
+    fixture "$fix" "$tags" "" "B:VERSION=$written" "H:VERSION=$written"
+  else
+    fixture "$fix" "$tags" ""
+  fi
+  mkdir -p "$rt"
+  : > "$rt/out"
+  out="$(PATH="$work/bin:$PATH" FIX="$fix" RUNNER_TEMP="$rt" GITHUB_OUTPUT="$rt/out" \
+    GITHUB_STEP_SUMMARY="$rt/summary" GITHUB_ACTIONS=true BASE_REF=staging BASE_SHA="$TIP" \
+    HEAD_SHA="$HEAD" DEFAULT_BRANCH=main PR_NUMBER='' REPO=o/r PREFIX=v GH_TOKEN=fake \
+    LIB="$lib" bash -e "$work/run.sh" 2>&1)" || true
+  a="$(sed -n 's/^current-rule: //p' <<<"$out")"
+  out="$(PATH="$work/bin:$PATH" FIX="$fix" GITHUB_OUTPUT="$rt/out" GITHUB_ACTIONS=true \
+    CHANNEL=staging BUMP="" MANUAL=false CURRENT="" PROPOSED=0.99.0 FROM_FILES="$written" \
+    PREFIX=v REPO=o/r GH_TOKEN=fake SCRIPT="$lib/next-version.mjs" bash -e "$work/next.sh" 2>&1)" || true
+  b="$(sed -n 's/^current-rule: //p' <<<"$out")"
+  if [ -n "$a" ] && [ "$a" = "$b" ]; then
+    echo "ok   both actions: $label ($a)"
+  else
+    echo "FAIL both actions: $label: release-version-check '$a', next-version '$b'"
+    fails=$((fails + 1))
+  fi
+}
+same_rule_ "no tags, nothing written" ""
+same_rule_ "no tags, a version written" "" 0.4.0
+same_rule_ "no tags, 0.0.0 written" "" 0.0.0
+same_rule_ "version tags" "v0.27.3 v0.27.10 release-1" 0.4.0
+same_rule_ "a v0.0.0 tag" "v0.0.0"
+same_rule_ "another scheme" "release-1 vNext" 0.4.0
+same_rule_ "pre-releases only" "v1.0.0-rc.1 v1.0.0-beta" 0.4.0
+same_rule_ "out of range" "v2024.10.1"
+same_rule_ "another prefix" "pkg@1.0.0" 0.4.0
+same_rule_ "mixed" "v1.0.0-rc.1 v0.3.0 release-9"
 
 # The workflow's event step.
 event_ "pull_request goes on" 0 7 "" pull_request

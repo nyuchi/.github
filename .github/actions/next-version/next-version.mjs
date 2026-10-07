@@ -49,6 +49,10 @@
 //     Prints the highest released version among the tags, or 0.0.0.
 //   next-version.mjs count   [--prefix v]   (tag refs on stdin)
 //     Prints how many tags are <prefix><strict version>.
+//   next-version.mjs current [--prefix v] [--from-files <x.y.z>]
+//                            (ALL tag refs on stdin, not prefix-filtered)
+//     THE current-version rule, one line: "tagged <x.y.z>", "untagged",
+//     "written <x.y.z>" or "none". See currentVersion().
 //   next-version.mjs strict  --version <v>
 //     Prints the version rebuilt from its parts (so equal to <v>) when <v>
 //     is strict; fails otherwise. Callers compare the output with <v>.
@@ -228,6 +232,39 @@ export function countTags(refs, prefix = "v") {
   return tagVersions(refs, prefix).length;
 }
 
+/**
+ * THE current-version rule, the only one: both release-version-check and
+ * the next-version action act on its answer.
+ *
+ *   { kind: "tagged", version }   the highest <prefix><strict version> tag
+ *   { kind: "untagged" }          tags exist, but none is a version tag
+ *                                 (another scheme, pre-releases only, out of
+ *                                 range): no version can be verified
+ *   { kind: "written", version }  no tags at all; the version the repo
+ *                                 already writes (`fromFiles`)
+ *   { kind: "none" }              no tags at all and nothing written (or
+ *                                 only the 0.0.0 placeholder): a true first
+ *                                 release from 0.0.0
+ *
+ * @param {string[]} refs  ALL tag refs (not filtered by prefix); blank
+ *   lines are ignored
+ * @param {{prefix?: string, fromFiles?: string}} opts  `fromFiles`, when
+ *   given, must be a strict version
+ */
+export function currentVersion(refs, { prefix = "v", fromFiles = "" } = {}) {
+  const tags = refs.filter((r) => String(r) !== "");
+  const versions = tagVersions(tags, prefix);
+  if (versions.length > 0) {
+    return { kind: "tagged", version: highest(versions, "") };
+  }
+  if (tags.length > 0) return { kind: "untagged" };
+  if (fromFiles !== "" && fromFiles !== undefined) {
+    parseStrict(fromFiles);
+    if (fromFiles !== "0.0.0") return { kind: "written", version: fromFiles };
+  }
+  return { kind: "none" };
+}
+
 function args(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -275,9 +312,16 @@ async function main(argv) {
     }
     case "count":
       return String(countTags(await stdinLines(), a.prefix ?? "v"));
+    case "current": {
+      const c = currentVersion(await stdinLines(), {
+        prefix: a.prefix ?? "v",
+        fromFiles: a["from-files"] ?? "",
+      });
+      return c.version ? `${c.kind} ${c.version}` : c.kind;
+    }
     default:
       throw new PolicyError(
-        "Usage: next-version.mjs next|check|highest|count|strict ...",
+        "Usage: next-version.mjs next|check|highest|count|current|strict ...",
       );
   }
 }

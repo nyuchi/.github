@@ -21,8 +21,10 @@
 #      base after the PR branched is not mistaken for the PR's own change.
 #   2. Reads every version file read-version.mjs knows (package.json,
 #      Cargo.toml, pyproject.toml, VERSION) at the merge-base, the head and
-#      the base tip through the contents API. A 404 means the file is
-#      absent. Nothing from the PR is checked out or run.
+#      the base tip through the contents API, as JSON: only a `file` counts
+#      as one (a directory or symlink there is invalid, unless it is the
+#      same on both sides). A 404 means the file is absent. Nothing from the
+#      PR is checked out or run.
 #   3. read-version.mjs assess reads each entry (package.json; each TOML
 #      table; VERSION) as absent, valid or invalid, with one JSON reader and
 #      one TOML reader (Python's json and tomllib) and one version parser
@@ -44,7 +46,9 @@
 #      shows the version the merge will be tagged with, or says it cannot be
 #      predicted when there is no version tag.
 #
-# The current version is the highest version tag, a tag named exactly
+# The current version comes from next-version.mjs `current`, the one rule
+# the next-version action uses too, over all the repo's tags. It is the
+# highest version tag, a tag named exactly
 # <prefix><strict version> (any other tag, pre-releases and out-of-range
 # ones like v2024.10.1 included, is ignored). With no tags at all, it is the
 # highest real version written at the merge-base, and 0.0.0 only when there
@@ -56,9 +60,9 @@
 #
 # Every answer read from a script is checked before it is used: the
 # read-version output starts with its header line and the `written` line,
-# `count` is a number, `strict` echoes the version it was given, and a
-# passing `check` gives a reason. A missing or malformed answer is a hard
-# error.
+# `current` gives one of its four answers, `strict` echoes the version it
+# was given, and a passing `check` gives a reason. A missing or malformed
+# answer is a hard error.
 #
 # The channel is `main` when the base is the repo's default branch and
 # `staging` for any other base.
@@ -163,27 +167,31 @@ runs:
 
         # The merge-base: what the PR started from. The compare API also
         # proves both commits exist.
-        merge_base="$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA" --jq .merge_base_commit.sha)" \
+        merge_base="$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA?per_page=1" --jq .merge_base_commit.sha)" \
           || die "Could not compare the base and head commits; re-run the check."
         [[ "$merge_base" =~ $sha_re ]] || die "The compare API gave no merge-base; re-run the check."
-
-        # fetch <sha> <path> <out>: 0 = got it, 1 = not there.
-        fetch() {
-          local err="$RUNNER_TEMP/rvc-err"
-          if gh api -H "Accept: application/vnd.github.raw" \
-            "repos/$REPO/contents/$2?ref=$1" > "$3" 2> "$err"; then
-            return 0
-          fi
-          rm -f "$3"
-          if grep -q 'HTTP 404' "$err"; then return 1; fi
-          cat "$err" >&2
-          die "Could not read $2 at $1 in $REPO; re-run the check."
-        }
 
         # read-version's answers start with a header line; anything else
         # (empty, cut short, a script that did not run) is a hard error.
         header() {
           [ "${2%%$'\n'*}" = "$1" ] || die "read-version gave no answer ('$1' missing); re-run the check."
+        }
+
+        # fetch <sha> <path> <out>: 0 = got it, 1 = not there. The contents
+        # API answers as JSON; read-version save writes a file's bytes, or
+        # <out>.notfile for a directory or symlink (judged as invalid unless
+        # it is the same on both sides).
+        fetch() {
+          local err="$RUNNER_TEMP/rvc-err" json="$RUNNER_TEMP/rvc-json" saved
+          if gh api "repos/$REPO/contents/$2?ref=$1" > "$json" 2> "$err"; then
+            saved="$(node "$LIB/read-version.mjs" save "$2" "$3" < "$json")" \
+              || die "Could not read $2 at $1 in $REPO (see the log); re-run the check."
+            header '# read-version save v1' "$saved"
+            return 0
+          fi
+          if grep -q 'HTTP 404' "$err"; then return 1; fi
+          cat "$err" >&2
+          die "Could not read $2 at $1 in $REPO; re-run the check."
         }
 
         files_out="$(node "$LIB/read-version.mjs" files)" \
@@ -198,7 +206,9 @@ runs:
           fetch "$merge_base" "$f" "$dirs/base/$f" || true
           fetch "$HEAD_SHA" "$f" "$dirs/head/$f" || true
           if [ "$BASE_SHA" = "$merge_base" ]; then
-            if [ -e "$dirs/base/$f" ]; then cp "$dirs/base/$f" "$dirs/tip/$f"; fi
+            for got in "$dirs/base/$f" "$dirs/base/$f.notfile"; do
+              if [ -e "$got" ]; then cp "$got" "$dirs/tip/"; fi
+            done
           else
             fetch "$BASE_SHA" "$f" "$dirs/tip/$f" || true
           fi
@@ -216,35 +226,32 @@ runs:
         [ "$written" = - ] || strict "$written" || die "read-version gave a bad 'written' version."
         todo="$(sed 1d <<<"$body")"
 
-        # All tags. A version tag is exactly <prefix><strict version>
-        # (next-version.mjs); the count tells "no version tags" apart from a
-        # real v0.0.0.
+        # The current version: next-version.mjs `current`, THE rule shared
+        # with the next-version action, over ALL tags (not prefix-filtered)
+        # and the version written at the merge-base.
         refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags" --jq '.[].ref')" \
           || die "Could not read the repo's tags; re-run the check."
-        version_tags="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" count --prefix "$PREFIX")" \
-          || die "next-version count failed; re-run the check."
-        [[ "$version_tags" =~ ^[0-9]+$ ]] || die "next-version count gave no number; re-run the check."
+        from_files=()
+        [ "$written" = - ] || from_files=(--from-files "$written")
+        rule="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" current --prefix "$PREFIX" \
+          ${from_files[@]+"${from_files[@]}"})" \
+          || die "next-version current failed; re-run the check."
+        echo "current-rule: $rule"
         untagged=false
         has_tags=true
-        if [ "$version_tags" -gt 0 ]; then
-          current="$(printf '%s\n' "$refs" | node "$LIB/next-version.mjs" highest --prefix "$PREFIX")" \
-            || die "next-version highest failed; re-run the check."
-          current_from="the highest tag"
-        elif [ -n "$refs" ]; then
-          # Tags, but none a version tag (another scheme, or only
-          # pre-releases): no version can be verified.
-          untagged=true
-          current=0.0.0
-          current_from="no version tag"
-        elif [ "$written" != - ]; then
-          # No tags at all, but a version is already written.
-          current="$written"
-          current_from="the version written at the merge-base"
-        else
-          has_tags=false
-          current=0.0.0
-          current_from="nothing yet: a first release"
-        fi
+        case "$rule" in
+          "tagged "*)
+            current="${rule#tagged }" current_from="the highest tag" ;;
+          untagged)
+            # Tags, but none a version tag: no version can be verified.
+            untagged=true current=0.0.0 current_from="no version tag" ;;
+          "written "*)
+            current="${rule#written }" current_from="the version written at the merge-base" ;;
+          none)
+            has_tags=false current=0.0.0 current_from="nothing yet: a first release" ;;
+          *)
+            die "next-version current gave no answer; re-run the check." ;;
+        esac
         strict "$current" || die "next-version gave a bad current version; re-run the check."
 
         summary "## Release version check" "" \

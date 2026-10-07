@@ -130,23 +130,30 @@ runs:
         refs=""
         has_tags=true
         if [ -z "$current" ]; then
-          # matching-refs takes a URL-encoded prefix ('@' in npm tags).
-          enc="$(node -p 'encodeURIComponent(process.argv[1])' "$PREFIX")"
-          refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$enc" --jq '.[].ref')"
-          count="$(printf '%s\n' "$refs" | node "$SCRIPT" count --prefix "$PREFIX")"
-          [[ "$count" =~ ^[0-9]+$ ]] || die "next-version count gave no number."
-          if [ "$count" -gt 0 ]; then
-            current="$(printf '%s\n' "$refs" | node "$SCRIPT" highest --prefix "$PREFIX")"
-          elif [ -n "$refs" ] && [ -n "$PROPOSED" ]; then
-            msg="This repo's tags don't follow $PREFIX<MAJOR.MINOR.PATCH>, so the version can't be verified;"
-            die "$msg tag releases as $PREFIX<version>."
-          elif [ -n "$FROM_FILES" ] && [ -n "$PROPOSED" ]; then
+          # The current version: next-version.mjs `current`, THE rule shared
+          # with release-version-check, over ALL tags (not prefix-filtered).
+          refs="$(gh api --paginate "repos/$REPO/git/matching-refs/tags" --jq '.[].ref')"
+          from_files=()
+          if [ -n "$FROM_FILES" ] && [ -n "$PROPOSED" ]; then
             strict "$FROM_FILES" || die "current-from-files is not MAJOR.MINOR.PATCH (each 0..999)."
-            current="$FROM_FILES"
-          else
-            has_tags=false
-            current=0.0.0
+            from_files=(--from-files "$FROM_FILES")
           fi
+          rule="$(printf '%s\n' "$refs" | node "$SCRIPT" current --prefix "$PREFIX" \
+            ${from_files[@]+"${from_files[@]}"})"
+          echo "current-rule: $rule"
+          case "$rule" in
+            "tagged "*) current="${rule#tagged }" ;;
+            "written "*) current="${rule#written }" ;;
+            untagged)
+              if [ -n "$PROPOSED" ]; then
+                msg="This repo's tags don't follow $PREFIX<MAJOR.MINOR.PATCH>, so the version can't be verified;"
+                die "$msg tag releases as $PREFIX<version>."
+              fi
+              # Computing (no proposed version): the first version tag.
+              has_tags=false current=0.0.0 ;;
+            none) has_tags=false current=0.0.0 ;;
+            *) die "next-version current gave no answer." ;;
+          esac
         fi
         strict "$current" || die "The current version is not MAJOR.MINOR.PATCH (each 0..999)."
         echo "current=$current" >> "$GITHUB_OUTPUT"

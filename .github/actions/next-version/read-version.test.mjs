@@ -5,6 +5,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -18,10 +19,13 @@ import {
   ENTRIES,
   FILES_HEADER,
   Invalid,
+  NotAFile,
+  SAVE_HEADER,
   VERSION_FILES,
   assess,
   classify,
   classifyFiles,
+  fromContents,
   fromVersionFile,
   isPlaceholder,
   judge,
@@ -68,13 +72,22 @@ test("package.json: the root version only, read by python's json", () => {
   assert.equal(kind(pj(Buffer.from([0x7b, 0xff, 0x7d]))), "invalid");
 });
 
-test("package.json: a duplicate key at any level is invalid", () => {
+test("package.json: only a duplicate root version is invalid", () => {
   assert.equal(kind(pj('{"version":"1.0.0","version":"2.0.0"}')), "invalid");
   assert.equal(
     kind(pj('{"\\u0076ersion":"1.0.0","version":"1.0.0"}')),
     "invalid",
   );
-  assert.equal(kind(pj('{"version":"1.0.0","a":{"b":1,"b":2}}')), "invalid");
+  // Other duplicates are npm's business, not this check's.
+  assert.deepEqual(
+    pj('{"name":"a","name":"b","version":"1.0.0"}'),
+    valid("1.0.0"),
+  );
+  assert.deepEqual(pj('{"version":"1.0.0","a":{"b":1,"b":2}}'), valid("1.0.0"));
+  assert.deepEqual(
+    pj('{"a":{"version":"1","version":"2"},"version":"1.0.0"}'),
+    valid("1.0.0"),
+  );
   // Nested or quoted "version" text is not a root key.
   assert.deepEqual(
     pj(
@@ -82,8 +95,110 @@ test("package.json: a duplicate key at any level is invalid", () => {
     ),
     valid("1.0.0"),
   );
-  // A changed broken file is a change: each is fingerprinted.
+  // Entries compare by their parsed values: an unrelated edit is no change,
+  // a change to either duplicate is one.
+  const pkg = (extra) => `{"name":"a"${extra},"version":"1.0.0"}`;
+  assert.deepEqual(
+    assess({ "package.json": pkg("") }, { "package.json": pkg(',"x":1') })
+      .actions,
+    [],
+  );
+  const dup = (a, b) => `{"version":"${a}","x":1,"version":"${b}"}`;
+  assert.deepEqual(
+    assess(
+      { "package.json": dup("1.0.0", "1.0.1") },
+      {
+        "package.json": dup("1.0.0", "1.0.1").replace('"x":1', '"x":2'),
+      },
+    ).actions,
+    [],
+  );
+  assert.deepEqual(
+    assess(
+      { "package.json": dup("1.0.0", "1.0.1") },
+      { "package.json": dup("1.0.0", "1.0.2") },
+    ).actions.map((x) => x.action),
+    ["invalid"],
+  );
+  // A broken file has no readable version: it is fingerprinted.
   assert.notDeepEqual(pj("{ broken"), pj("{ broken too"));
+});
+
+test("a leading BOM is stripped before tomllib too", () => {
+  const bom = "\uFEFF";
+  assert.deepEqual(
+    cargo(`${bom}[package]\nversion = "0.2.0"\n`)["Cargo.toml#package"],
+    valid("0.2.0"),
+  );
+  assert.deepEqual(
+    py(`${bom}[project]\nversion = "0.3.0"\n`)["pyproject.toml#project"],
+    valid("0.3.0"),
+  );
+  // Only one.
+  assert.equal(
+    kind(
+      cargo(`${bom}${bom}[package]\nversion = "0.2.0"\n`)["Cargo.toml#package"],
+    ),
+    "invalid",
+  );
+});
+
+test("contents answers: a file, or not a file", () => {
+  const file = (path, text, extra = {}) => ({
+    type: "file",
+    path,
+    encoding: "base64",
+    content: Buffer.from(text).toString("base64"),
+    size: Buffer.byteLength(text),
+    ...extra,
+  });
+  assert.equal(
+    fromContents(file("VERSION", "1.2.3\n"), "VERSION").toString(),
+    "1.2.3\n",
+  );
+  assert.ok(fromContents([{ type: "file" }], "VERSION") instanceof NotAFile);
+  assert.equal(
+    fromContents({ type: "symlink", path: "VERSION" }, "VERSION").type,
+    "symlink",
+  );
+  assert.equal(
+    fromContents({ type: "submodule", path: "VERSION" }, "VERSION").type,
+    "submodule",
+  );
+  // A symlink the API follows answers with its target's path.
+  assert.equal(
+    fromContents(file("other/VERSION", "1.2.3"), "VERSION").type,
+    "symlink",
+  );
+  assert.throws(() =>
+    fromContents(file("VERSION", "1.2.3", { size: 99 }), "VERSION"),
+  );
+  assert.throws(() =>
+    fromContents(
+      { type: "file", path: "VERSION", encoding: "none", content: "" },
+      "VERSION",
+    ),
+  );
+  assert.throws(() => fromContents(null, "VERSION"));
+  // Not a file: invalid, the same on both sides when unchanged.
+  const dir = new NotAFile("dir");
+  assert.equal(classifyFiles({ VERSION: dir }).VERSION.kind, "invalid");
+  assert.equal(
+    classifyFiles({ "Cargo.toml": dir })["Cargo.toml#package"].kind,
+    "invalid",
+  );
+  assert.deepEqual(
+    assess({ VERSION: dir }, { VERSION: new NotAFile("dir") }).actions,
+    [],
+  );
+  assert.deepEqual(
+    assess({}, { VERSION: dir }).actions.map((x) => x.action),
+    ["invalid"],
+  );
+  assert.deepEqual(
+    assess({ VERSION: "1.0.0" }, { VERSION: dir }).actions.map((x) => x.action),
+    ["invalid"],
+  );
 });
 
 test("VERSION: the version, then at most one line ending", () => {
@@ -428,6 +543,28 @@ test("the CLI prints a header, then its answer", () => {
       assessed(),
       `${ASSESS_HEADER}\nwritten\t0.3.0\npackage.json\tinvalid\t-\t!invalid\t-\nVERSION\tdowngrade\t0.3.0\t0.2.0\t0.3.1`,
     );
+    // save: a file's bytes, or a .notfile marker.
+    const json = (o) => JSON.stringify(o);
+    const save = (path, out, answer) =>
+      execFileSync("node", [CLI, "save", path, out], {
+        input: json(answer),
+        encoding: "utf8",
+      }).trimEnd();
+    const out1 = join(root, "saved");
+    assert.equal(
+      save("VERSION", out1, {
+        type: "file",
+        path: "VERSION",
+        encoding: "base64",
+        content: Buffer.from("4.5.6\n").toString("base64"),
+        size: 6,
+      }),
+      `${SAVE_HEADER}\nfile`,
+    );
+    assert.equal(readFileSync(out1, "utf8"), "4.5.6\n");
+    const out2 = join(root, "dir");
+    assert.equal(save("VERSION", out2, []), `${SAVE_HEADER}\nnot-a-file dir`);
+    assert.equal(readFileSync(`${out2}.notfile`, "utf8"), "dir");
     assert.throws(() => execFileSync("node", [CLI], { stdio: "pipe" }));
     assert.throws(() =>
       execFileSync("node", [CLI, "assess", base, head], { stdio: "pipe" }),

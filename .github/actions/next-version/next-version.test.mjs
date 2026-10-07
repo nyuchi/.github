@@ -11,6 +11,7 @@ import {
   PolicyError,
   check,
   countTags,
+  currentVersion,
   highest,
   isMain,
   isStrictVersion,
@@ -194,6 +195,65 @@ test("a first release fails closed: the same rule from 0.0.0", () => {
     check("0.0.0", "1.0.0", { ...tagged, allowMajor: true }),
     "next major",
   );
+});
+
+test("current: the one current-version rule", () => {
+  const cur = (refs, opts) => currentVersion(refs, opts);
+  // No tags at all.
+  assert.deepEqual(cur([]), { kind: "none" });
+  assert.deepEqual(cur(["", ""]), { kind: "none" });
+  assert.deepEqual(cur([], { fromFiles: "0.4.0" }), {
+    kind: "written",
+    version: "0.4.0",
+  });
+  assert.deepEqual(cur([], { fromFiles: "0.0.0" }), { kind: "none" });
+  assert.throws(() => cur([], { fromFiles: "v0.4.0" }), /not a version/);
+  // Tags, none a version tag: untagged, whatever the files say.
+  for (const tags of [
+    ["refs/tags/release-1"],
+    ["refs/tags/v1.0.0-rc.1"],
+    ["refs/tags/v2024.10.1"],
+    ["refs/tags/vNext", "refs/tags/1.2.3"],
+    ["refs/tags/pkg@1.0.0"],
+  ]) {
+    assert.deepEqual(
+      cur(tags, { fromFiles: "0.4.0" }),
+      { kind: "untagged" },
+      tags.join(),
+    );
+  }
+  // Version tags: the highest, whatever else is there.
+  assert.deepEqual(cur(["refs/tags/v0.0.0"]), {
+    kind: "tagged",
+    version: "0.0.0",
+  });
+  assert.deepEqual(
+    cur(
+      [
+        "refs/tags/release-1",
+        "refs/tags/v0.27.3",
+        "refs/tags/v0.27.10",
+        "refs/tags/v1.0.0-rc.1",
+      ],
+      { fromFiles: "9.0.0" },
+    ),
+    { kind: "tagged", version: "0.27.10" },
+  );
+  assert.deepEqual(
+    cur(["refs/tags/pkg@1.2.3", "refs/tags/v0.1.0"], { prefix: "pkg@" }),
+    {
+      kind: "tagged",
+      version: "1.2.3",
+    },
+  );
+  // The CLI prints one line.
+  const cli = fileURLToPath(new URL("./next-version.mjs", import.meta.url));
+  const run = (input, ...a) =>
+    execFileSync("node", [cli, "current", ...a], { input, encoding: "utf8" });
+  assert.equal(run("refs/tags/v0.1.0\nrefs/tags/x\n"), "tagged 0.1.0\n");
+  assert.equal(run("refs/tags/x\n"), "untagged\n");
+  assert.equal(run("", "--from-files", "0.2.0"), "written 0.2.0\n");
+  assert.equal(run("\n"), "none\n");
 });
 
 test("countTags counts only strict version tags", () => {

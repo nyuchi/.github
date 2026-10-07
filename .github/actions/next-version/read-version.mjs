@@ -52,6 +52,9 @@
 // answer from an empty one)
 //   read-version.mjs files
 //     "# read-version files v1", then VERSION_FILES, one per line.
+//   read-version.mjs save <path> <out>   (contents-API JSON on stdin)
+//     "# read-version save v1", then "file" (the bytes written to <out>) or
+//     "not-a-file <type>" (<out>.notfile written: a directory, a symlink).
 //   read-version.mjs assess <merge-base-dir> <head-dir> <base-tip-dir>
 //     "# read-version assess v2", "written\t<version or ->", then
 //     "<entry>\t<action>\t<merge-base>\t<head>\t<tip>" for every entry that
@@ -107,6 +110,42 @@ export class Invalid {
 }
 
 /**
+ * Something at a version file's path that is not a file (a directory, a
+ * symlink, a submodule). Every entry of it is invalid, the same on both
+ * sides when it is the same kind of thing, so it is only refused when the
+ * PR puts it there or changes it.
+ */
+export class NotAFile {
+  constructor(type) {
+    this.type = String(type);
+  }
+}
+
+export const SAVE_HEADER = "# read-version save v1";
+
+/**
+ * One contents-API answer (JSON) for `expectedPath`: the file's bytes, or a
+ * NotAFile. A directory answers with a list; a symlink with its type, or
+ * with the target file under another path, which is not this file either.
+ * Throws when a file's content cannot be read (too large, unknown encoding,
+ * a size that does not match).
+ */
+export function fromContents(json, expectedPath) {
+  if (Array.isArray(json)) return new NotAFile("dir");
+  if (!json || typeof json !== "object") throw new Error("No contents answer.");
+  if (json.type !== "file") return new NotAFile(json.type ?? "unknown");
+  if (json.path !== expectedPath) return new NotAFile("symlink");
+  if (json.encoding !== "base64" || typeof json.content !== "string") {
+    throw new Error(`${expectedPath} cannot be read through the contents API.`);
+  }
+  const bytes = Buffer.from(json.content, "base64");
+  if (typeof json.size === "number" && bytes.length !== json.size) {
+    throw new Error(`${expectedPath}: the content does not match its size.`);
+  }
+  return bytes;
+}
+
+/**
  * A VERSION file is exactly the version, then nothing, "\n" or "\r\n".
  * Returns the value to classify; anything else (a lone "\r", a second
  * line, spaces) stays in it and makes it invalid.
@@ -130,13 +169,18 @@ except ImportError:
     sys.stderr.write("python3 has no tomllib (needs Python 3.11 or later)\n")
     sys.exit(3)
 STRUCTURED = json.loads(sys.argv[1])
-class Duplicate(ValueError):
-    pass
-def no_duplicates(pairs):
-    out = {}
+class Obj(dict):
+    """A JSON object that remembers every value given for "version"."""
+    versions = None
+def keep_versions(pairs):
+    # JSON.parse keeps the last of a duplicate key, silently. Duplicates are
+    # npm's business, except "version": every value is kept, and a root
+    # object with more than one is invalid.
+    out = Obj()
+    out.versions = []
     for k, v in pairs:
-        if k in out:
-            raise Duplicate("duplicate key " + repr(k))
+        if k == "version":
+            out.versions.append(v)
         out[k] = v
     return out
 def no_constant(name):
@@ -172,14 +216,19 @@ for kind, path in zip(args[0::2], args[1::2]):
         data = f.read()
     try:
         text = data.decode("utf-8")
+        # One leading byte order mark is not part of the document.
+        if text.startswith("\ufeff"):
+            text = text[1:]
         if kind == "package.json":
-            if text.startswith("﻿"):
-                text = text[1:]
-            doc = json.loads(text, object_pairs_hook=no_duplicates, parse_constant=no_constant)
+            doc = json.loads(text, object_pairs_hook=keep_versions, parse_constant=no_constant)
         else:
             doc = tomllib.loads(text)
     except (UnicodeDecodeError, ValueError, tomllib.TOMLDecodeError):
         out.append({t: unreadable(data) for t in tables})
+        continue
+    if kind == "package.json" and isinstance(doc, Obj) and len(doc.versions) > 1:
+        # Compared by the values, so a change to any of them is a change.
+        out.append({"": {"kind": "invalid", "raw": "duplicate version " + json.dumps(doc.versions)}})
         continue
     out.append({t: version_in(doc, t, kind == "pyproject.toml" and t == "project") for t in tables})
 print(json.dumps(out))
@@ -275,13 +324,23 @@ export function classifySets(sets) {
   sets.forEach((files, s) => {
     for (const file of Object.keys(STRUCTURED)) {
       const data = files?.[file];
-      if (data != null) items.push({ s, file, data });
+      if (data != null && !(data instanceof NotAFile)) {
+        items.push({ s, file, data });
+      }
     }
   });
   const read = readStructured(items);
   return sets.map((files, s) => {
     const values = {};
-    if (files?.VERSION != null) {
+    for (const file of VERSION_FILES) {
+      const data = files?.[file];
+      if (!(data instanceof NotAFile)) continue;
+      const names = file in STRUCTURED ? STRUCTURED[file] : [""];
+      for (const t of names) {
+        values[entryName(file, t)] = new Invalid(`not a file: ${data.type}`);
+      }
+    }
+    if (files?.VERSION != null && !(files.VERSION instanceof NotAFile)) {
       values.VERSION = fromVersionFile(files.VERSION);
     }
     items.forEach((it, i) => {
@@ -370,8 +429,11 @@ function readDir(dir) {
   const files = {};
   for (const name of VERSION_FILES) {
     const path = join(dir, name);
-    // Bytes, so python3 judges the file exactly as written.
-    if (existsSync(path)) {
+    // `save` leaves <file>.notfile for something that is not a file.
+    if (existsSync(`${path}.notfile`)) {
+      files[name] = new NotAFile(readFileSync(`${path}.notfile`, "utf8"));
+    } else if (existsSync(path)) {
+      // Bytes, so python3 judges the file exactly as written.
       files[name] =
         name === "VERSION" ? readFileSync(path, "utf8") : readFileSync(path);
     }
@@ -382,6 +444,16 @@ function readDir(dir) {
 function main(argv) {
   const [cmd, baseDir, headDir, tipDir] = argv;
   if (cmd === "files") return [FILES_HEADER, ...VERSION_FILES].join("\n");
+  if (cmd === "save" && baseDir && headDir) {
+    // save <path in the repo> <out file>, the contents-API JSON on stdin.
+    const got = fromContents(JSON.parse(readFileSync(0, "utf8")), baseDir);
+    if (got instanceof NotAFile) {
+      writeFileSync(`${headDir}.notfile`, got.type);
+      return `${SAVE_HEADER}\nnot-a-file ${got.type}`;
+    }
+    writeFileSync(headDir, got);
+    return `${SAVE_HEADER}\nfile`;
+  }
   if (cmd === "assess" && baseDir && headDir && tipDir) {
     const r = assess(readDir(baseDir), readDir(headDir), readDir(tipDir));
     const lines = r.actions.map((a) =>
@@ -390,7 +462,7 @@ function main(argv) {
     return [ASSESS_HEADER, `written\t${r.written ?? "-"}`, ...lines].join("\n");
   }
   throw new Error(
-    "Usage: read-version.mjs files | assess <merge-base-dir> <head-dir> <base-tip-dir>",
+    "Usage: read-version.mjs files | save <path> <out> | assess <merge-base-dir> <head-dir> <base-tip-dir>",
   );
 }
 

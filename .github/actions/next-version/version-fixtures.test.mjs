@@ -16,7 +16,12 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-import { countTags, highest, isStrictVersion } from "./next-version.mjs";
+import {
+  countTags,
+  currentVersion,
+  highest,
+  isStrictVersion,
+} from "./next-version.mjs";
 import { classifySets } from "./read-version.mjs";
 
 const FIXTURES = JSON.parse(
@@ -187,5 +192,31 @@ test("(c) the CLI agrees with every fixture", () => {
       }).trim();
     assert.equal(run("count"), f.valid ? "2" : "1", `count ${label(f)}`);
     assert.equal(run("highest"), f.valid ? f.input : "0.0.0", label(f));
+  }
+});
+
+test("(d) the current-version rule agrees with every fixture", () => {
+  for (const f of FIXTURES) {
+    // As a tag: a version tag, or a tag that makes the repo untagged.
+    assert.deepEqual(
+      currentVersion([`refs/tags/v${f.input}`]),
+      f.valid ? { kind: "tagged", version: f.input } : { kind: "untagged" },
+      label(f),
+    );
+    // As the version written in files, with no tags ("" means none given).
+    if (f.input === "") {
+      assert.deepEqual(currentVersion([], { fromFiles: "" }), { kind: "none" });
+    } else if (!f.valid) {
+      assert.throws(() => currentVersion([], { fromFiles: f.input }), label(f));
+    } else if (f.input === "0.0.0") {
+      assert.deepEqual(currentVersion([], { fromFiles: f.input }), {
+        kind: "none",
+      });
+    } else {
+      assert.deepEqual(currentVersion([], { fromFiles: f.input }), {
+        kind: "written",
+        version: f.input,
+      });
+    }
   }
 });
