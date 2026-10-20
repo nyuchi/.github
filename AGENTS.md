@@ -295,6 +295,33 @@ Load the Mzizi **dev skills** before starting work:
   it's verified at runtime, and `/code-review` has run with findings
   resolved.
 
+## Branch ownership and landing
+
+Most of our git friction comes from several writers on one branch and
+concurrent merge calls, not from git itself. These rules remove it.
+
+- **One writer per branch.** A branch belongs to the session or person
+  that created it. Never push to another session's branch; open your own
+  branch and a follow-up PR instead. Force-push (`--force-with-lease`
+  only) is allowed on your own branch, never on a shared one.
+- **When only the base moved, update, don't rewrite.** Use GitHub's
+  "Update branch" (or merge the base in) rather than rebasing and
+  force-pushing a branch someone may have checked out.
+- **Enqueue, don't merge.** Where a repo's ruleset requires a merge queue,
+  land with `gh pr merge <n> --auto` (the repo's allowed method); GitHub
+  adds the PR to the queue once checks pass. Never call merge in a loop.
+- **Treat GitHub's 5xx and "merge already in progress" as wait, not
+  failure.** Retry 5xx with backoff (2s, 4s, 8s, 16s); poll the PR state
+  on "in progress" instead of retrying the merge.
+- **Read through the API when you don't need to build.** Review and
+  research work reads diffs and files with `gh api` or the GitHub MCP
+  tools, without cloning or adding a worktree.
+- **Every workflow whose check is required must trigger on
+  `merge_group:`.** A required check that never reports on the queue's
+  `gh-readonly-queue/**` ref stalls every queued PR. Jobs that need a PR
+  (title lint, PR comments) skip themselves on `merge_group`; a skipped
+  check counts as passed.
+
 ---
 
 _Last reviewed by a human: every PR that changes this file._
