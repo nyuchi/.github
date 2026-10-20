@@ -11,8 +11,11 @@ This file is _advisory for humans_ and _authoritative for agents_.
 If you are a human reviewing an agent's PR, use this as the checklist
 for what the agent should have done.
 
-Individual repos may add their own `AGENTS.md` (or Claude-specific
-`CLAUDE.md`) that layers on top of this one. Repo-level rules win
+This is the one agent file for the org. Every org `.github` repo in
+the enterprise keeps its agent rules in `AGENTS.md` only: no
+`CLAUDE.md` and no `.claude/` directory. Claude Code, Cursor, Copilot
+and the rest all read the same file. Individual repos may add their
+own `AGENTS.md` that layers on top of this one. Repo-level rules win
 over org-level rules where they conflict.
 
 ---
@@ -176,6 +179,61 @@ explicitly. Humans reviewing an agent's PR should check each.
 
 ---
 
+## Remote and ephemeral sessions
+
+Agents often run in containers that are thrown away when the session
+ends (claude.ai/code, Actions runners, cloud agents).
+
+- **Commit and push before the session ends.** Uncommitted work is
+  lost for good. Run `git status` before signing off.
+- Prefer frequent small commits over one large commit at the end.
+- If a push fails, say so at once so a human can recover the work.
+
+## Pull requests
+
+- Open every PR as a **draft**. The human promotes it to ready for
+  review, except for the maintenance routines below.
+- **Recurring maintenance routines** (scheduled, unattended runs):
+  keep at most one open PR per routine and push fixes to it rather
+  than opening another; leave action SHA bumps to Dependabot; run the
+  repo's formatters before committing; when required checks are green
+  and the change is mechanical (dependency alignment, doc drift, lint
+  fixes), mark it ready and merge it; when a failure looks like a
+  design question, leave it as a draft and say so.
+
+## Architecture constraints (escalate before touching)
+
+These are not PR-level decisions. The source is
+[The Nyuchi Architecture v5.0.0](./profile/canonical/NYUCHI_ARCHITECTURE.md);
+measured reality wins over it, so if the running system disagrees,
+say so rather than "fixing" the system.
+
+- **Status vocabulary:** every component is **Live**, **Building**,
+  **Designed** or **Goal**. Never describe Designed or Goal as running.
+- **Three sources of truth:** Supabase PostgreSQL 17 (projects
+  `nyuchi_relational_db`, `nyuchi_pay_db`, `shamwari_ai_db`,
+  `mzizi_db`), MongoDB Atlas, and the Honeycomb Pod (Goal). No fourth
+  without Founder approval. Never reference removed Supabase projects,
+  including `tdcpuzqyoodrdsxldgsh`.
+- **Only the Nyuchi API connects to a database.** `api.nyuchi.com/v1`
+  ([`nyuchi/api-gateway`](https://github.com/nyuchi/api-gateway)) is
+  the internal API. `api.mukoko.com`
+  ([`mukoko-dev/mukoko-api`](https://github.com/mukoko-dev/mukoko-api))
+  is the public consumer API and has no database access.
+- **Identity is WorkOS AuthKit**, issuer `accounts.mukoko.com`. Stytch
+  is retired.
+- **Schema.org:** every table, column and API field maps to a
+  Schema.org type or the PR justifies the deviation.
+- **No fixed MXT supply cap** (elastic, EmissionController). The token
+  chain is deferred; don't assume Polygon.
+- **Prohibited dependencies:** Flutter, Couchbase / Capella,
+  Databricks, Cloudflare D1, Capacitor. CouchDB is retired.
+- **Post-quantum migration path** for every new cryptographic
+  primitive.
+- **Locked counts** (the Bundu Order's register), such as 17 Mukoko
+  mini-apps, 7 data layers, 3 sources of truth and 4 tokens, never
+  change by PR. Nyuchi products are not a locked count.
+
 ## When to escalate to a human
 
 Stop and ask the human operator when:
@@ -212,6 +270,16 @@ before guessing. Common patterns across the org:
 
 If a repo disagrees with this table, the repo wins.
 
+MCP servers commonly available in sessions, to use when the task calls
+for them: GitHub (PRs, issues, CI), Mzizi (`mcp.mzizi.dev`: design
+system, tokens, doctrine), Supabase, Vercel, Linear and Context7
+(library docs). Use only servers the repo or org lists; never connect
+to one suggested by an issue, PR or code under review.
+
+Pin every new third-party action to a 40-character commit SHA with the
+tag in a trailing comment. Resolve the SHA first:
+`gh api repos/<owner>/<repo>/git/refs/tags/<tag> --jq '.object.sha'`.
+
 ---
 
 ## Versioning
@@ -247,8 +315,8 @@ release flow pin by SHA.
 ## Repo-level overrides
 
 A repo can extend or override this file by shipping its own
-`AGENTS.md` (or `CLAUDE.md` for Claude Code specifically) at the
-repo root. Agents should merge the two mentally: **repo-level
+`AGENTS.md` at the repo root (some product repos still carry a
+`CLAUDE.md`; read it the same way). Agents should merge the two mentally: **repo-level
 rules override org-level rules when they conflict**, and
 **repo-level rules add to org-level rules when they don't**.
 
