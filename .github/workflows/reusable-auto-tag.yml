@@ -159,7 +159,7 @@ jobs:
 
       - name: Check it against the versioning policy, or compute it
         id: policy
-        uses: nyuchi/.github/.github/actions/next-version@de909ab7468d998ba2cf87416ac2042616eba75d  # main, 2026-10-04
+        uses: nyuchi/.github/.github/actions/next-version@32eabdb685947bd040ad8141b5fa3d8cc2e83725  # main, 2026-10-19
         with:
           channel: ${{ inputs.channel }}
           bump: ${{ inputs.bump }}
