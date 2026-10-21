@@ -234,7 +234,7 @@ jobs:
               --output "$canonical"
             echo "::notice::$canonical is missing from the repo root; using the canonical copy from nyuchi/.github@$ref."
           done <<< "$ORG_CONFIGS"
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v6
         with:
           node-version: '24'
           # Node is only a runtime for a globally installed tool here; the
@@ -358,7 +358,7 @@ jobs:
                       break
           print("script=%s" % script)
           DETECT
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f  # v1.21.1
+      - uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af  # v1.21.2
         id: setup
         if: ${{ steps.detect.outputs.js == 'true' }}
         continue-on-error: ${{ !inputs.enforce }}
@@ -440,7 +440,7 @@ jobs:
           VITE_PLUS_VERSION: ${{ inputs.vite-plus-version }}
         shell: bash
         run: *detect
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f  # v1.21.1
+      - uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af  # v1.21.2
         id: setup
         if: ${{ steps.detect.outputs.js == 'true' }}
         continue-on-error: ${{ !inputs.enforce }}
@@ -499,7 +499,7 @@ jobs:
         if: ${{ steps.detect.outputs.js == 'true' && steps.detect.outputs.script == '' }}
         shell: bash
         run: echo "::notice::No 'ci:build' or 'build' script in package.json; nothing to build. Passing."
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f  # v1.21.1
+      - uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af  # v1.21.2
         id: setup
         if: ${{ steps.detect.outputs.js == 'true' && steps.detect.outputs.script != '' }}
         continue-on-error: ${{ !inputs.enforce }}
