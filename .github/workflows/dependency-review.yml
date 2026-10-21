@@ -175,6 +175,14 @@ jobs:
           PNPM_VERSION: 10.34.6
           PIP_AUDIT_VERSION: 2.10.1
           REGISTRY: https://registry.npmjs.org/
+          # WHAT BLOCKS (owner, 2026-10-21: "latest shouldn't be a blocker
+          # on too old of a version"). A high or critical advisory fails the
+          # job only while a newer release of the package exists to move to.
+          # A package already at its newest published release (no fix yet)
+          # gets a warning instead, so a repo is never red for something it
+          # cannot change. Judged against the registry's `latest`, not the
+          # advisory's patched range, which can lag a published fix.
+          #
           # The org allowlist: advisories pnpm audit may ignore in EVERY
           # repo. A repo's own auditConfig is stripped (below), so a waiver
           # lives here, owner-reviewed, one line each with why and until when.
@@ -191,6 +199,33 @@ jobs:
           root=$PWD
           failed=0
           summary() { printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"; }
+          notes="$RUNNER_TEMP/audit-notes.md"
+          : > "$notes"
+          note() { printf '%s\n' "$1" >> "$notes"; }
+          # judge < "name<TAB>version<TAB>advisory<TAB>severity" lines: warn
+          # when the version is the package's latest, else error. Returns 1
+          # when anything blocks. Names come from the lockfile, so they are
+          # checked before they reach npm.
+          judge() {
+            local n v id sev latest blocked=0
+            while IFS=$'\t' read -r n v id sev; do
+              [ -n "$n" ] || continue
+              if [[ ! "$n" =~ ^(@[a-z0-9._~-]+/)?[a-z0-9._~-]+$ ]]; then
+                echo "::error file=$f::Unexpected package name in an advisory."
+                blocked=1; continue
+              fi
+              latest=$(cd "$w" && npm view --registry="$REGISTRY" -- "$n@latest" version 2>/dev/null || true)
+              if [ -n "$latest" ] && [ "$v" = "$latest" ]; then
+                echo "::warning file=$f::$n $v ($id, $sev) is the newest release; nothing to upgrade to yet, so not blocking."
+                note "- ⚠️ \`$f\`: \`$n@$v\` $id ($sev) is the newest release, not blocking"
+              else
+                echo "::error file=$f::$n $v ($id, $sev): ${latest:+$n $latest is published; }upgrade or override to a fixed version."
+                note "- ❌ \`$f\`: \`$n@$v\` $id ($sev), ${latest:-a newer version} is published"
+                blocked=1
+              fi
+            done
+            return "$blocked"
+          }
           summary "### Dependency audit of changed lockfiles"
           summary ""
           summary "| Lockfile | Auditor | Result |"
@@ -222,7 +257,21 @@ jobs:
               package-lock.json|npm-shrinkwrap.json)
                 tool="npm audit"
                 cp -- "$root/$dir/package.json" "$root/$f" "$w/" 2>/dev/null
-                (cd "$w" && npm audit --package-lock-only --audit-level=high --registry="$REGISTRY") || rc=1
+                (cd "$w" && npm audit --package-lock-only --json --registry="$REGISTRY" > "$w/audit.json") || true
+                if jq -e '.vulnerabilities | type == "object"' "$w/audit.json" > /dev/null 2>&1; then
+                  # Packages with an advisory of their own (an object in via),
+                  # each installed version from the lockfile.
+                  jq -r --slurpfile lock "$w/$name" '.vulnerabilities[]
+                    | select(.severity == "high" or .severity == "critical")
+                    | select(any(.via[]; type == "object")) as $x
+                    | ([$x.via[] | objects | (.url // "" | split("/") | last)] | unique | join(",")) as $ids
+                    | $lock[0].packages // {} | to_entries[]
+                    | select(.key | endswith("node_modules/" + $x.name)) | .value.version // empty
+                    | [$x.name, ., $ids, $x.severity] | @tsv' "$w/audit.json" | sort -u > "$w/found.tsv"
+                  judge < "$w/found.tsv" || rc=1
+                else
+                  rc=1
+                fi
                 ;;
               pnpm-lock.yaml)
                 tool="pnpm audit"
@@ -235,8 +284,16 @@ jobs:
                   | if ($ids | length) > 0 then .pnpm = {auditConfig: {ignoreGhsas: $ids}} else . end' \
                   "$root/$dir/package.json" > "$w/package.json" 2>/dev/null || rc=1
                 [ "$rc" -eq 0 ] && { (cd "$w" && npm_config_manage_package_manager_versions=false \
-                  npx --yes --registry="$REGISTRY" "pnpm@$PNPM_VERSION" audit --audit-level high \
-                  --registry="$REGISTRY" --config.manage-package-manager-versions=false) || rc=1; }
+                  npx --yes --registry="$REGISTRY" "pnpm@$PNPM_VERSION" audit --json \
+                  --registry="$REGISTRY" --config.manage-package-manager-versions=false > "$w/audit.json") || true
+                  if jq -e '.advisories | type == "object"' "$w/audit.json" > /dev/null 2>&1; then
+                    jq -r '.advisories[] | select(.severity == "high" or .severity == "critical")
+                      | . as $a | .findings[].version | [$a.module_name, ., ($a.github_advisory_id // "advisory"), $a.severity] | @tsv' \
+                      "$w/audit.json" | sort -u > "$w/found.tsv"
+                    judge < "$w/found.tsv" || rc=1
+                  else
+                    rc=1
+                  fi; }
                 ;;
               Cargo.lock)
                 tool="cargo audit"
@@ -295,6 +352,7 @@ jobs:
                 ;;
             esac
           done < "$TARGETS"
+          if [ -s "$notes" ]; then summary ""; cat "$notes" >> "$GITHUB_STEP_SUMMARY"; fi
           exit "$failed"
       - name: Nothing to audit
         if: steps.pick.outputs.any != 'true'
