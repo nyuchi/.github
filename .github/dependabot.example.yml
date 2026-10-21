@@ -24,6 +24,7 @@ updates:
   # GitHub Actions — applies to every repo that uses Actions.
   # -------------------------------------------------------------------
   - package-ecosystem: "github-actions"
+    target-branch: "staging"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -46,6 +47,7 @@ updates:
   # npm / pnpm — TypeScript, Next.js, Astro, component packages.
   # -------------------------------------------------------------------
   - package-ecosystem: "npm"
+    target-branch: "staging"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -78,6 +80,7 @@ updates:
   # Cargo — Rust workspaces (e.g. ntl).
   # -------------------------------------------------------------------
   - package-ecosystem: "cargo"
+    target-branch: "staging"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -104,6 +107,7 @@ updates:
   # pyproject.toml. The Python CI handles that automatically.
   # -------------------------------------------------------------------
   - package-ecosystem: "pip"
+    target-branch: "staging"
     directory: "/"
     schedule:
       interval: "weekly"
