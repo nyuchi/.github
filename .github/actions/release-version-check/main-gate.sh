@@ -10,8 +10,9 @@
 #
 # In a repo that has a `staging` branch, a pull request into the default
 # branch must:
-#   1. come from `staging`, a `release/*` branch, or the registry pin bot's
-#      `bot/registry-pin` branch; and
+#   1. come from `staging`, a `release/*` branch, a release bot's
+#      `release-pr/*` branch (nyuchi-api's staging-release.yml), or the
+#      registry pin bot's `bot/registry-pin` branch; and
 #   2. if it is a release, find no commit on the default branch since the
 #      last release. Such a commit exists only there and the release would
 #      erase it: forward-port it to staging and re-cut the release. The
@@ -48,7 +49,7 @@ if [ -z "$head_ref" ]; then
 fi
 
 case "$head_ref" in
-  staging|release/*|bot/registry-pin) ;;
+  staging|release/*|release-pr/*|bot/registry-pin) ;;
   *)
     fail "'$DEFAULT_BRANCH' takes releases only, and this PR comes from '$head_ref'. Open it against 'staging' instead (gh pr edit <n> --base staging); it reaches '$DEFAULT_BRANCH' with the next release. Dependabot: set target-branch: staging in .github/dependabot.yml." ;;
 esac
