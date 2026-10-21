@@ -41,7 +41,6 @@ not define its own equivalent file.
 | `CONTRIBUTING.md`                 | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements.                                                              |   ✅   |
 | `CLA.md`                          | Contributor Licence Agreement for substantive contributions to Apache 2.0 infrastructure repos (per NA-02 §4(b)). Licence grant, not copyright assignment. |   ✅   |
 | `AGENTS.md`                       | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex).                                                                        |   ✅   |
-| `CLAUDE.md`                       | Claude Code–specific supplement to `AGENTS.md`: remote-session hygiene, model selection, MCP servers, SHA-pinning, architecture constraints.               |   ✅   |
 | `.github/copilot-instructions.md` | GitHub Copilot–specific pointer to `AGENTS.md` with the rules Copilot most often gets wrong.                                                               |   ✅   |
 
 ### Issue and PR forms
