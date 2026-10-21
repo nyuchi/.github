@@ -214,7 +214,7 @@ jobs:
                 echo "::error file=$f::Unexpected package name in an advisory."
                 blocked=1; continue
               fi
-              latest=$(cd "$w" && npm view --registry="$REGISTRY" -- "$n@latest" version 2>/dev/null || true)
+              latest=$(cd "$w" || exit 1; npm view --registry="$REGISTRY" -- "$n@latest" version 2>/dev/null) || latest=""
               if [ -n "$latest" ] && [ "$v" = "$latest" ]; then
                 echo "::warning file=$f::$n $v ($id, $sev) is the newest release; nothing to upgrade to yet, so not blocking."
                 note "- ⚠️ \`$f\`: \`$n@$v\` $id ($sev) is the newest release, not blocking"
