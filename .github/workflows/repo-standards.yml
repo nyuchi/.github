@@ -63,7 +63,8 @@ jobs:
               | grep -E '^(CLAUDE\.md|\.claude/)' || true)
             if [ -n "$added" ]; then
               while IFS= read -r f; do
-                echo "::error file=$f,title=Repo standards::Org .github repos keep agent rules in AGENTS.md only; remove $f and put its content in AGENTS.md."
+                msg="Org .github repos keep agent rules in AGENTS.md only; remove $f and put its content in AGENTS.md."
+                echo "::error file=$f,title=Repo standards::$msg"
               done <<<"$added"
               summary "- ❌ adds CLAUDE.md or .claude/ in an org .github repo"
               failed=1
@@ -85,7 +86,8 @@ jobs:
             if grep -Eq '^[[:space:]]*pull_request[:[:space:]]|^on:.*pull_request|^[[:space:]]*-[[:space:]]*pull_request\b' <<<"$body" \
               && ! grep -q 'merge_group' <<<"$body" \
               && ! grep -q 'workflow_call' <<<"$body"; then
-              echo "::warning file=$f,title=Repo standards::Runs on pull_request but not merge_group; as a required check it would stall the merge queue."
+              msg="Runs on pull_request but not merge_group; as a required check it would stall the merge queue."
+              echo "::warning file=$f,title=Repo standards::$msg"
               summary "- ⚠️ \`$f\` runs on pull_request but not merge_group"
             fi
           done <<<"$files"
