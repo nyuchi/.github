@@ -45,14 +45,32 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Check out the default ref (main's tip), never the workflow_run's
+      # head_sha: the next step runs a local action from this tree with
+      # contents: write (Semgrep workflow-run-target-code-checkout).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
+      # Lint passed on head_sha. If main has moved on since, that newer push
+      # runs Lint and this workflow itself, so this run tags nothing.
+      - name: Release only the commit Lint passed
+        id: gate
+        if: github.event_name == 'workflow_run'
+        env:
+          LINTED: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          if [ "$head" != "$LINTED" ]; then
+            echo "main is at $head, Lint passed on $LINTED; the newer push releases itself."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Compute the next version
         id: v
+        if: steps.gate.outputs.skip != 'true'
         uses: ./.github/actions/next-version
         with:
           channel: main
@@ -60,6 +78,7 @@ jobs:
           manual: ${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Push the tag and release
+        if: steps.gate.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
