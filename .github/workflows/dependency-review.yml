@@ -186,7 +186,8 @@ jobs:
             GHSA-vfj7-8cjw-p6xm
         run: |
           set -uo pipefail
-          allow_json=$(printf '%s\n' $AUDIT_ALLOW_GHSAS | jq -R . | jq -sc 'map(select(length > 0))')
+          read -r -a allow_ids <<<"$AUDIT_ALLOW_GHSAS"
+          allow_json=$(printf '%s\n' "${allow_ids[@]}" | jq -R . | jq -sc 'map(select(length > 0))')
           root=$PWD
           failed=0
           summary() { printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"; }
