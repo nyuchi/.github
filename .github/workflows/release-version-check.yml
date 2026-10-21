@@ -150,6 +150,19 @@ jobs:
           sparse-checkout: .github/actions
           persist-credentials: false
 
+      # The default branch takes releases only, and a release may not erase
+      # work that exists only there. The two rules are in main-gate.sh.
+      - name: Main gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE_REF: ${{ steps.event.outputs.base-ref }}
+          BASE_SHA: ${{ steps.event.outputs.base-sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ steps.event.outputs.pr-number }}
+        run: bash ./.release-version-check/.github/actions/release-version-check/main-gate.sh
+
       - name: Check the version
         uses: ./.release-version-check/.github/actions/release-version-check
         with:
