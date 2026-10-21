@@ -175,8 +175,19 @@ jobs:
           PNPM_VERSION: 10.34.6
           PIP_AUDIT_VERSION: 2.10.1
           REGISTRY: https://registry.npmjs.org/
+          # The org allowlist: advisories pnpm audit may ignore in EVERY
+          # repo. A repo's own auditConfig is stripped (below), so a waiver
+          # lives here, owner-reviewed, one line each with why and until when.
+          # Remove an entry the day a fix is published.
+          #   GHSA-vfj7-8cjw-p6xm  braces: no patched release; reaches repos
+          #                        only through lint/build tooling. Review
+          #                        by 2027-01-31.
+          AUDIT_ALLOW_GHSAS: >-
+            GHSA-vfj7-8cjw-p6xm
         run: |
           set -uo pipefail
+          read -r -a allow_ids <<<"$AUDIT_ALLOW_GHSAS"
+          allow_json=$(printf '%s\n' "${allow_ids[@]}" | jq -R . | jq -sc 'map(select(length > 0))')
           root=$PWD
           failed=0
           summary() { printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"; }
@@ -219,7 +230,10 @@ jobs:
                 # The scratch directory has no .pnpmfile.cjs or .npmrc, and
                 # package.json loses the fields pnpm reads settings from
                 # (auditConfig ignores, overrides, a pnpm version to switch to).
-                jq 'del(.pnpm, .packageManager, .devEngines)' "$root/$dir/package.json" > "$w/package.json" 2>/dev/null || rc=1
+                # Only the org allowlist (AUDIT_ALLOW_GHSAS) is put back.
+                jq --argjson ids "$allow_json" 'del(.pnpm, .packageManager, .devEngines)
+                  | if ($ids | length) > 0 then .pnpm = {auditConfig: {ignoreGhsas: $ids}} else . end' \
+                  "$root/$dir/package.json" > "$w/package.json" 2>/dev/null || rc=1
                 [ "$rc" -eq 0 ] && { (cd "$w" && npm_config_manage_package_manager_versions=false \
                   npx --yes --registry="$REGISTRY" "pnpm@$PNPM_VERSION" audit --audit-level high \
                   --registry="$REGISTRY" --config.manage-package-manager-versions=false) || rc=1; }
