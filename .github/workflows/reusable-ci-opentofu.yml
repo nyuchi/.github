@@ -15,7 +15,7 @@
 #
 #   jobs:
 #     iac:
-#       uses: nyuchi/.github/.github/workflows/reusable-ci-opentofu.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-opentofu.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
 #       with:
 #         working-directory: infra/
 #         tofu-version: "1.9"

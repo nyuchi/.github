@@ -12,7 +12,7 @@
 #
 #   jobs:
 #     docker:
-#       uses: nyuchi/.github/.github/workflows/reusable-ci-docker.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-ci-docker.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
 #       with:
 #         dockerfile: Dockerfile
 #         image-name: my-service

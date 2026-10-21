@@ -4,7 +4,7 @@
 #
 #   jobs:
 #     analyze:
-#       uses: nyuchi/.github/.github/workflows/reusable-codeql.yml@main
+#       uses: nyuchi/.github/.github/workflows/reusable-codeql.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
 #       with:
 #         languages: '[{"language":"javascript-typescript","build-mode":"none"}]'
 #
