@@ -15,7 +15,7 @@
 #
 #   jobs:
 #     sbom:
-#       uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
+#       uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
 #       with:
 #         artifact-name: sbom-${{ github.ref_name }}
 #       permissions:
