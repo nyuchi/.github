@@ -13,7 +13,7 @@
 #
 #   jobs:
 #     release:
-#       uses: nyuchi/.github/.github/workflows/reusable-release.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
+#       uses: nyuchi/.github/.github/workflows/reusable-release.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
 #       with:
 #         artifact-paths: |
 #           dist/**
@@ -38,7 +38,7 @@
 #       branches: [main]
 #   jobs:
 #     tag:
-#       uses: nyuchi/.github/.github/workflows/reusable-auto-tag.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
+#       uses: nyuchi/.github/.github/workflows/reusable-auto-tag.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
 #       with:
 #         version-command: node -p "require('./package.json').version"
 #       permissions:
@@ -46,7 +46,7 @@
 #     release:
 #       needs: tag
 #       if: needs.tag.outputs.created == 'true'
-#       uses: nyuchi/.github/.github/workflows/reusable-release.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
+#       uses: nyuchi/.github/.github/workflows/reusable-release.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
 #       with:
 #         tag: ${{ needs.tag.outputs.tag }}
 #       permissions:
@@ -129,7 +129,7 @@ jobs:
   sbom:
     name: Generate SBOM
     needs: validate-tag
-    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
+    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
     permissions:
       contents: read
       packages: read
