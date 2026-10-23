@@ -45,7 +45,7 @@
 #   jobs:
 #     tag:
 #       if: github.event.workflow_run.conclusion == 'success'
-#       uses: nyuchi/.github/.github/workflows/reusable-auto-tag.yml@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
+#       uses: nyuchi/.github/.github/workflows/reusable-auto-tag.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
 #       with:
 #         version-command: node -p "require('./package.json').version"
 #         ref: ${{ github.event.workflow_run.head_sha }}
@@ -159,7 +159,7 @@ jobs:
 
       - name: Check it against the versioning policy, or compute it
         id: policy
-        uses: nyuchi/.github/.github/actions/next-version@c2be05a22aeb6a98a80a9301f6b3e33bb88b20b0  # v0.2.0
+        uses: nyuchi/.github/.github/actions/next-version@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
         with:
           channel: ${{ inputs.channel }}
           bump: ${{ inputs.bump }}
