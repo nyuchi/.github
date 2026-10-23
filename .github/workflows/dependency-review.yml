@@ -90,6 +90,16 @@ jobs:
           # A required workflow can run on a fork's pull request, where the
           # token is read-only; the summary goes to the job summary instead.
           comment-summary-in-pr: never
+          # Owner, 2026-10-23: keep vite-plus. vite-plus depends on
+          # "vite": "npm:@voidzero-dev/vite-plus-core@<v>", which the lockfile
+          # records as a nested node_modules/vite at 1.x, and this review
+          # reads as real vite 1.x. These five vite advisories all cover
+          # 1.x and are false positives from that alias (nyuchi/fly-mcp#30:
+          # alias 1.3.0, real vite 8.3.5, npm audit clean). Real vite stays
+          # covered by the audit job below, which resolves the alias.
+          allow-ghsas: >-
+            GHSA-mv48-hcvh-8jj8, GHSA-353f-5xf4-qw67, GHSA-587h-7wmj-h5pm,
+            GHSA-fx2h-pf6j-xcff, GHSA-c27g-q93r-2cwf
 
   audit:
     name: audit
