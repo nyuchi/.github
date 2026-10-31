@@ -413,6 +413,10 @@ starts — so another session, agent or person can pick it up.
   issues.
 - Never put secrets, credential status or exploitable detail in issues
   on public repos.
+- Owner decisions that reach beyond one repository also go in
+  [`DECISIONS.md`](./DECISIONS.md) in `nyuchi/.github`, newest first, with
+  a link to the issue that tracks the work. Read it before starting work,
+  and add the entry in the same session that receives the decision.
 
 ## Dev skills, progress reports and the merge gate
 
