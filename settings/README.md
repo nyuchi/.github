@@ -38,7 +38,8 @@ existing owner bypass stays manual.
   `merge-queue-staging` (SQUASH) and `merge-queue-main` (MERGE, no extra wait).
   It replaces each repository's `repo-merge-queue`.
 - Repository settings: merge commits allowed (`settings/repository.json`);
-  squash stays on, rebase stays off.
+  squash and rebase stay as the org already has them (some repositories, such
+  as `bundu-standards`, rely on rebase and merge).
 
 ## Applying it
 

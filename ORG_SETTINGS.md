@@ -146,7 +146,7 @@ These should hold for **every public repo** under
 
 | Setting                             | Value                                |
 | ----------------------------------- | ------------------------------------ |
-| Allow merge commits                 | **Disabled**                         |
+| Allow merge commits                 | **Enabled** (promotion only)         |
 | Allow squash merging                | **Enabled** (default)                |
 | Allow rebase merging                | **Enabled**                          |
 | Default commit message for squash   | _Pull request title and description_ |
@@ -163,8 +163,9 @@ One standard covers every org in the enterprise: `nyuchi`,
 1. **One enterprise ruleset**, `enterprise-main-protection`, set on the
    `bundu-labs` enterprise and **active** on the default branch of every
    repo in every org (except `sandbox-*` and `archive-*`). It holds the
-   floor: pull request required with **0** approvals, linear history, no
-   force pushes, no deletion. It carries no status checks.
+   floor: pull request required with **0** approvals, no force pushes, no
+   deletion. Linear history is required on `staging`, not on the default
+   branch (see _Promotion_ below). It carries no status checks.
 2. **One org ruleset per org**, `org-wide-main-protection`, the same in
    every org. It repeats the floor and adds what the enterprise does
    not: the five required lint status checks and a "Require workflows to
@@ -188,7 +189,7 @@ The org ruleset (**Settings → Rules → Rulesets**):
 | Bypass                                                           | Organisation admins, always                                         |
 | Restrict deletions                                               | **Enabled**                                                         |
 | Block force pushes                                               | **Enabled**                                                         |
-| Require linear history                                           | **Enabled**                                                         |
+| Require linear history                                           | **Disabled** on the default branch (kept on `staging`)              |
 | Require a pull request before merging                            | **Enabled**                                                         |
 | Required approving reviews                                       | **0** (pre-scale solo-developer phase)                              |
 | Dismiss stale pull request approvals when new commits are pushed | **Disabled**                                                        |
@@ -196,7 +197,7 @@ The org ruleset (**Settings → Rules → Rulesets**):
 | Require approval of the most recent reviewable push              | _Deferred_ until ≥ 2 engineers with merge rights                    |
 | Require approval for unattributed changes                        | **Disabled** (it asks for an approval a solo owner cannot give)     |
 | Require conversation resolution before merging                   | **Enabled**                                                         |
-| Allowed merge methods                                            | **Squash, rebase**                                                  |
+| Allowed merge methods                                            | **Merge, squash**                                                   |
 | Require status checks to pass                                    | **Enabled** — the five lint checks below                            |
 | Require workflows to pass                                        | **Enabled** — `<org>/.github/.github/workflows/org-lint.yml`        |
 | Require branches to be up to date before merging                 | **Enabled**                                                         |
@@ -214,10 +215,16 @@ The org ruleset (**Settings → Rules → Rulesets**):
 > design. The trigger is documented in NA-01 Article 10.1 (the
 > transition to formal divisional structure).
 
-**Squash is required for release PRs.** A release PR built by
-merging `origin/main` into a release branch contains a merge
-commit. Under linear history it cannot be rebase-merged; it must
-be squash-merged. That is why the org allows both methods.
+**Promotion is a merge commit.** (Changed 2026-11-02.) Feature PRs into
+`staging` are squash-merged and `staging` stays linear. A release
+(`staging` into the default branch) and a `hotfix/*` PR are merged with a
+**merge commit**, so the default branch contains `staging`'s history and the
+two branches never diverge. Squashing a release put a commit on the default
+branch that `staging` did not have, and every release then needed a
+sync-back PR, the `forward-ported` label and a conflict fix. The merge queue
+is one ruleset per branch because a queue has one merge method: SQUASH for
+`staging`, MERGE for the default branch. The desired rulesets are the files in
+`settings/`.
 
 #### Required status checks
 
@@ -303,7 +310,6 @@ tokens.
 - **Rulesets:** branch and tag protection is enforced via GitHub
   Rulesets, not legacy branch-protection rules. The definitions live
   in [`github-rulesets/`](./github-rulesets/) in this repo:
-
   - `org-wide-main-protection.json` — the org ruleset described in
     §Branch protection for `main`, the same in every org apart from
     the `workflows` rule's repository id.
