@@ -81,7 +81,7 @@ jobs:
               grep -oiE "$close" | grep -oE '#[0-9]+' | sort -u || true)"
             missing="$(comm -13 <(printf '%s\n' "$have") <(printf '%s\n' "$want") | grep . || true)"
             if [ -n "$missing" ]; then
-              lines="$(printf 'Closes %s\n' $missing)"
+              lines="$(printf '%s\n' "$missing" | sed 's/^/Closes /')"
               msg="PRs in this release close issues this description does not repeat,"
               echo "::warning title=Release is missing closing lines::$msg so they stay open. Add:"
               printf '%s\n' "$lines"
