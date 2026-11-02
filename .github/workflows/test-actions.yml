@@ -86,6 +86,8 @@ jobs:
           persist-credentials: false
       - name: Refusal and pass paths, against a fake gh
         run: bash .github/actions/release-version-check/test.sh
+      - name: Main gate accepts releases and hotfixes only, against a fake gh
+        run: bash .github/actions/release-version-check/test-main-gate.sh
       - name: A commit with no version file passes as unchanged
         id: rvc
         uses: ./.github/actions/release-version-check
