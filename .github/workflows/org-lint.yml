@@ -40,3 +40,34 @@ jobs:
     uses: nyuchi/.github/.github/workflows/reusable-vite-plus.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
     with:
       enforce: false
+
+  # CLAUDE.md and .claude/ are development tooling. They are never tracked and
+  # never released, so a pull request must not add or change them (deleting
+  # them is fine). Only files the PR touches are checked, so a repo that still
+  # tracks one is not blocked: it is asked to remove it, and nothing new can
+  # arrive. A release PR into the default branch is a pull request too, so this
+  # is also what keeps them off main.
+  agent-files:
+    name: no agent-local files
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: No CLAUDE.md or .claude/ in the diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          touched="$(gh api "repos/$REPO/pulls/$PR/files" --paginate \
+            --jq '.[] | select(.status != "removed") | .filename' |
+            grep -E '(^|/)(CLAUDE(\.local)?\.md|\.claude/)' || true)"
+          if [ -n "$touched" ]; then
+            echo "::error title=Agent-local files::CLAUDE.md and .claude/ are development tooling and never reach main or production. Remove these from the pull request and keep them in .gitignore:"
+            printf '%s\n' "$touched"
+            exit 1
+          fi
+          echo "No CLAUDE.md or .claude/ added or changed."
