@@ -35,11 +35,58 @@ permissions:
 
 jobs:
   lint:
-    uses: nyuchi/.github/.github/workflows/reusable-lint.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
+    uses: nyuchi/.github/.github/workflows/reusable-lint.yml@c2e2506a4eadf67fbf824b41720aa220c539fc21  # v0.7.0
   vite-plus:
-    uses: nyuchi/.github/.github/workflows/reusable-vite-plus.yml@bb87d28e55c0c3c385121113900b698eb6ce8ab2  # v0.5.0
+    uses: nyuchi/.github/.github/workflows/reusable-vite-plus.yml@c2e2506a4eadf67fbf824b41720aa220c539fc21  # v0.7.0
     with:
       enforce: false
+
+  # Every pull request names the issue it serves. A closing keyword (Closes,
+  # Fixes, Resolves) makes GitHub close the issue when the PR merges into the
+  # default branch; Refs attaches an issue that stays open (partial work); and
+  # "No issue: <reason>" is the explicit opt-out for trivial changes. Bots are
+  # exempt. GitHub only acts on a closing keyword when the merge lands on the
+  # default branch, so a PR into staging closes nothing until the release PR to
+  # main repeats it: that PR is checked for the lines it is missing.
+  issue-link:
+    name: issue attached
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: The PR closes or references an issue, or says why not
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BODY: ${{ github.event.pull_request.body }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          DEFAULT: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          close='(close[sd]?|fix(e[sd])?|resolve[sd]?)[: ]+([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#[0-9]+'
+          refs='(refs?|related to|part of)[: ]+([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#[0-9]+'
+          if ! printf '%s' "$BODY" | grep -qiE "\b($close|$refs)|^no issue:[[:space:]]*[^[:space:]]"; then
+            msg="Add 'Closes #123' to the description, 'Refs #123' for partial work,"
+            msg="$msg or 'No issue: <reason>' for a trivial change."
+            echo "::error title=No issue attached::$msg"
+            exit 1
+          fi
+          echo "Issue attached."
+          if [ "$BASE" = "$DEFAULT" ]; then
+            have="$(printf '%s' "$BODY" | grep -oiE "$close" | grep -oE '#[0-9]+' | sort -u || true)"
+            want="$( { gh api "repos/$REPO/compare/$DEFAULT...staging" --jq '.commits[].sha' 2>/dev/null || true; } |
+              while read -r sha; do gh api "repos/$REPO/commits/$sha/pulls" --jq '.[].body // ""' 2>/dev/null || true; done |
+              grep -oiE "$close" | grep -oE '#[0-9]+' | sort -u || true)"
+            missing="$(comm -13 <(printf '%s\n' "$have") <(printf '%s\n' "$want") | grep . || true)"
+            if [ -n "$missing" ]; then
+              lines="$(printf '%s\n' "$missing" | sed 's/^/Closes /')"
+              msg="PRs in this release close issues this description does not repeat,"
+              echo "::warning title=Release is missing closing lines::$msg so they stay open. Add:"
+              printf '%s\n' "$lines"
+            fi
+          fi
 
   # CLAUDE.md and .claude/ are development tooling. They are never tracked and
   # never released, so a pull request must not add or change them (deleting
