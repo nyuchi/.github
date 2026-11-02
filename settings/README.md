@@ -15,12 +15,12 @@ sync-back, and the hours spent getting a one-line fix from `staging` to `main`.
 
 ## The flow
 
-| Step                              | Merge method       | Why                                                        |
-| --------------------------------- | ------------------ | ---------------------------------------------------------- |
-| feature PR into `staging`         | squash (unchanged) | one commit per change, linear history on `staging`         |
-| `staging` into `main` (release)   | **merge commit**   | `main` then contains `staging`'s history: nothing diverges |
-| `hotfix/*` into `main`            | merge commit       | the fix is on `main` at once                               |
-| `main` back into `staging`        | merge commit       | after a hotfix only; trivial, no conflicts                 |
+| Step                            | Merge method       | Why                                                        |
+| ------------------------------- | ------------------ | ---------------------------------------------------------- |
+| feature PR into `staging`       | squash (unchanged) | one commit per change, linear history on `staging`         |
+| `staging` into `main` (release) | **merge commit**   | `main` then contains `staging`'s history: nothing diverges |
+| `hotfix/*` into `main`          | merge commit       | the fix is on `main` at once                               |
+| `main` back into `staging`      | merge commit       | after a hotfix only; trivial, no conflicts                 |
 
 After a release, `main` is `staging` plus one merge commit with the same tree.
 The next release finds the old `staging` tip as the merge base, so the PR holds
