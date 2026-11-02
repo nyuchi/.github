@@ -404,8 +404,15 @@ starts — so another session, agent or person can pick it up.
 
 - The issue holds the goal, the owner's decisions (verbatim where
   given), the plan, acceptance criteria, owner-only steps and links.
-- Every PR references its issue (`Refs #n`; `Fixes #n` only when the
-  merge completes it).
+- Every PR is attached to its issue, and the "Org lint" check
+  (`issue attached`) fails without it. Put `Closes #n` in the
+  description when the merge completes the issue, so GitHub closes it
+  on merge. Use `Refs #n` for partial work (the issue stays open), or
+  `No issue: <reason>` for a trivial change. Bot PRs are exempt.
+- GitHub acts on a closing keyword only when the merge lands on the
+  default branch. A PR into `staging` therefore closes nothing yet: the
+  release PR to `main` repeats every `Closes #n` from the PRs it
+  carries, and the same check warns with the exact lines it is missing.
 - Post progress, decisions and a hand-off note (what's done, what's
   left, branch names) as issue comments — at each merge and before a
   session or agent finishes.
