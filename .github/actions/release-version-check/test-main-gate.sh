@@ -13,7 +13,10 @@ cat > "$work/bin/gh" <<'GH'
 #!/usr/bin/env bash
 case "$*" in
   *"branches/staging"*) exit 0 ;;
-  *"commits?sha="*) echo "abc1234 chore(release): staging to main 2026-11-01"; exit 0 ;;
+  *"commits?sha="*)
+    if [ -n "${STRAY:-}" ]; then printf 'def5678 Merge pull request #9 from o/something\nabc1234 chore(release): staging to main 2026-11-01\n'
+    else echo "abc1234 chore(release): staging to main 2026-11-01"; fi
+    exit 0 ;;
   *) exit 0 ;;
 esac
 GH
@@ -33,10 +36,14 @@ check() {
   fi
 }
 
-check "staging" 0 "release from"
+check "staging" 0 "merge commit"
 check "release/staging-to-main-2026-11-02" 0 "release from"
 check "hotfix/fix-token-mint" 0 "release from"
 check "bot/registry-pin" 0 "registry pin bot"
+# main holds a merge commit after the last release: staging may still promote (merge keeps it),
+# a tree-replacement release branch may not (it would erase it).
+STRAY=1 check "staging" 0 "merge commit"
+STRAY=1 check "release/staging-to-main-2026-11-02" 1 "would delete them"
 check "feature/anything" 1 "takes releases and hotfixes only"
 check "dependabot/npm_and_yarn/x" 1 "takes releases and hotfixes only"
 check "hotfixes-not-a-prefix" 1 "takes releases and hotfixes only"
