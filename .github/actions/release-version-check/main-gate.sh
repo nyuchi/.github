@@ -16,11 +16,14 @@
 #      hotfix lane: a fix straight to the default branch, then staging catches
 #      up by merging the default branch back in, labelled `forward-ported`
 #      on the next release); and
-#   2. if it is a release, find no commit on the default branch since the
+#   2. if it is a tree-replacement release (a `release/*` or `release-pr/*`
+#      branch, the old way), find no commit on the default branch since the
 #      last release. Such a commit exists only there and the release would
 #      erase it: forward-port it to staging and re-cut the release. The
 #      commits stay in the default branch's history after that, so once
 #      they are on staging the `forward-ported` label lets the release by.
+#      A promotion from `staging` itself is a merge commit and keeps every
+#      commit on the default branch, so rule 2 does not apply to it.
 # A pin-bot PR is let through rule 1 and is then caught by rule 2 at the next
 # release, which is the point at which it must be forward-ported.
 #
@@ -59,6 +62,11 @@ esac
 
 if [ "$head_ref" = "bot/registry-pin" ]; then
   ok "registry pin bot; allowed. The next release must forward-port it to staging (rule 2 enforces that)."
+  exit 0
+fi
+
+if [ "$head_ref" = "staging" ]; then
+  ok "promotion from staging is a merge commit: nothing on '$DEFAULT_BRANCH' can be erased, so the commit scan is skipped."
   exit 0
 fi
 
