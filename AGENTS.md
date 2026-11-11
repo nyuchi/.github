@@ -365,9 +365,10 @@ to a PR to choose a version:
 | `staging` released to `main`                 | MINOR | 0.27.4 → 0.28.0 |
 | A person runs the release with `bump: major` | MAJOR | 0.28.0 → 1.0.0  |
 
-- Each segment holds 0–999. Patch 999 rolls into the next minor; minor
-  999 never rolls into a major on its own. The release fails and asks
-  for a manual major.
+- Minor and patch have no upper limit: patch 999 is followed by patch
+  1000, minor 999 by minor 1000 (`v0.1000.0` is newer than `v0.999.0`).
+  Versions compare as numbers. Only a major is manual, and the major
+  segment stays 0–999.
 - **Agents never release a major** and never hand-edit a version to one.
   A major is the owner's call, made from the Actions tab.
 - In a repo whose version lives in a file (`package.json`,

@@ -11,6 +11,7 @@ import {
   PolicyError,
   UsageError,
   check,
+  compare,
   currentVersion,
   decide,
   highest,
@@ -40,14 +41,55 @@ test("no tags yet starts from 0.0.0", () => {
   assert.equal(nextVersion("", main), "0.1.0");
 });
 
-test("patch 999 rolls into the next minor", () => {
+test("patch has no upper limit: 999 is followed by 1000", () => {
   assert.equal(nextVersion("0.27.998", staging), "0.27.999");
-  assert.equal(nextVersion("0.27.999", staging), "0.28.0");
+  assert.equal(nextVersion("0.27.999", staging), "0.27.1000");
+  assert.equal(nextVersion("0.27.1000", staging), "0.27.1001");
+  assert.equal(nextVersion("0.0.999", staging), "0.0.1000");
+  // a patch never rolls into the minor on its own any more
+  assert.equal(nextVersion("0.999.999", staging), "0.999.1000");
 });
 
-test("minor 999 refuses to roll into a major", () => {
-  assert.throws(() => nextVersion("0.999.4", main), /bump: major/);
-  assert.throws(() => nextVersion("0.999.999", staging), PolicyError);
+test("minor has no upper limit: 999 is followed by 1000", () => {
+  assert.equal(nextVersion("0.998.4", main), "0.999.0");
+  assert.equal(nextVersion("0.999.4", main), "0.1000.0");
+  assert.equal(nextVersion("0.1000.7", main), "0.1001.0");
+  assert.equal(nextVersion("3.999.999", main), "3.1000.0");
+});
+
+test("versions compare as numbers, not as text or fixed-width fields", () => {
+  assert.ok(compare("0.1000.0", "0.999.0") > 0);
+  assert.ok(compare("0.0.1000", "0.0.999") > 0);
+  assert.ok(compare("0.999.1000", "0.1000.0") < 0);
+  assert.ok(compare("0.1000.0", "0.1000.0") === 0);
+  assert.equal(
+    highest(["refs/tags/v0.999.0", "refs/tags/v0.1000.0", "refs/tags/v0.99.9"]),
+    "0.1000.0",
+  );
+  assert.equal(
+    highest(["refs/tags/v0.0.999", "refs/tags/v0.0.1000", "refs/tags/v0.0.99"]),
+    "0.0.1000",
+  );
+});
+
+test("a major is still never automatic, whatever minor or patch hold", () => {
+  assert.throws(
+    () => nextVersion("0.1000.0", { ...main, bump: "major" }),
+    /only ever released by hand/,
+  );
+  assert.throws(
+    () => nextVersion("0.0.1000", { ...staging, bump: "major" }),
+    PolicyError,
+  );
+  assert.equal(
+    nextVersion("0.1000.5", { ...main, bump: "major", manual: true }),
+    "1.0.0",
+  );
+  // the major segment keeps its bound (also what keeps v2024.10.1 from being a version)
+  assert.throws(
+    () => nextVersion("999.0.0", { ...main, bump: "major", manual: true }),
+    /no next/,
+  );
 });
 
 test("major only on a manual run", () => {
@@ -88,9 +130,14 @@ test("check accepts the next version and refuses others", () => {
     check("0.999.0", "1.0.0", { ...main, allowMajor: true }),
     "next major",
   );
-  assert.throws(() => check("0.999.0", "0.1000.0", main), /not a version/);
-  assert.throws(() => check("0.999.0", "0.999.1", main), /bump: major/);
-  assert.equal(check("0.27.999", "0.28.0", staging), "next patch");
+  // no cap: minor 999 -> 1000 is the next minor, and a patch bump on main is refused
+  assert.equal(check("0.999.0", "0.1000.0", main), "next minor");
+  assert.throws(() => check("0.999.0", "0.999.1", main), /allows 0.1000.0/);
+  // a jump to a major is still never automatic
+  assert.throws(() => check("0.999.0", "1.0.0", main), /bump: major/);
+  assert.equal(check("0.27.999", "0.27.1000", staging), "next patch");
+  assert.throws(() => check("0.27.999", "0.28.0", staging), /allows 0.27.1000/);
+  assert.equal(check("0.0.999", "0.0.1000", staging), "next patch");
 });
 
 test("only strict versions: pre-releases and suffixes are refused", () => {
@@ -136,7 +183,17 @@ test("parseStrict and isStrictVersion", () => {
   });
   assert.equal(parse, parseStrict);
   assert.ok(isStrictVersion("999.999.999"));
+  // minor and patch are unbounded; major keeps its three digits
+  assert.ok(isStrictVersion("0.1000.0"));
+  assert.ok(isStrictVersion("0.0.1000"));
+  assert.ok(isStrictVersion("1.123456.7890123"));
   assert.ok(!isStrictVersion("1000.0.0"));
+  assert.ok(!isStrictVersion("9999.9.9"));
+  // a segment must be exactly representable, or two versions could compare equal
+  assert.ok(isStrictVersion("0.9007199254740991.0"));
+  assert.ok(!isStrictVersion("0.9007199254740993.0"));
+  assert.ok(!isStrictVersion("0.0.99999999999999999999"));
+  assert.throws(() => parseStrict("0.0.99999999999999999999"), /not a version/);
   assert.ok(!isStrictVersion(undefined));
   assert.ok(!isStrictVersion(123));
   assert.throws(() => parseStrict(null), PolicyError);
@@ -624,8 +681,22 @@ test("CLI exit codes: 0 an answer, 2 the policy says no, 1 a bad call", () => {
     "--channel",
     "main",
   );
+  // v0.999.0 is followed by v0.1000.0: there is no cap
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /^ok 0\.1000\.0 0\.999\.0 next minor/);
+  // ... but a major is only ever released by hand
+  r = run(
+    "refs/tags/v0.1000.0\n",
+    "decide",
+    "--mode",
+    "compute",
+    "--channel",
+    "main",
+    "--bump",
+    "major",
+  );
   assert.equal(r.status, 2);
-  assert.match(r.stderr, /^(::error::)?policy: Minor bump/);
+  assert.match(r.stderr, /only ever released by hand/);
   r = run(
     "refs/tags/v0.27.3\n",
     "decide",
@@ -915,14 +986,31 @@ test("the CLI prints the version and fails with a message", () => {
     }).trim(),
     "tagged 1.0.10",
   );
+  // no cap: 1.999.0 on main is followed by 1.1000.0
+  assert.equal(
+    execFileSync(
+      "node",
+      [cli, "next", "--current", "1.999.0", "--channel", "main"],
+      { encoding: "utf8" },
+    ).trim(),
+    "1.1000.0",
+  );
+  // a major without --manual still fails
   assert.throws(
     () =>
       execFileSync(
         "node",
-        [cli, "next", "--current", "1.999.0", "--channel", "main"],
-        {
-          stdio: "pipe",
-        },
+        [
+          cli,
+          "next",
+          "--current",
+          "1.1000.0",
+          "--channel",
+          "main",
+          "--bump",
+          "major",
+        ],
+        { stdio: "pipe" },
       ),
     /Command failed/,
   );
