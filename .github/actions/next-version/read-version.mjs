@@ -26,7 +26,7 @@
 //
 // ONE VERSION PARSER. Nothing is trimmed and no "v" is stripped: a value is
 // a version only if next-version.mjs's isStrictVersion() accepts it
-// (MAJOR.MINOR.PATCH, each 0..999), the parser shared with the policy and
+// (MAJOR.MINOR.PATCH; MAJOR 0..999, MINOR and PATCH unbounded), the parser shared with the policy and
 // the Nyuchi App.
 //
 // assess() judges every entry at three commits: the merge-base of the PR

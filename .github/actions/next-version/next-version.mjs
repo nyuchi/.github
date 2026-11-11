@@ -5,13 +5,18 @@
 //   Release `staging` -> main MINOR  x.y.z -> x.(y+1).0
 //   MAJOR                     manual only (workflow_dispatch, bump: major)
 //
-// Each segment holds 0..999. PATCH 999 rolls into the next MINOR
-// (x.y.999 -> x.(y+1).0). MINOR 999 does NOT roll into a MAJOR: that is
-// refused, and a person runs the major release by hand.
+// There is NO upper limit on MINOR or PATCH: patch 999 is followed by patch
+// 1000, minor 999 by minor 1000 (v0.1000.0 is newer than v0.999.0). Only a MAJOR
+// is ever manual. Versions are compared as numbers, never as text or as fixed
+// width fields. Two bounds remain, on purpose:
+//   - MAJOR is 0..999. It is only ever bumped by hand, and the bound keeps a
+//     calendar-style tag such as v2024.10.1 from being read as a version.
+//   - a segment must fit exactly in a JavaScript number (at most 2^53 - 1), or
+//     two versions could compare equal.
 //
 // ONE STRICT VERSION FORMAT (nyuchi/.github#90). A version is exactly
 //
-//   MAJOR.MINOR.PATCH    each 0..999, decimal, no leading zeros
+//   MAJOR.MINOR.PATCH    decimal, no leading zeros; MAJOR 0..999, MINOR and PATCH unbounded
 //
 // and nothing else: no "v", no whitespace, no pre-release (-rc.1), no build
 // metadata (+b), no fourth segment. parseStrict() / isStrictVersion() below
@@ -70,10 +75,15 @@
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-export const CEILING = 999;
+// The only version pattern. `\d` without the u flag is ASCII 0-9 only. MINOR and
+// PATCH have no length limit here (fits() below keeps them exact); MAJOR is at
+// most three digits.
+export const MAJOR_CEILING = 999;
+const STRICT = /^(0|[1-9]\d{0,2})\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
-// The only version pattern. `\d` without the u flag is ASCII 0-9 only.
-const STRICT = /^(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})$/;
+/** Whether every captured segment is exactly representable as a JS number. */
+const fits = (m) =>
+  m.slice(1, 4).every((seg) => Number.isSafeInteger(Number(seg)));
 
 /** The policy says no (exit 2 from the CLI, "policy: <reason>"). */
 export class PolicyError extends Error {}
@@ -81,18 +91,20 @@ export class PolicyError extends Error {}
 /** The call itself is wrong: a bad flag, mode or channel (exit 1). */
 export class UsageError extends Error {}
 
-/** Whether `v` is exactly MAJOR.MINOR.PATCH (each 0..999). */
+/** Whether `v` is exactly MAJOR.MINOR.PATCH (MAJOR 0..999, MINOR and PATCH unbounded). */
 export function isStrictVersion(v) {
-  return typeof v === "string" && STRICT.test(v);
+  if (typeof v !== "string") return false;
+  const m = STRICT.exec(v);
+  return m !== null && fits(m);
 }
 
 /** { major, minor, patch } of a strict version; PolicyError otherwise. */
 export function parseStrict(v) {
   const m = typeof v === "string" ? STRICT.exec(v) : null;
-  if (!m) {
+  if (!m || !fits(m)) {
     throw new PolicyError(
       `${JSON.stringify(v) ?? String(v)} is not a version: expected ` +
-        "MAJOR.MINOR.PATCH, each 0..999, nothing else.",
+        "MAJOR.MINOR.PATCH, plain decimal numbers (MAJOR 0..999), nothing else.",
     );
   }
   return { major: Number(m[1]), minor: Number(m[2]), patch: Number(m[3]) };
@@ -137,34 +149,21 @@ export function nextVersion(current, { channel, bump = "", manual = false }) {
           "workflow from the Actions tab with bump: major.",
       );
     }
-    if (v.major + 1 > CEILING) {
-      throw new PolicyError(`Major is already ${CEILING}; there is no next.`);
+    if (v.major + 1 > MAJOR_CEILING) {
+      throw new PolicyError(
+        `Major is already ${MAJOR_CEILING}; there is no next.`,
+      );
     }
     return `${v.major + 1}.0.0`;
   }
 
-  if (kind === "patch") {
-    if (v.patch + 1 <= CEILING) return `${v.major}.${v.minor}.${v.patch + 1}`;
-    // x.y.999 -> x.(y+1).0, through the same ceiling check as a minor.
-    return bumpMinor(v, `Patch ${core(v)} is at ${CEILING} and rolls into`);
-  }
+  if (kind === "patch") return `${v.major}.${v.minor}.${v.patch + 1}`;
 
-  if (kind === "minor") return bumpMinor(v, `Minor bump from ${core(v)} needs`);
+  if (kind === "minor") return `${v.major}.${v.minor + 1}.0`;
 
   throw new UsageError(
     `Unknown bump '${bump}'; expected patch, minor or major.`,
   );
-}
-
-function bumpMinor(v, why) {
-  if (v.minor + 1 > CEILING) {
-    throw new PolicyError(
-      `${why} the next minor, but minor is at ${CEILING} and never rolls ` +
-        `into a major on its own. Release ${v.major + 1}.0.0 by hand: run ` +
-        "the release workflow from the Actions tab with bump: major.",
-    );
-  }
-  return `${v.major}.${v.minor + 1}.0`;
 }
 
 /**
@@ -187,8 +186,7 @@ export function check(
   const major = `${parse(current).major + 1}.0.0`;
   if (allowMajor && core(p) === major) return "next major";
 
-  // The usual next version; at minor 999 there is none, and that error
-  // (which asks for a manual major) is the answer.
+  // The usual next version for this channel.
   const allowed = nextVersion(current, { channel, bump, manual: allowMajor });
   if (core(p) === allowed) return `next ${bump || defaultBump(channel)}`;
 

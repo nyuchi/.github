@@ -4,9 +4,9 @@
 #   Release `staging` -> main  MINOR  x.y.z -> x.(y+1).0
 #   MAJOR                      manual only: workflow_dispatch with bump: major
 #
-# Each segment holds 0..999. Patch 999 rolls into the next minor; minor 999
-# is refused, with a message asking for a manual major. The rules live in
-# next-version.mjs beside this file, with its tests.
+# Minor and patch have no upper limit: patch 999 is followed by patch 1000,
+# minor 999 by minor 1000. Only a major is manual, and the major segment stays
+# 0..999. The rules live in next-version.mjs beside this file, with its tests.
 #
 # Two modes, both decided by next-version.mjs `decide` (the same decision
 # release-version-check makes; this action only fetches tags and writes
@@ -34,7 +34,7 @@
 # prefix (a monorepo component), every tag but its own version tags is
 # ignored, and only those are fetched. `manual` is a manual run only when it
 # is exactly "true". A proposed version must be strict (MAJOR.MINOR.PATCH,
-# each 0..999).
+# MAJOR 0..999, MINOR and PATCH unbounded).
 #
 # Usage, pinned to a commit like every org action:
 #
@@ -136,7 +136,7 @@ runs:
         # writes outputs. Tags: ALL of the repo's (not prefix-filtered), or
         # the given `current` as if it were the only tag.
         if [ -n "$CURRENT" ]; then
-          strict "$CURRENT" || die "The current version is not MAJOR.MINOR.PATCH (each 0..999)."
+          strict "$CURRENT" || die "The current version is not MAJOR.MINOR.PATCH (plain decimal numbers, MAJOR 0..999)."
           refs="refs/tags/$PREFIX$CURRENT"
         else
           # The tags decide needs: every tag for the default prefix, else the

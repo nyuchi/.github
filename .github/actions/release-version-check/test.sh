@@ -334,8 +334,18 @@ case_ "a decide crash (exit 3) is a hard error" 1 - "decide failed (exit 3" \
   staging "v0.27.3" "" lib=stub env:STUB_DECIDE_FAIL=3 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "a decide crash in compute, no version written: still a hard error" 1 - "decide failed (exit 1" \
   staging "v0.27.3" "" lib=stub env:STUB_DECIDE_FAIL=1
-case_ "a policy refusal in compute (minor 999) is only a warning" 0 unchanged \
-  "::warning::No version change in this PR, but: Minor bump" main "v0.999.0" ""
+# No cap on minor or patch: 999 is followed by 1000, and the merge is tagged with it.
+case_ "minor 999 has a next version: the merge is tagged v0.1000.0" 0 unchanged \
+  "will be tagged v0.1000.0" main "v0.999.0" ""
+case_ "patch 999 has a next version: the merge is tagged v0.27.1000" 0 unchanged \
+  "will be tagged v0.27.1000" staging "v0.27.999" ""
+case_ "writing minor 1000 after 999 on main is allowed" 0 allowed "VERSION: 0.999.0 -> 0.1000.0" \
+  main "v0.999.0" "" "B:VERSION=0.999.0" "H:VERSION=0.1000.0"
+case_ "writing patch 1000 after 999 on staging is allowed" 0 allowed "VERSION: 0.27.999 -> 0.27.1000" \
+  staging "v0.27.999" "" "B:VERSION=0.27.999" "H:VERSION=0.27.1000"
+# ... and a major is still refused unless a person asks for it (the semver:major label).
+case_ "a major after minor 1000 is still refused without the label" 1 - "bump: major" \
+  main "v0.1000.0" "" "B:VERSION=0.1000.0" "H:VERSION=1.0.0"
 case_ "a strict that does not echo the version is a hard error" 1 - "bad 'written' version" \
   staging "v0.27.3" "" lib=stub env:STUB_STRICT=9.9.9 "B:VERSION=0.27.3" "H:VERSION=0.27.4"
 case_ "an empty strict answer is a hard error" 1 - "bad 'written' version" \
