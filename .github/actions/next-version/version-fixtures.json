@@ -45,11 +45,11 @@
   },
   {
     "input": "0.1000.0",
-    "valid": false
+    "valid": true
   },
   {
     "input": "0.0.1000",
-    "valid": false
+    "valid": true
   },
   {
     "input": "9999.9.9",
@@ -192,15 +192,15 @@
     "valid": false
   },
   {
-    "input": "١.٢.٣",
+    "input": "\u0661.\u0662.\u0663",
     "valid": false
   },
   {
-    "input": "1.2.３",
+    "input": "1.2.\uff13",
     "valid": false
   },
   {
-    "input": "１.2.3",
+    "input": "\uff11.2.3",
     "valid": false
   },
   {
@@ -212,7 +212,35 @@
     "valid": false
   },
   {
-    "input": "1.2.3​",
+    "input": "1.2.3\u200b",
+    "valid": false
+  },
+  {
+    "input": "0.1000.1000",
+    "valid": true
+  },
+  {
+    "input": "0.999.1000",
+    "valid": true
+  },
+  {
+    "input": "1.123456.7890123",
+    "valid": true
+  },
+  {
+    "input": "0.9007199254740991.0",
+    "valid": true
+  },
+  {
+    "input": "0.9007199254740993.0",
+    "valid": false
+  },
+  {
+    "input": "0.0.9007199254740993",
+    "valid": false
+  },
+  {
+    "input": "0.0.99999999999999999999",
     "valid": false
   }
 ]

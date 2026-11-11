@@ -13,8 +13,8 @@
 #   main    (a release to main)     MINOR  x.y.z -> x.(y+1).0
 #   MAJOR                           by hand only: workflow_dispatch, bump: major
 #
-# Each segment holds 0..999: patch 999 rolls into the next minor; minor 999
-# is refused and asks for a manual major. A version that is not the one the
+# Minor and patch have no upper limit (patch 999 -> 1000, minor 999 -> 1000);
+# only a major is manual. A version that is not the one the
 # policy allows next fails the run with the version it should have been.
 # Released versions are never renumbered; the check compares against the
 # highest existing tag. A repo whose staging merges are tagged by

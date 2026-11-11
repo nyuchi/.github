@@ -2,7 +2,7 @@
 # reusable-staging-release.yml.
 #
 # next-version holds the org's versioning policy (patch on staging, minor on
-# main, major by hand, 999 ceiling), and read-version.mjs beside it reads a
+# main, major by hand, no minor/patch cap), and read-version.mjs beside it reads a
 # repo's version from package.json, Cargo.toml, pyproject.toml or VERSION;
 # their tests run on Node's built-in runner, with no install step.
 # version-fixtures.test.mjs feeds every entry of version-fixtures.json (the

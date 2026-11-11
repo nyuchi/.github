@@ -6,8 +6,8 @@
 #   Release `staging` -> main  MINOR  x.y.z -> x.(y+1).0   the repo's main release
 #   MAJOR                      by hand: workflow_dispatch with bump: major
 #
-# Each segment holds 0..999: patch 999 rolls into the next minor; minor 999
-# is refused. The rules live in ONE place, the next-version action in this
+# Minor and patch have no upper limit (patch 999 -> 1000, minor 999 -> 1000);
+# only a major is manual. The rules live in ONE place, the next-version action in this
 # repo, which this workflow and every release flow pin by SHA.
 #
 # The version lives in TAGS, not in a commit: each staging merge gets an

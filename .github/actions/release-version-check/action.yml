@@ -28,7 +28,7 @@
 #   3. read-version.mjs assess reads each entry (package.json; each TOML
 #      table; VERSION) as absent, valid or invalid, with one JSON reader and
 #      one TOML reader (Python's json and tomllib) and one version parser
-#      (next-version.mjs isStrictVersion: MAJOR.MINOR.PATCH, each 0..999).
+#      (next-version.mjs isStrictVersion: MAJOR.MINOR.PATCH; MAJOR 0..999, MINOR and PATCH unbounded).
 #      Per entry:
 #        invalid    the head value is invalid and differs from the merge-base
 #        removed    a real version (not 0.0.0) at the merge-base is gone,
@@ -327,7 +327,7 @@ runs:
           [ "$head" = '!invalid' ] || [ "$head" = - ] || written_now="${written_now:+$written_now }$head"
           case "$action" in
             invalid)
-              ok=false why="the head does not hold a version (MAJOR.MINOR.PATCH, each 0..999, nothing else)." ;;
+              ok=false why="the head does not hold a version (MAJOR.MINOR.PATCH, plain decimal numbers, MAJOR 0..999, nothing else)." ;;
             removed)
               ok=false why="version removed or reset ($base at the merge-base). That needs an owner bypass of this check." ;;
             downgrade)

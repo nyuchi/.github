@@ -223,8 +223,8 @@ Every release follows the org policy
 - **Releasing `staging` to `main` is a MINOR** (x.y.z → x.y+1.0).
 - **A MAJOR is manual only**: the owner runs the release workflow with
   `bump: major`. Automation never makes one.
-- Each segment holds 0–999. Patch 999 rolls into the next minor; minor
-  999 stops and asks for a manual major.
+- Minor and patch have no upper limit: patch 999 is followed by patch
+  1000, minor 999 by minor 1000. Only a major is manual.
 - `workflow_dispatch` on a release workflow takes
   `bump: patch|minor|major` as a manual override.
 
