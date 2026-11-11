@@ -72,8 +72,14 @@ fi
 
 # Rule 2: commits on the default branch since the last release.
 # Release commits are recognised by title: "chore(release): staging to main…",
-# "Release staging to main…", "Release v1.2.0…", "release: v1.2.0".
-is_release='^(chore\(release\)|release)([:(]|\b)|staging to main'
+# "chore(release): v1.2.3", "Release staging to main…", "Release v1.2.0…",
+# "release: v1.2.0", and the merge commit a MERGE-method queue leaves when it
+# lands a release: "Merge pull request #N from <org>/staging", ".../release/<x>"
+# or ".../release-pr/<x>". The branch must sit directly under the org segment, so
+# a feature branch that merely contains the word release does not count, and a
+# "Merge pull request ... from <org>/hotfix/<x>" is NOT a release: a hotfix is
+# exactly the commit this scan exists to catch.
+is_release='^(chore\(release\)|release)([:(]|\b)|staging to main|^Merge pull request #[0-9]+ from [^/ ]+/(staging|release/[^ ]+|release-pr/[^ ]+)[[:space:]]*$'
 commits="$(gh api "repos/$REPO/commits?sha=$BASE_SHA&per_page=100" \
   --jq '.[] | "\(.sha[0:7]) \(.commit.message | split("\n")[0])"')" \
   || fail "Cannot list the commits on '$DEFAULT_BRANCH'."
