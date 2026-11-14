@@ -515,6 +515,35 @@ in `config` mode (CRITICAL + HIGH). The `reusable-ci-opentofu.yml`
 reusable workflow does this automatically. SARIF results appear in
 each repo's GitHub Security tab.
 
+### Automatic releases
+
+Every 15 minutes, `Auto release` (`.github/workflows/auto-release.yml`)
+runs `scripts/auto-release-prs.sh` for each of the seven orgs. For every
+repo (not archived, not `sandbox-*`/`archive-*`):
+
+- Where `staging` is ahead of the default branch, the release PR exists
+  with auto-merge on, as the enterprise-owned **bundu-release** GitHub
+  App — the app's private key lives only in the `org-release`
+  environment, which only `main` can deploy from. The app never merges
+  anything: the required checks decide, the merge queue included.
+- Where the default-branch tip is an untagged release merge, it is
+  tagged the next MINOR and published as the latest GitHub release.
+  Repos that tag their own releases (`main-release.yml`) are skipped.
+
+A MAJOR needs the owner's `semver:major` label on the release PR. A repo
+opts out with the `AUTO_RELEASE=off` repository variable. Repos named
+`.github` have no `staging` and are skipped by design.
+
+### Daily repo bootstrap
+
+Every night at 03:23 Harare, `Bootstrap repos`
+(`.github/workflows/bootstrap-repos.yml`) runs
+`scripts/bootstrap-repos.sh` for each org: every repo has a default
+branch, a `staging` branch (except `.github` repos), the standard merge
+settings, immutable releases, the standard labels, and the standard
+files — missing files are proposed in one pull request, never pushed
+directly. Run it by hand from the Actions tab for an instant fix.
+
 ---
 
 ## Related documents

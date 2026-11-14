@@ -1,0 +1,84 @@
+# Daily repo bootstrap across the bundu-labs enterprise: every repo has a
+# default branch, a staging branch (except .github repos, which work directly
+# on the default branch), the org merge settings, immutable releases, standard
+# labels, and the standard files - proposed in one PR - as the enterprise-owned
+# bundu-release app. GitHub has no org-level default for these, so a new repo
+# is bare until the next run. Trigger it by hand for an instant fix.
+#
+# Skipped (not failed) until the app exists: RELEASE_APP_CLIENT_ID unset.
+name: Bootstrap repos
+
+on:
+  schedule:
+    - cron: "23 1 * * *" # 03:23 Harare
+  workflow_dispatch:
+    inputs:
+      org:
+        description: "Only this org (blank = all)"
+        required: false
+        type: string
+      repo:
+        description: "Only this repo (needs org)"
+        required: false
+        type: string
+      dry_run:
+        description: "Report only, change nothing"
+        required: false
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: bootstrap-repos-${{ inputs.org || 'all' }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: bootstrap (${{ matrix.org }})
+    if: ${{ vars.RELEASE_APP_CLIENT_ID != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        org:
+          [
+            nyuchi,
+            mzizi-dev,
+            mukoko-dev,
+            shamwari-ai,
+            bundu-labs,
+            openNTL,
+            siafuDB,
+          ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: org-release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Mint a token for this org
+        if: ${{ inputs.org == '' || inputs.org == matrix.org }}
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ matrix.org }}
+
+      - name: Bootstrap every repo
+        if: ${{ inputs.org == '' || inputs.org == matrix.org }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          ORG: ${{ matrix.org }}
+          INPUT_REPO: ${{ inputs.repo }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "$INPUT_DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          if [ -n "$INPUT_REPO" ]; then args+=(--repo "$INPUT_REPO"); fi
+          scripts/bootstrap-repos.sh ${args[@]+"${args[@]}"}
