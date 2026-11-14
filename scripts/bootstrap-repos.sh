@@ -231,13 +231,13 @@ adopt_files() {
     return
   fi
 
+  base=staging
+  gh api "/repos/$ORG/$repo/branches/staging" --silent 2>/dev/null || base="$db"
   act "open a PR into $base adding:$missing"
   [ "$DRY" -eq 1 ] && return
 
   if ! gh api "/repos/$ORG/$repo/branches/$BRANCH" --silent 2>/dev/null; then
-    base=staging
-  gh api "/repos/$ORG/$repo/branches/staging" --silent 2>/dev/null || base="$db"
-  sha=$(gh api "/repos/$ORG/$repo/git/ref/heads/$base" --jq .object.sha) || { fail "$repo: no branch to base the PR on"; return; }
+    sha=$(gh api "/repos/$ORG/$repo/git/ref/heads/$base" --jq .object.sha) || { fail "$repo: no branch to base the PR on"; return; }
     gh api -X POST "/repos/$ORG/$repo/git/refs" -f ref="refs/heads/$BRANCH" -f sha="$sha" >/dev/null || { fail "$repo: could not create $BRANCH"; return; }
   fi
   while IFS='|' read -r target source alts; do
