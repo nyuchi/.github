@@ -1,0 +1,85 @@
+# Automatic releases across the bundu-labs enterprise: for every repo in every
+# org, the staging -> default-branch release PR (auto-merge on, merge commit),
+# as the enterprise-owned bundu-release app - the only identity whose pull
+# requests trigger the required checks (a repo's own GITHUB_TOKEN cannot).
+# A repo opts out with the AUTO_RELEASE=off variable; a MAJOR needs the
+# semver:major label. Policy in ORG_SETTINGS.md; scripts/auto-release-prs.sh.
+#
+# Skipped (not failed) until the app exists: RELEASE_APP_CLIENT_ID unset.
+name: Auto release
+
+on:
+  schedule:
+    - cron: "*/15 * * * *" # every 15 minutes
+  workflow_dispatch:
+    inputs:
+      org:
+        description: "Only this org (blank = all)"
+        required: false
+        type: string
+      repo:
+        description: "Only this repo (needs org)"
+        required: false
+        type: string
+      dry_run:
+        description: "Report only, change nothing"
+        required: false
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: auto-release-${{ inputs.org || 'all' }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release (${{ matrix.org }})
+    if: ${{ vars.RELEASE_APP_CLIENT_ID != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        org:
+          [
+            nyuchi,
+            mzizi-dev,
+            mukoko-dev,
+            shamwari-ai,
+            bundu-labs,
+            openNTL,
+            siafuDB,
+          ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: org-release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # One installation per org (seven in total): owner picks the right one.
+      - name: Mint a token for this org
+        if: ${{ inputs.org == '' || inputs.org == matrix.org }}
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ matrix.org }}
+
+      - name: Open release PRs
+        if: ${{ inputs.org == '' || inputs.org == matrix.org }}
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          ORG: ${{ matrix.org }}
+          INPUT_REPO: ${{ inputs.repo }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "$INPUT_DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          if [ -n "$INPUT_REPO" ]; then args+=(--repo "$INPUT_REPO"); fi
+          scripts/auto-release-prs.sh ${args[@]+"${args[@]}"}

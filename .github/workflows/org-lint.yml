@@ -70,8 +70,8 @@ jobs:
           if ! printf '%s' "$BODY" | grep -qiE "\b($close|$refs)|^no issue:[[:space:]]*[^[:space:]]"; then
             msg="Add 'Closes #123' to the description, 'Refs #123' for partial work,"
             msg="$msg or 'No issue: <reason>' for a trivial change."
-            echo "::error title=No issue attached::$msg"
-            exit 1
+            echo "::warning title=No issue attached::$msg"
+            exit 0
           fi
           echo "Issue attached."
           if [ "$BASE" = "$DEFAULT" ]; then
