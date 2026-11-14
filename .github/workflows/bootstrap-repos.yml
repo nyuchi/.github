@@ -1,4 +1,4 @@
-# Daily repo bootstrap across the bundu-labs enterprise: every repo has a
+# Hourly repo bootstrap across the bundu-labs enterprise: every repo has a
 # default branch, a staging branch (except .github repos, which work directly
 # on the default branch), the org merge settings, immutable releases, standard
 # labels, and the standard files - proposed in one PR - as the enterprise-owned
@@ -10,7 +10,7 @@ name: Bootstrap repos
 
 on:
   schedule:
-    - cron: "23 1 * * *" # 03:23 Harare
+    - cron: "23 * * * *" # hourly
   workflow_dispatch:
     inputs:
       org:
