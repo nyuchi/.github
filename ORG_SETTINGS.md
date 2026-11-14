@@ -534,9 +534,9 @@ A MAJOR needs the owner's `semver:major` label on the release PR. A repo
 opts out with the `AUTO_RELEASE=off` repository variable. Repos named
 `.github` have no `staging` and are skipped by design.
 
-### Daily repo bootstrap
+### Hourly repo bootstrap
 
-Every night at 03:23 Harare, `Bootstrap repos`
+Every hour at :23, `Bootstrap repos`
 (`.github/workflows/bootstrap-repos.yml`) runs
 `scripts/bootstrap-repos.sh` for each org: every repo has a default
 branch, a `staging` branch (except `.github` repos), the standard merge
