@@ -19,9 +19,12 @@
 #   2. if it is a tree-replacement release (a `release/*` or `release-pr/*`
 #      branch, the old way), find no commit on the default branch since the
 #      last release. Such a commit exists only there and the release would
-#      erase it: forward-port it to staging and re-cut the release. The
-#      commits stay in the default branch's history after that, so once
-#      they are on staging the `forward-ported` label lets the release by.
+#      erase it: forward-port it to staging and re-cut the release. A stray
+#      whose changed files all already match staging's blobs is proven
+#      forward-ported by content (stray_contained_in_staging below), and
+#      passes without the label. The commits stay in the default branch's
+#      history after that, so once they are on staging the `forward-ported`
+#      label lets the release by when the content check cannot run.
 #      A promotion from `staging` itself is a merge commit and keeps every
 #      commit on the default branch, so rule 2 does not apply to it.
 # A pin-bot PR is let through rule 1 and is then caught by rule 2 at the next
@@ -35,6 +38,43 @@ set -euo pipefail
 
 fail() { echo "::error title=Main gate::$1"; exit 1; }
 ok() { echo "Main gate: $1"; echo "Main gate: $1" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; }
+
+# A stray commit whose changes staging already contains deletes nothing: the
+# release is staging's tree, so it carries the stray's work. Every file the
+# stray touched must have the same blob on staging (a file it removed must be
+# gone there); cherry-picked forward-ports differ in SHA but not in content,
+# which is what this reads. Anything it cannot verify -- a file it cannot
+# read on staging, a commit whose file list the API caps at 300 -- is
+# reported "unverified" and falls through to the label or the failure, never
+# past them. Echoes the word, always exits 0: a failed API call is data.
+stray_contained_in_staging() {
+  local sha="$1" status path prev blob_here blob_there n=0
+  # \x1f (unit separator), not a tab: a whitespace IFS collapses the empty
+  # previous_filename field and shifts the blob sha into it
+  while IFS=$'\x1f' read -r status path prev blob_here; do
+    [ -n "$path" ] || continue
+    n=$((n + 1))
+    case "$status" in renamed|copied)
+      # the old name must be gone from staging too, or the rename is undone
+      gh api "repos/$REPO/contents/$prev?ref=staging" --silent 2>/dev/null \
+        && { echo unverified; return 0; } ;;
+    esac
+    if [ "$status" = removed ]; then
+      gh api "repos/$REPO/contents/$path?ref=staging" --silent 2>/dev/null \
+        && { echo unverified; return 0; }
+    else
+      blob_there="$(gh api "repos/$REPO/contents/$path?ref=staging" --jq '.sha' 2>/dev/null)" \
+        || { echo unverified; return 0; }
+      if [ -z "$blob_here" ] || [ "$blob_here" != "$blob_there" ]; then
+        echo unverified; return 0
+      fi
+    fi
+  done < <(gh api "repos/$REPO/commits/$sha" \
+    --jq '.files[] | [.status, .filename, (.previous_filename // ""), (.sha // "")] | join("\u001f")' 2>/dev/null)
+  # nothing readable, or the commits API's 300-file cap may have cut the list
+  if [ "$n" -eq 0 ] || [ "$n" -ge 300 ]; then echo unverified; return 0; fi
+  echo contained
+}
 
 if [ "$BASE_REF" != "$DEFAULT_BRANCH" ]; then
   ok "base is '$BASE_REF', not the default branch; nothing to check."
@@ -85,12 +125,14 @@ commits="$(gh api "repos/$REPO/commits?sha=$BASE_SHA&per_page=100" \
   || fail "Cannot list the commits on '$DEFAULT_BRANCH'."
 
 stray=""
+stray_shas=""
 found_release=false
 while IFS= read -r line; do
   [ -z "$line" ] && continue
   title="${line#* }"
   if grep -Eiq "$is_release" <<<"$title"; then found_release=true; break; fi
   stray+="$line"$'\n'
+  stray_shas+="${line%% *}"$'\n'
 done <<<"$commits"
 
 if [ "$found_release" = false ]; then
@@ -107,6 +149,20 @@ if [ -n "$stray" ] && [[ "${PR_NUMBER:-}" =~ ^[1-9][0-9]*$ ]] \
 fi
 
 if [ -n "$stray" ]; then
+  contained=true
+  while IFS= read -r s; do
+    [ -n "$s" ] || continue
+    if [ "$(stray_contained_in_staging "$s")" != contained ]; then contained=false; break; fi
+  done <<<"$stray_shas"
+  if $contained; then
+    echo "::notice title=Main gate::Every commit on '$DEFAULT_BRANCH' since the last release is already in staging's tree; the release keeps them:"
+    printf '%s' "$stray"
+    ok "the commits on '$DEFAULT_BRANCH' since the last release are already in staging's tree; the release cannot delete them."
+    exit 0
+  fi
+fi
+
+if [ -n "$stray" ]; then
   {
     echo "### Main gate: commits on $DEFAULT_BRANCH since the last release"
     echo
@@ -117,7 +173,7 @@ if [ -n "$stray" ]; then
     echo '```'
     echo
     echo "Forward-port them to staging (cherry-pick onto a branch off staging, PR into staging), then re-cut the release."
-    echo "Once each one is on staging, add the \`forward-ported\` label to this PR and re-run the check."
+    echo "Once each one is on staging the check passes on content; the \`forward-ported\` label is the fallback for what it cannot read."
   } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
   fail "'$DEFAULT_BRANCH' has $(printf '%s' "$stray" | grep -c .) commit(s) since the last release that staging may not have; this release would delete them. They are listed in the job summary. Forward-port them to staging and re-cut the release."
 fi

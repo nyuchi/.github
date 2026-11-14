@@ -18,6 +18,17 @@ case "$*" in
     elif [ -n "${STRAY:-}" ]; then printf 'def5678 Merge pull request #9 from o/something\nabc1234 chore(release): staging to main 2026-11-01\n'
     else echo "abc1234 chore(release): staging to main 2026-11-01"; fi
     exit 0 ;;
+  *"commits/"*)
+    # a single stray commit's file list for the staging-content check
+    # (fields joined with \x1f, like the real jq in main-gate.sh)
+    if [ -n "${STRAY_FILES:-}" ]; then printf '%s\n' "$STRAY_FILES"
+    else printf 'modified\x1fpkg/lock.json\x1f\x1fdeadbeef\n'; fi
+    exit 0 ;;
+  *"contents/"*)
+    # STAGING_HAS: the path exists on staging (any blob). STAGING_BLOB: its blob sha.
+    if [ -n "${STAGING_HAS:-}" ]; then exit 0; fi
+    if [ -n "${STAGING_BLOB:-}" ]; then printf '%s\n' "$STAGING_BLOB"; exit 0; fi
+    exit 1 ;;
   *) exit 0 ;;
 esac
 GH
@@ -60,6 +71,24 @@ COMMITS="aaa1111 Merge pull request #6 from o/hotfix/fix-token\ndef5678 $REL\n$L
 COMMITS="aaa1111 Merge pull request #7 from o/feature/release/x\n$LAST" check "release-pr/v1.3.0" 1 "would delete them"
 # a plain commit pushed to the default branch after the release is stray
 COMMITS="aaa1111 fix: something directly on main\n$LAST" check "release-pr/v1.3.0" 1 "would delete them"
+# a stray whose files all match staging's blobs is proven forward-ported: it passes
+STRAY=1 STRAY_FILES=$'modified\x1fpkg/lock.json\x1f\x1fdeadbeef\n' STAGING_BLOB=deadbeef \
+  check "release/staging-to-main-2026-11-02" 0 "already in staging's tree"
+# one changed file differing on staging still refuses
+STRAY=1 STRAY_FILES=$'modified\x1fpkg/lock.json\x1f\x1fdeadbeef\nmodified\x1fpkg/other.json\x1f\x1ffeedface\n' STAGING_BLOB=deadbeef \
+  check "release/staging-to-main-2026-11-02" 1 "would delete them"
+# a removed file that staging still has would come back: refuse
+STRAY=1 STRAY_FILES=$'removed\x1fold/file.ts\x1f\x1f-\n' STAGING_HAS=1 \
+  check "release/staging-to-main-2026-11-02" 1 "would delete them"
+# a removed file staging has removed too is contained
+STRAY=1 STRAY_FILES=$'removed\x1fold/file.ts\x1f\x1f-\n' \
+  check "release/staging-to-main-2026-11-02" 0 "already in staging's tree"
+# a renamed file whose old name is still on staging is not contained
+STRAY=1 STRAY_FILES=$'renamed\x1fnew/file.ts\x1fold/file.ts\x1fdeadbeef\n' STAGING_BLOB=deadbeef \
+  check "release/staging-to-main-2026-11-02" 1 "would delete them"
+# a file list the check cannot read falls back to refusing
+STRAY=1 STRAY_FILES=$'\n' \
+  check "release/staging-to-main-2026-11-02" 1 "would delete them"
 # the label that already existed still lets a known stray through
 check "feature/anything" 1 "takes releases and hotfixes only"
 check "dependabot/npm_and_yarn/x" 1 "takes releases and hotfixes only"
