@@ -35,9 +35,9 @@ permissions:
 
 jobs:
   lint:
-    uses: nyuchi/.github/.github/workflows/reusable-lint.yml@c2e2506a4eadf67fbf824b41720aa220c539fc21  # v0.7.0
+    uses: nyuchi/.github/.github/workflows/reusable-lint.yml@755c93763e6e0245fc2729c6a361240017ab6ccc  # v0.9.0
   vite-plus:
-    uses: nyuchi/.github/.github/workflows/reusable-vite-plus.yml@c2e2506a4eadf67fbf824b41720aa220c539fc21  # v0.7.0
+    uses: nyuchi/.github/.github/workflows/reusable-vite-plus.yml@755c93763e6e0245fc2729c6a361240017ab6ccc  # v0.9.0
     with:
       enforce: false
 
