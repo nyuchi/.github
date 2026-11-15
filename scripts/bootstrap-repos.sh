@@ -164,8 +164,24 @@ bootstrap_repo() {
   elif [ "$ready" -eq 1 ] && ! gh api "/repos/$ORG/$repo/branches/staging" --silent 2>/dev/null; then
     act "create 'staging' from '$db'"
     sha=$(gh api "/repos/$ORG/$repo/git/ref/heads/$db" --jq .object.sha)
-    api -X POST "/repos/$ORG/$repo/git/refs" -f ref=refs/heads/staging -f sha="$sha" >/dev/null ||
+    # A merge-queue-staging ruleset blocks creating the branch (a queue implies
+    # pull requests on the ref; nothing should block creation): disable it,
+    # create, restore it.
+    qid=$(gh api "/repos/$ORG/$repo/rulesets?includes_parents=false&per_page=100" \
+      --jq '.[] | select(.name=="merge-queue-staging") | .id' 2>/dev/null)
+    qbk=""
+    [ -n "$qid" ] && qbk=$(mktemp) &&
+      gh api "/repos/$ORG/$repo/rulesets/$qid" >"$qbk" &&
+      gh api -X PUT "/repos/$ORG/$repo/rulesets/$qid" --input - <<<'{"enforcement":"disabled"}' --silent
+    if ! api -X POST "/repos/$ORG/$repo/git/refs" -f ref=refs/heads/staging -f sha="$sha" >/dev/null; then
+      [ -s "$qbk" ] && gh api -X PUT "/repos/$ORG/$repo/rulesets/$qid" --input "$qbk" --silent
       fail "$repo: could not create staging"
+    fi
+    if [ -s "$qbk" ]; then
+      gh api -X PUT "/repos/$ORG/$repo/rulesets/$qid" --input "$qbk" --silent ||
+        fail "$repo: staging created but merge-queue-staging left disabled - re-enable it"
+      rm -f "$qbk"
+    fi
   fi
 
   # 3. Merge settings
