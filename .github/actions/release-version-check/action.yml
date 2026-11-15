@@ -3,8 +3,8 @@
 # .github/workflows/release-version-check.yml (nyuchi/.github#90), kept here
 # so that workflow stays a thin wrapper.
 #
-#   Into `staging`               PATCH  x.y.z -> x.y.(z+1)
-#   Into the default branch      MINOR  x.y.z -> x.(y+1).0
+#   Into `staging`               PATCH  0.0.z -> 0.0.(z+1)  — the staging line
+#   Into the default branch      MINOR  x.y.0 -> x.(y+1).0  — the release line
 #   MAJOR                        only with the `semver:major` label
 #
 # The policy itself is next-version.mjs (nyuchi/.github#80), called here as

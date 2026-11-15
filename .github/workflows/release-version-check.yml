@@ -1,8 +1,8 @@
 # Release version check. Fails a pull request that writes a version the org
 # versioning policy does not allow next (nyuchi/.github#80, #90):
 #
-#   PR into `staging`            PATCH  x.y.z -> x.y.(z+1)
-#   PR into the default branch   MINOR  x.y.z -> x.(y+1).0
+#   PR into `staging`            PATCH  0.0.z -> 0.0.(z+1)  — the staging line
+#   PR into the default branch   MINOR  x.y.0 -> x.(y+1).0  — the release line
 #   MAJOR                        only with the `semver:major` label on the PR
 #
 # The label is read through the API when the job runs, not from the event,

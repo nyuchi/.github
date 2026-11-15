@@ -2,7 +2,7 @@
 #
 # The org versioning policy (nyuchi/.github#80):
 #
-#   Merge into `staging`       PATCH  x.y.z -> x.y.(z+1)   this workflow
+#   Merge into `staging`       PATCH  0.0.z -> 0.0.(z+1) (the staging line)   this workflow
 #   Release `staging` -> main  MINOR  x.y.z -> x.(y+1).0   the repo's main release
 #   MAJOR                      by hand: workflow_dispatch with bump: major
 #

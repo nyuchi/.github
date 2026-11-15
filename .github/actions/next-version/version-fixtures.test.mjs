@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-import { currentVersion, highest, isStrictVersion } from "./next-version.mjs";
+import { currentVersion, highest, isStrictVersion , lineOf } from "./next-version.mjs";
 import { classifySets } from "./read-version.mjs";
 
 const FIXTURES = JSON.parse(
@@ -189,9 +189,17 @@ test("(c) the CLI agrees with every fixture", () => {
       input: `${ref}\nrefs/tags/v0.0.0\n`,
       encoding: "utf8",
     }).trim();
+    // The two tag lines (owner ruling, 2026-11-15): only a release-line
+    // tag makes the repo tagged; a staging-line tag (0.0.x) means no
+    // release yet, and 0.0.0 is a placeholder that never counts.
+    const line = f.valid && f.input !== "0.0.0" ? lineOf(f.input) : "";
     assert.equal(
       got,
-      `tagged ${f.valid ? f.input : "0.0.0"}`,
+      line === "release"
+        ? `tagged ${f.input}`
+        : line === "0.0"
+          ? "none"
+          : "untagged",
       `current ${label(f)}`,
     );
   }
@@ -200,13 +208,17 @@ test("(c) the CLI agrees with every fixture", () => {
 test("(d) the current-version rule agrees with every fixture", () => {
   for (const f of FIXTURES) {
     // As a tag: a version tag, or a tag that makes the repo untagged.
+    const line = f.valid && f.input !== "0.0.0" ? lineOf(f.input) : "";
     assert.deepEqual(
       currentVersion([`refs/tags/v${f.input}`]),
-      f.valid
+      line === "release"
         ? { kind: "tagged", version: f.input }
-        : { kind: "untagged", written: "" },
+        : line === "0.0"
+          ? { kind: "none" }
+          : { kind: "untagged", written: "" },
       label(f),
     );
+    // (line above is "" for the placeholder and for invalid inputs)
     // As the version written in files, with no tags ("" means none given).
     if (f.input === "") {
       assert.deepEqual(currentVersion([], { fromFiles: "" }), { kind: "none" });

@@ -245,25 +245,40 @@ test("from 0.0.0 the rule is the same: 0.0.1, 0.1.0 or 1.0.0", () => {
 test("decide: check mode", () => {
   const t = (...v) => v.map((x) => `refs/tags/${x}`);
   const d = (refs, o) => decide(refs, { mode: "check", ...o });
-  // The next version after the highest tag.
-  assert.deepEqual(d(t("v0.27.3"), { ...staging, proposed: "0.27.4" }), {
-    version: "0.27.4",
-    current: "0.27.3",
-    reason: "next patch (current: the highest tag v0.27.3)",
+  // Staging tags the 0.0.x line: after release-line tags its next is 0.0.1
+  // (owner ruling, 2026-11-15), and a release-line patch is refused.
+  assert.deepEqual(d(t("v0.27.3"), { ...staging, proposed: "0.0.1" }), {
+    version: "0.0.1",
+    current: "0.0.0",
+    reason: "first release, next patch (current: nothing yet)",
   });
   assert.throws(
-    () => d(t("v0.27.3"), { ...staging, proposed: "0.28.0" }),
-    /allows 0.27.4/,
+    () => d(t("v0.27.3"), { ...staging, proposed: "0.27.4" }),
+    /allows 0.0.1/,
   );
-  // Already tagged only when it IS the current version ...
+  // With staging tags present, the next staging patch continues that line.
+  assert.deepEqual(
+    d(t("v0.27.3", "v0.0.4"), { ...staging, proposed: "0.0.5" }).version,
+    "0.0.5",
+  );
+  // Already tagged only when it IS the current version (on the channel's
+  // own line: staging's is 0.0.x) ...
   assert.match(
-    d(t("v0.27.3"), { ...staging, proposed: "0.27.3" }).reason,
+    d(t("v0.0.3"), { ...staging, proposed: "0.0.3" }).reason,
+    /already tagged/,
+  );
+  assert.match(
+    d(t("v0.27.3"), { ...main, proposed: "0.27.3" }).reason,
     /already tagged/,
   );
   // ... so a downgrade to an old tag is refused.
   assert.throws(
-    () => d(t("v0.27.3", "v0.27.5"), { ...staging, proposed: "0.27.3" }),
-    /allows 0.27.6/,
+    () => d(t("v0.0.3", "v0.0.5"), { ...staging, proposed: "0.0.3" }),
+    /allows 0.0.6/,
+  );
+  assert.throws(
+    () => d(t("v0.27.3", "v0.27.5"), { ...main, proposed: "0.27.3" }),
+    /allows 0.28.0/,
   );
   // A major with the label (allowMajor) or a manual bump: major.
   assert.match(
@@ -285,28 +300,29 @@ test("decide: check mode", () => {
     /^first release, next patch/,
   );
   assert.throws(() => d([], { ...staging, proposed: "5.0.0" }), /allows 0.0.1/);
-  // ... or from the files.
+  // Staging never reads the files (owner ruling, 2026-11-15): the files
+  // announce release-line versions, and a staging merge must not consume
+  // one. Whatever they say, the staging answer stays on 0.0.x.
   assert.equal(
-    d([], { ...staging, proposed: "1.4.3", fromFiles: "1.4.2" }).current,
-    "1.4.2",
+    d([], { ...staging, proposed: "0.0.1", fromFiles: "1.4.2" }).version,
+    "0.0.1",
   );
   assert.throws(
-    () => d([], { ...staging, proposed: "0.0.1", fromFiles: "1.4.2" }),
-    /allows 1.4.3/,
+    () => d([], { ...staging, proposed: "1.4.3", fromFiles: "1.4.2" }),
+    /allows 0.0.1/,
   );
-  // Files ahead of the tags: the files win, no deadlock.
-  const ahead = d(t("v0.27.3"), {
-    ...staging,
-    proposed: "0.27.5",
-    fromFiles: "0.27.4",
-  });
-  assert.equal(ahead.current, "0.27.4");
-  assert.match(ahead.reason, /next patch/);
-  // Files behind the tags: the tags win.
-  assert.equal(
-    d(t("v0.27.3"), { ...staging, proposed: "0.27.4", fromFiles: "0.20.0" })
-      .current,
-    "0.27.3",
+  assert.throws(
+    () =>
+      d(t("v0.27.3"), {
+        ...staging,
+        proposed: "0.27.5",
+        fromFiles: "0.27.4",
+      }),
+    /allows 0.0.1/,
+  );
+  assert.throws(
+    () => d(t("v0.27.3"), { ...staging, proposed: "0.27.4", fromFiles: "0.20.0" }),
+    /allows 0.0.1/,
   );
   // Untagged (default prefix): cannot be verified.
   for (const tags of [t("release-1"), t("v1.0.0-rc.1"), t("v2024.10.1")]) {
@@ -470,7 +486,9 @@ test("decide: a custom prefix ignores everything but its own version tags", () =
 test("decide: compute mode", () => {
   const t = (...v) => v.map((x) => `refs/tags/${x}`);
   const d = (refs, o) => decide(refs, { mode: "compute", ...o });
-  assert.equal(d(t("v0.27.3"), staging).version, "0.27.4");
+  // Staging computes from its own 0.0.x line; main from the release line.
+  assert.equal(d(t("v0.27.3"), staging).version, "0.0.1");
+  assert.equal(d(t("v0.27.3", "v0.0.7"), staging).version, "0.0.8");
   assert.equal(d(t("v0.27.3"), main).version, "0.28.0");
   assert.equal(d([], staging).version, "0.0.1");
   assert.match(d([], staging).reason, /^first release/);
@@ -481,15 +499,23 @@ test("decide: compute mode", () => {
     ["v0.28.0", "0.29.0", main, "0.29.0"],
     ["v0.28.0", "0.35.0", main, "0.35.0"],
     ["v0.28.5", "1.0.0", main, "1.0.0"],
-    ["v0.28.0", "0.28.2", staging, "0.28.2"],
-    ["v0.28.0", "0.28.1", staging, "0.28.1"],
+    ["v0.28.0", "0.28.2", main, "0.28.2"],
+    ["v0.28.0", "0.28.1", main, "0.28.1"],
+    // Staging ignores the files (owner ruling, 2026-11-15): whatever they
+    // announce, its answer stays on the 0.0.x line.
+    ["v0.28.0", "0.28.2", staging, "0.0.1"],
+    ["v0.28.0", "0.28.1", staging, "0.0.1"],
   ]) {
     const r = d(t(tag), { ...channel, fromFiles: files });
     assert.equal(r.version, want, `${tag} + ${files}`);
-    assert.match(
-      r.reason,
-      /the version the repo writes, ahead of the highest tag/,
-    );
+    // Only the main channel honours files-ahead; staging stays on 0.0.x.
+    if (channel === main) {
+      assert.match(
+        r.reason,
+        /the version the repo writes, ahead of the highest tag/,
+        `${tag} + ${files} reason`,
+      );
+    }
   }
   // Files at or behind the tags: bump from the highest tag.
   assert.equal(
@@ -500,23 +526,31 @@ test("decide: compute mode", () => {
     d(t("v0.28.0"), { ...main, fromFiles: "0.20.0" }).version,
     "0.29.0",
   );
-  // No version tag: the files' own version, the release they announce.
-  assert.equal(d([], { ...staging, fromFiles: "0.1.0" }).version, "0.1.0");
-  assert.equal(d([], { ...staging, fromFiles: "1.4.2" }).version, "1.4.2");
+  // No version tag: the files' own version, the release they announce
+  // (the release they announce is a MAIN answer; staging never reads the
+  // files and starts its own 0.0.x line).
+  assert.equal(d([], { ...main, fromFiles: "0.1.0" }).version, "0.1.0");
+  assert.equal(d([], { ...main, fromFiles: "1.4.2" }).version, "1.4.2");
   assert.match(
-    d([], { ...staging, fromFiles: "1.4.2" }).reason,
+    d([], { ...main, fromFiles: "1.4.2" }).reason,
     /no version tag yet/,
   );
+  assert.equal(d([], { ...staging, fromFiles: "1.4.2" }).version, "0.0.1");
   // A 0.0.0 placeholder is no version: a first release.
   assert.equal(d([], { ...staging, fromFiles: "0.0.0" }).version, "0.0.1");
   assert.equal(
     d(t("v0.1.0"), { ...main, fromFiles: "1.4.2" }).version,
     "1.4.2",
   );
-  // Untagged: the files' version, or 0.0.1.
+  // Untagged: the files' version on main; staging answers 0.0.1 whatever
+  // the files say.
   assert.equal(d(t("release-1"), staging).version, "0.0.1");
   assert.equal(
     d(t("release-1"), { ...staging, fromFiles: "2.0.0" }).version,
+    "0.0.1",
+  );
+  assert.equal(
+    d(t("release-1"), { ...main, fromFiles: "2.0.0" }).version,
     "2.0.0",
   );
   // A manual run with an explicit bump overrides the files-ahead rule:
@@ -575,7 +609,7 @@ test("decide: compute mode", () => {
     execFileSync("node", [cli, "decide", ...a], { input, encoding: "utf8" });
   assert.equal(
     run("refs/tags/v0.1.0\n", "--mode", "compute", "--channel", "staging"),
-    "ok 0.1.1 0.1.0 next patch (current: the highest tag v0.1.0)\n",
+    "ok 0.0.1 0.0.0 first release, next patch (current: nothing yet)\n",
   );
   assert.equal(
     run("", "--mode", "check", "--channel", "main", "--proposed", "0.1.0"),
@@ -629,10 +663,10 @@ test("current: the one current-version rule", () => {
       tags.join(),
     );
   }
-  // Version tags: the highest, whatever else is there.
+  // A bare placeholder tag is not a line member: main has no release yet.
   assert.deepEqual(cur(["refs/tags/v0.0.0"]), {
-    kind: "tagged",
-    version: "0.0.0",
+    kind: "untagged",
+    written: "",
   });
   assert.deepEqual(
     cur(

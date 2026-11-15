@@ -9,7 +9,7 @@
 # VERSIONING POLICY (nyuchi/.github#80). Before tagging, the version is
 # checked against the org policy by the next-version action (pinned below):
 #
-#   staging (a merge into staging)  PATCH  x.y.z -> x.y.(z+1)
+#   staging (a merge into staging)  PATCH  0.0.z -> 0.0.(z+1) (the staging line)
 #   main    (a release to main)     MINOR  x.y.z -> x.(y+1).0
 #   MAJOR                           by hand only: workflow_dispatch, bump: major
 #

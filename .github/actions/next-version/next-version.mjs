@@ -1,9 +1,16 @@
 #!/usr/bin/env node
 // The org's versioning policy, in one place.
 //
-//   Merge into `staging`      PATCH  x.y.z -> x.y.(z+1)
-//   Release `staging` -> main MINOR  x.y.z -> x.(y+1).0
+//   Merge into `staging`      PATCH  0.0.z -> 0.0.(z+1)  — the staging line
+//   Release `staging` -> main MINOR  x.y.0 -> x.(y+1).0  — the release line
 //   MAJOR                     manual only (workflow_dispatch, bump: major)
+//
+// The two channels tag different ranges (owner ruling, 2026-11-15): staging
+// patches are v0.0.x and NEVER lift the release line, so a run of staging
+// merges cannot consume a release number; the release line is every version
+// tag that is not 0.0.x. A repo on the old scheme (staging patches on the
+// release line) keeps its history: the next staging tag starts at 0.0.1 and
+// the next main release is one minor above the highest release-line tag.
 //
 // There is NO upper limit on MINOR or PATCH: patch 999 is followed by patch
 // 1000, minor 999 by minor 1000 (v0.1000.0 is newer than v0.999.0). Only a MAJOR
@@ -209,6 +216,12 @@ function tagName(line) {
     .replace(/\^\{\}$/, "");
 }
 
+/** The line a strict version belongs to: "0.0" (staging patches) or "release". */
+export function lineOf(v) {
+  const p = parse(v);
+  return p.major === 0 && p.minor === 0 ? "0.0" : "release";
+}
+
 /**
  * The versions of the tags whose name is exactly <prefix><strict version>.
  * Nothing is trimmed, so a tag that is not exactly a version tag is ignored.
@@ -264,8 +277,13 @@ export const DEFAULT_PREFIX = "v";
  */
 export function currentVersion(
   refs,
-  { prefix = DEFAULT_PREFIX, fromFiles = "" } = {},
+  { prefix = DEFAULT_PREFIX, fromFiles = "", channel = "main" } = {},
 ) {
+  if (channel !== "staging" && channel !== "main") {
+    throw new UsageError(
+      `Unknown channel '${channel}'; expected staging or main.`,
+    );
+  }
   const tags = refs.filter((r) => String(r) !== "");
   if (
     fromFiles !== "" &&
@@ -278,13 +296,42 @@ export function currentVersion(
     );
   }
   const written = fromFiles && fromFiles !== "0.0.0" ? fromFiles : "";
-  const versions = tagVersions(tags, prefix);
-  if (versions.length > 0) {
-    const tagged = highest(versions, "");
+  // 0.0.0 is a placeholder everywhere and never a line member.
+  const versions = tagVersions(tags, prefix).filter((v) => v !== "0.0.0");
+
+  // Staging tags the 0.0.x line only. The files announce release-line
+  // versions, so they are deliberately ignored here: a staging merge can
+  // never consume a release number no matter what the files write.
+  if (channel === "staging") {
+    const patches = versions.filter((v) => lineOf(v) === "0.0");
+    if (patches.length > 0) {
+      return { kind: "tagged", version: highest(patches, "") };
+    }
+    // Release-line tags with no staging line yet: staging starts at 0.0.1.
+    if (versions.length > 0) return { kind: "none" };
+    // Tags that never follow the scheme still cannot be verified.
+    if (prefix === DEFAULT_PREFIX && tags.length > 0) {
+      return { kind: "untagged", written: "" };
+    }
+    return { kind: "none" };
+  }
+
+  // Main rules the release line: every version tag that is not 0.0.x,
+  // merged with the version the files write exactly as before. Staging
+  // patches (v0.0.x) and a bare placeholder tag do not lift it.
+  const releases = versions.filter((v) => lineOf(v) !== "0.0");
+  if (releases.length > 0) {
+    const tagged = highest(releases, "");
     if (written && compare(written, tagged) > 0) {
       return { kind: "written", version: written, tagged };
     }
     return { kind: "tagged", version: tagged };
+  }
+  if (versions.length > 0) {
+    // Only staging-line (or placeholder) tags: no release yet. The files
+    // may still announce one; otherwise the first release is 0.1.0.
+    if (written) return { kind: "written", version: written };
+    return { kind: "none" };
   }
   if (prefix === DEFAULT_PREFIX && tags.length > 0) {
     return { kind: "untagged", written };
@@ -359,7 +406,7 @@ export function decide(
     throw new UsageError("decide --mode check needs --proposed.");
   }
   const major = allowMajor || (manual && bump === "major");
-  const cur = currentVersion(refs, { prefix, fromFiles });
+  const cur = currentVersion(refs, { prefix, fromFiles, channel });
   const current = cur.version ?? "0.0.0";
   const from = {
     tagged: `the highest tag ${prefix}${current}`,
@@ -407,7 +454,10 @@ export function decide(
   // they reached the branch through the required check (with its label) or
   // an owner bypass. A manual run with an explicit bump overrides that and
   // bumps from max(tag, files). Otherwise: bump from the highest tag.
-  const files = fromFiles && fromFiles !== "0.0.0" ? fromFiles : "";
+  // Release line only: staging computes from its own 0.0.x tags and never
+  // reads the files.
+  const files =
+    channel === "staging" ? "" : fromFiles && fromFiles !== "0.0.0" ? fromFiles : "";
   const tag = cur.kind === "tagged" ? cur.version : (cur.tagged ?? "");
   const override = manual && bump !== "";
   if (files && !override && (!tag || compare(files, tag) > 0)) {

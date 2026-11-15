@@ -1,6 +1,6 @@
 # Composite action: the org's versioning policy.
 #
-#   Merge into `staging`       PATCH  x.y.z -> x.y.(z+1)
+#   Merge into `staging`       PATCH  0.0.z -> 0.0.(z+1) (the staging line)
 #   Release `staging` -> main  MINOR  x.y.z -> x.(y+1).0
 #   MAJOR                      manual only: workflow_dispatch with bump: major
 #
