@@ -341,6 +341,18 @@ before guessing. Common patterns across the org:
 
 If a repo disagrees with this table, the repo wins.
 
+**Tooling order (owner, 2026-11-17).** CI and dev tooling move off Node:
+
+1. **Pure Rust first.** A Rust-only repo (`Cargo.toml` at the root, no
+   `package.json`) runs fully Rust CI, with no Node or JavaScript. Org
+   lint already does this from nyuchi/.github v0.20.0: the standalone
+   `oxfmt` binary for formatting, and markdownlint-cli2 under Deno for
+   Markdown.
+2. **Then Deno, or full Vite+.** Where no pure Rust tool exists, run the
+   npm tool under Deno (an `npm:` specifier, version pinned), or use
+   Vite+ end to end through `vp`.
+3. **Node last**, only where neither of those works.
+
 MCP servers commonly available in sessions, to use when the task calls
 for them: GitHub (PRs, issues, CI), Mzizi (`mcp.mzizi.dev`: design
 system, tokens, doctrine), Supabase, Vercel, Linear and Context7
@@ -441,6 +453,14 @@ Load the Mzizi **dev skills** before starting work:
 - **Merge gate.** Merge only when the work is complete, CI is green,
   it's verified at runtime, and `/code-review` has run with findings
   resolved.
+- **Nothing merges while any check is red or orange (owner,
+  2026-11-17).** Red is failure, error, cancelled, timed out, action
+  required, neutral or stale; orange is queued, in progress or pending.
+  Skipped counts as green. This holds for required and optional checks
+  alike: never enable auto-merge, and never merge, while one is red or
+  orange. The org-required `All checks green` workflow
+  (`.github/workflows/all-checks-green.yml`) enforces it; see
+  `settings/README.md`.
 
 ## Branch ownership and landing
 
