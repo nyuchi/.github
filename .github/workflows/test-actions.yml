@@ -16,8 +16,8 @@
 #
 # rust-only-lint proves the Node-free path for Rust-only repos (owner,
 # 2026-11-17) gives the same answer as the Node path: the standalone oxfmt
-# against the oxfmt vite-plus bundles, and rumdl against markdownlint-cli2,
-# on this repo's own files. Same pins as reusable-vite-plus.yml and
+# against the oxfmt vite-plus bundles, and markdownlint-cli2 under Deno
+# against the same version under Node, on this repo's own files. Same pins as reusable-vite-plus.yml and
 # reusable-lint.yml.
 #
 # staging-release-guard extracts the "Refuse anything but staging" step's
@@ -201,7 +201,10 @@ jobs:
         with:
           node-version: '24'
           package-manager-cache: false
-      - name: Install both oxfmt builds and both Markdown linters
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed  # v2.0.5
+        with:
+          deno-version: v2.x
+      - name: Install both oxfmt builds and markdownlint-cli2 for Node
         shell: bash
         run: |
           set -euo pipefail
@@ -212,10 +215,6 @@ jobs:
             https://github.com/oxc-project/oxc/releases/download/oxfmt_v0.70.0/oxfmt-x86_64-unknown-linux-gnu.tar.gz
           echo "7c1051238203be82eb7ed6038a9a72ac258ee15d79510e71ea32665df6b7af9f  $t/oxfmt.tgz" | sha256sum --check --strict
           tar -xzf "$t/oxfmt.tgz" -C "$t"
-          curl -fsSL --retry 3 -o "$t/rumdl.tgz" \
-            https://github.com/rvben/rumdl/releases/download/v0.3.4/rumdl-v0.3.4-x86_64-unknown-linux-gnu.tar.gz
-          echo "36f1524f0cfaf33f5dfe68ac19220e1bd57ded1f0f9205931f6ee1de32f4a040  $t/rumdl.tgz" | sha256sum --check --strict
-          tar -xzf "$t/rumdl.tgz" -C "$t"
           echo "bundled: $("$t/vp/node_modules/.bin/oxfmt" --version)  standalone: $("$t/oxfmt-x86_64-unknown-linux-gnu" --version)"
       - name: The standalone oxfmt agrees with the bundled one
         shell: bash
@@ -232,18 +231,18 @@ jobs:
             diff "$t/a.txt" "$t/b.txt" || true
             exit 1
           fi
-      - name: rumdl agrees with markdownlint-cli2
+      - name: markdownlint-cli2 under Deno agrees with Node
         shell: bash
         run: |
           set -uo pipefail
           t="$RUNNER_TEMP"
           a=0; "$t/mdl/node_modules/.bin/markdownlint-cli2" '**/*.md' '!**/node_modules/**' > "$t/c.txt" 2>&1 || a=$?
-          mapfile -d '' files < <(git ls-files -z -- ':(glob)**/*.md' ':(exclude,glob)**/node_modules/**')
-          b=0; "$t/rumdl" check "${files[@]}" > "$t/d.txt" 2>&1 || b=$?
-          echo "markdownlint-cli2 exit $a, rumdl exit $b"
+          b=0; deno run --allow-read --allow-env --allow-sys npm:markdownlint-cli2@0.23.2 \
+            '**/*.md' '!**/node_modules/**' > "$t/d.txt" 2>&1 || b=$?
+          echo "Node exit $a, Deno exit $b"
           if [ "$a" != "$b" ]; then
-            echo "::error::rumdl and markdownlint-cli2 disagree on this repo."
-            echo "--- markdownlint-cli2"; cat "$t/c.txt"
-            echo "--- rumdl"; cat "$t/d.txt"
+            echo "::error::markdownlint-cli2 under Deno and under Node disagree on this repo."
+            echo "--- Node"; cat "$t/c.txt"
+            echo "--- Deno"; cat "$t/d.txt"
             exit 1
           fi

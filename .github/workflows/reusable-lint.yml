@@ -499,7 +499,7 @@ jobs:
         run: |
           if [ -f Cargo.toml ] && [ ! -f package.json ]; then
             echo "rust_only=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Rust-only repo (Cargo.toml, no package.json): linting Markdown with rumdl, no Node."
+            echo "::notice::Rust-only repo (Cargo.toml, no package.json): linting Markdown with markdownlint-cli2 under Deno, no Node."
           else
             echo "rust_only=false" >> "$GITHUB_OUTPUT"
           fi
@@ -591,46 +591,38 @@ jobs:
             exit 1
           fi
           markdownlint-cli2 "${globs[@]}"
-      - name: rumdl (Rust-only repos, no Node)
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed  # v2.0.5
         if: ${{ steps.kind.outputs.rust_only == 'true' }}
+        with:
+          deno-version: v2.x
+      - name: markdownlint-cli2 under Deno (Rust-only repos, no Node)
+        if: ${{ steps.kind.outputs.rust_only == 'true' }}
+        # Owner, 2026-11-17: "we move from node to Deno where we can't use a
+        # pure rust equivalent". rumdl 0.3.4 was tried and is not faithful:
+        # it fires rules the org config turns off (MD040, MD041) and adds
+        # its own (MD057). So the same pinned markdownlint-cli2 runs here,
+        # under Deno instead of Node: the same rules, the same answers.
         env:
+          MARKDOWNLINT_VERSION: ${{ inputs.markdownlint-version }}
           MARKDOWNLINT_GLOBS: ${{ inputs.markdownlint-globs }}
         shell: bash
         run: |
           set -euo pipefail
-          # rumdl: a Rust Markdown linter that reads .markdownlint.jsonc and
-          # the markdownlint-cli2 config (ignores) itself. Pinned by version
-          # and sha256; keep in step with test-actions.yml.
-          rumdl_version=0.3.4
-          sha256=36f1524f0cfaf33f5dfe68ac19220e1bd57ded1f0f9205931f6ee1de32f4a040
-          dir="$RUNNER_TEMP/rumdl"
-          mkdir -p "$dir"
-          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
-            "https://github.com/rvben/rumdl/releases/download/v${rumdl_version}/rumdl-v${rumdl_version}-x86_64-unknown-linux-gnu.tar.gz" \
-            --output "$dir/rumdl.tar.gz"
-          echo "$sha256  $dir/rumdl.tar.gz" | sha256sum --check --strict
-          tar -xzf "$dir/rumdl.tar.gz" -C "$dir"
-          rumdl="$dir/rumdl"
-          test -x "$rumdl" || { echo "::error::The rumdl $rumdl_version archive has no rumdl binary."; exit 1; }
-          echo "rumdl $("$rumdl" --version | head -n 1)"
-          # The same globs markdownlint-cli2 gets: positive globs select
-          # tracked files, a leading ! excludes.
-          include=(); exclude=()
-          while IFS= read -r glob; do
-            [ -n "$glob" ] || continue
-            case "$glob" in
-              '!'*) exclude+=(":(exclude,glob)${glob#!}") ;;
-              *) include+=(":(glob)$glob") ;;
-            esac
-          done <<< "$MARKDOWNLINT_GLOBS"
-          files=()
-          while IFS= read -r -d '' f; do files+=("$f"); done \
-            < <(git ls-files -z -- "${include[@]}" "${exclude[@]}")
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "::notice::No tracked Markdown files match; nothing to lint."
-            exit 0
+          if [[ ! "$MARKDOWNLINT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]]; then
+            echo "::error::Invalid markdownlint-version '$MARKDOWNLINT_VERSION' - expected semver."
+            exit 1
           fi
-          "$rumdl" check "${files[@]}"
+          globs=()
+          while IFS= read -r glob; do
+            [ -n "$glob" ] && globs+=("$glob")
+          done <<< "$MARKDOWNLINT_GLOBS"
+          if [ ${#globs[@]} -eq 0 ]; then
+            echo "::error::markdownlint-globs resolved to nothing."
+            exit 1
+          fi
+          deno --version | head -n 1
+          deno run --allow-read --allow-env --allow-sys \
+            "npm:markdownlint-cli2@$MARKDOWNLINT_VERSION" "${globs[@]}"
 
   yamllint:
     name: yamllint
