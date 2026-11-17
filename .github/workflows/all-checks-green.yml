@@ -17,7 +17,9 @@
 #   green   success or skipped
 #
 # Where a check has run more than once, only its newest run counts, so a
-# re-run that turns green clears an earlier failure.
+# re-run that turns green clears an earlier failure. A run that has a
+# conclusion is finished, even if GitHub still shows its status as
+# in_progress (it can lag behind a job that has already completed).
 #
 # It passes only after two polls in a row find everything else green, so a
 # workflow that registers late is not missed. Anything still orange after
@@ -67,7 +69,8 @@ jobs:
               --jq '.check_runs[] | select(.name != env.SELF)
                     | {id, name, status, conclusion}' |
               jq -rs 'group_by(.name) | map(max_by(.id))[]
-                      | [.status, (.conclusion // "none"), .name] | @tsv')
+                      | [(if .conclusion then "completed" else .status end),
+                         (.conclusion // "none"), .name] | @tsv')
             statuses=$(gh api "repos/$REPO/commits/$SHA/status" \
               --jq '.statuses[] | [.state, .context] | @tsv')
 
