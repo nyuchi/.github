@@ -66,7 +66,10 @@ required through the same "Require workflows to pass" rule as Org lint, so the
 `All checks green` context exists in every repository with no per-repo file.
 
 1. Merge `all-checks-green.yml` to `main` here (the rule points at `main`).
-2. Each organisation: `settings/require-all-green.sh <org> ...` to see the
+2. Copy that file verbatim to each organisation's own `<org>/.github` main:
+   GitHub rejects a required workflow sourced from another organisation, even
+   a public repository, so each org carries its own copy.
+3. Each organisation: `settings/require-all-green.sh <org> ...` to see the
    change, then again with `--apply`. It needs an org admin.
-3. Remove any per-repository `all-green.yml` copies, so the context does not
+4. Remove any per-repository `all-green.yml` copies, so the context does not
    run twice.

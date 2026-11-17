@@ -10,23 +10,26 @@
 # Without --apply it only reads and prints what it would change. Needs gh
 # (logged in with admin:org) and jq.
 #
-# Run it only once all-checks-green.yml is on nyuchi/.github main: the rule
-# points at refs/heads/main, and a required workflow that does not exist
-# blocks every pull request in the org.
+# Required workflows must live in a repository the org owns: GitHub rejects a
+# source outside the org, even a public one. So the file is sourced from each
+# org's own <org>/.github main, and every org carries a verbatim copy of
+# nyuchi/.github's all-checks-green.yml. Run it only once that copy is on the
+# org's .github main: the rule points at refs/heads/main, and a required
+# workflow that does not exist blocks every pull request in the org.
 set -euo pipefail
 
 apply=false
 if [ "${1:-}" = "--apply" ]; then apply=true; shift; fi
 [ "$#" -ge 1 ] || { echo "usage: $0 [--apply] <org> [<org> ...]" >&2; exit 2; }
 
-source_repo="nyuchi/.github"
 path=".github/workflows/all-checks-green.yml"
-repo_id="$(gh api "/repos/$source_repo" --jq .id)"
-gh api "/repos/$source_repo/contents/$path?ref=main" --silent ||
-  { echo "$path is not on $source_repo main yet: merge it first." >&2; exit 1; }
 
 for org in "$@"; do
   echo "== $org"
+  source_repo="$org/.github"
+  repo_id="$(gh api "/repos/$source_repo" --jq .id)" || continue
+  gh api "/repos/$source_repo/contents/$path?ref=main" --silent ||
+    { echo "  $path is not on $source_repo main yet: copy it there first. skipped" >&2; continue; }
   ids="$(gh api "/orgs/$org/rulesets" --paginate \
     --jq '.[] | select(.name == "org-wide-main-protection" and .source_type == "Organization") | .id')"
   [ -n "$ids" ] || { echo "  no org-wide-main-protection ruleset: skipped"; continue; }
