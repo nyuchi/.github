@@ -199,6 +199,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v6
         with:
           persist-credentials: false
+      - name: Detect a Rust-only repo
+        id: kind
+        # Owner, 2026-11-17: "The ci for the cell repos should be fully rust
+        # no node or JavaScript"; scope chosen as "Rust repos only". A repo
+        # with a Cargo.toml at its root and no package.json takes the
+        # Node-free path below; every other repo is unchanged.
+        shell: bash
+        run: |
+          if [ -f Cargo.toml ] && [ ! -f package.json ]; then
+            echo "rust_only=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Rust-only repo (Cargo.toml, no package.json): using the standalone oxfmt, no Node."
+          else
+            echo "rust_only=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Fall back to the org format config
         env:
           # job.workflow_sha is the commit of THIS reusable workflow. See
@@ -235,6 +249,7 @@ jobs:
             echo "::notice::$canonical is missing from the repo root; using the canonical copy from nyuchi/.github@$ref."
           done <<< "$ORG_CONFIGS"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v6
+        if: ${{ steps.kind.outputs.rust_only != 'true' }}
         with:
           node-version: '24'
           # Node is only a runtime for a globally installed tool here; the
@@ -245,6 +260,7 @@ jobs:
           package-manager-cache: false
       - name: Install the oxfmt that Vite+ bundles
         id: install
+        if: ${{ steps.kind.outputs.rust_only != 'true' }}
         env:
           VITE_PLUS_VERSION: ${{ inputs.vite-plus-version }}
         shell: bash
@@ -262,11 +278,41 @@ jobs:
           test -x "$oxfmt" || { echo "::error::vite-plus@$VITE_PLUS_VERSION did not install an oxfmt binary."; exit 1; }
           echo "vite-plus $VITE_PLUS_VERSION bundles oxfmt $("$oxfmt" --version | tr -d '\n')"
           echo "oxfmt=$oxfmt" >> "$GITHUB_OUTPUT"
+      - name: Install the standalone oxfmt (Rust-only repos, no Node)
+        id: standalone
+        if: ${{ steps.kind.outputs.rust_only == 'true' }}
+        env:
+          VITE_PLUS_VERSION: ${{ inputs.vite-plus-version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The oxfmt that vite-plus bundles, as oxc's own Linux release
+          # binary: same version, so the same formatting. One pin per
+          # vite-plus version; keep in step with test-actions.yml.
+          case "$VITE_PLUS_VERSION" in
+            1.0.0)
+              oxfmt_version=0.70.0
+              sha256=7c1051238203be82eb7ed6038a9a72ac258ee15d79510e71ea32665df6b7af9f ;;
+            *)
+              echo "::error::No standalone oxfmt pin for vite-plus $VITE_PLUS_VERSION. Add one to reusable-vite-plus.yml."
+              exit 1 ;;
+          esac
+          dir="$RUNNER_TEMP/oxfmt"
+          mkdir -p "$dir"
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+            "https://github.com/oxc-project/oxc/releases/download/oxfmt_v${oxfmt_version}/oxfmt-x86_64-unknown-linux-gnu.tar.gz" \
+            --output "$dir/oxfmt.tar.gz"
+          echo "$sha256  $dir/oxfmt.tar.gz" | sha256sum --check --strict
+          tar -xzf "$dir/oxfmt.tar.gz" -C "$dir"
+          oxfmt="$dir/oxfmt-x86_64-unknown-linux-gnu"
+          test -x "$oxfmt" || { echo "::error::The oxfmt $oxfmt_version archive has no oxfmt-x86_64-unknown-linux-gnu binary."; exit 1; }
+          echo "standalone oxfmt $("$oxfmt" --version | tr -d '\n')"
+          echo "oxfmt=$oxfmt" >> "$GITHUB_OUTPUT"
       - name: oxfmt --check
         id: run
         continue-on-error: ${{ !inputs.enforce }}
         env:
-          OXFMT: ${{ steps.install.outputs.oxfmt }}
+          OXFMT: ${{ steps.install.outputs.oxfmt || steps.standalone.outputs.oxfmt }}
           PATHSPECS: ${{ inputs.fmt-pathspecs }}
         shell: bash
         run: |
