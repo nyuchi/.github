@@ -129,7 +129,7 @@ jobs:
   sbom:
     name: Generate SBOM
     needs: validate-tag
-    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@755c93763e6e0245fc2729c6a361240017ab6ccc  # v0.9.0
+    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@925d067322defd676dacd90f2c2b0540cb10f644  # v0.11.1
     permissions:
       contents: read
       packages: read
@@ -211,7 +211,7 @@ jobs:
           subject-path: "release-assets/*"
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3  # v3.0.4
         with:
           draft: ${{ inputs.draft }}
           prerelease: ${{ needs.validate-tag.outputs.prerelease }}
