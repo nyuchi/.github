@@ -232,7 +232,18 @@ test("from 0.0.0 the rule is the same: 0.0.1, 0.1.0 or 1.0.0", () => {
     check("0.0.0", "1.0.0", { ...staging, allowMajor: true }),
     "next major",
   );
-  for (const bad of ["5.0.0", "0.2.0", "1.0.0", "0.1.1", "3.1.4"]) {
+  // A first release PR from staging carries 0.0.1: main takes it too.
+  assert.equal(
+    check("0.0.0", "0.0.1", main),
+    "the first staging version, 0.0.1",
+  );
+  // Only from 0.0.0, and not with an explicit bump.
+  assert.throws(() => check("0.1.0", "0.0.2", main), /allows 0.2.0/);
+  assert.throws(
+    () => check("0.0.0", "0.0.1", { ...main, bump: "minor" }),
+    /allows 0.1.0/,
+  );
+  for (const bad of ["5.0.0", "0.2.0", "1.0.0", "0.1.1", "0.0.2", "3.1.4"]) {
     assert.throws(() => check("0.0.0", bad, main), /allows 0.1.0/, bad);
   }
   assert.throws(() => check("0.0.0", "0.1.0", staging), /allows 0.0.1/);
