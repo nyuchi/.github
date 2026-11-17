@@ -287,11 +287,18 @@ case_ "major with the label is allowed" 0 allowed "allowed (next major" \
 case_ "pre-release of the released version is refused" 1 - "does not hold a version" \
   main "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.3-rc.1)"
 
-# A first release (no tags at all) fails closed: 0.0.1 / 0.1.0 / 1.0.0 only.
+# A first release (no tags at all) fails closed: 0.0.1 / 0.1.0 / 1.0.0 only
+# (main also takes 0.0.1, below).
 case_ "no tags, staging: 0.0.1 is the first release" 0 allowed "first release, next patch" \
   staging "" "" "H:Cargo.toml=$(cargo 0.0.1)"
 case_ "no tags, main: 0.1.0 is the first release" 0 allowed "first release, next minor" \
   main "" "" "H:package.json=$(pj 0.1.0)"
+# A first release PR from staging carries the 0.0.1 staging wrote; with no
+# tag for it (no staging tagger yet), main takes it rather than deadlock.
+case_ "no tags, main: 0.0.1 from staging is the first release" 0 allowed "first release, the first staging version, 0.0.1" \
+  main "" "" "H:Cargo.toml=$(cargo 0.0.1)"
+case_ "no tags, main: 0.0.2 is refused" 1 - "the policy allows 0.1.0" \
+  main "" "" "H:Cargo.toml=$(cargo 0.0.2)"
 case_ "no tags, main, semver:major: 1.0.0 is the first release" 0 allowed "first release, next major" \
   main "" "semver:major" "H:VERSION=1.0.0"
 case_ "no tags: 9.0.0 is refused" 1 - "the policy allows 0.0.1" \
