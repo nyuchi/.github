@@ -69,7 +69,9 @@ test("package.json: the root version only, read by python's json", () => {
     assert.equal(kind(pj(bad)), "invalid", bad);
   }
   // Nesting too deep for python (RecursionError) is invalid, not a crash.
-  const deep = `{"version":"1.0.0","x":${"[".repeat(100000)}${"]".repeat(100000)}}`;
+  // Python 3.12's json parses 100k-deep arrays, so the fixture must go deeper
+  // than that; 300k still raises RecursionError on 3.15.
+  const deep = `{"version":"1.0.0","x":${"[".repeat(300000)}${"]".repeat(300000)}}`;
   assert.equal(kind(pj(deep)), "invalid");
   assert.equal(
     kind(
