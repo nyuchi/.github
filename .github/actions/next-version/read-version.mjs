@@ -187,6 +187,22 @@ def keep_versions(pairs):
     return out
 def no_constant(name):
     raise ValueError("not JSON: " + name)
+# A version file nested deeper than this is not a version file. Checked after
+# parsing because json and tomllib only sometimes raise RecursionError: newer
+# CPython parses 100,000 levels without it, so a depth limit is what keeps
+# the answer the same on every Python.
+MAX_DEPTH = 512
+def too_deep(doc):
+    stack = [(doc, 1)]
+    while stack:
+        node, depth = stack.pop()
+        if depth > MAX_DEPTH:
+            return True
+        if isinstance(node, dict):
+            stack.extend((v, depth + 1) for v in node.values())
+        elif isinstance(node, list):
+            stack.extend((v, depth + 1) for v in node)
+    return False
 def unreadable(data):
     return {"kind": "invalid", "raw": "unreadable " + hashlib.sha256(data).hexdigest()}
 def version_in(node, dotted, project):
@@ -225,6 +241,8 @@ for kind, path in zip(args[0::2], args[1::2]):
             doc = json.loads(text, object_pairs_hook=keep_versions, parse_constant=no_constant)
         else:
             doc = tomllib.loads(text)
+        if too_deep(doc):
+            raise ValueError("nested deeper than " + str(MAX_DEPTH))
         if kind == "package.json" and isinstance(doc, Obj) and len(doc.versions) > 1:
             # Compared by the values, so a change to any of them is a change.
             entries = {"": {"kind": "invalid", "raw": "duplicate version " + json.dumps(doc.versions)}}
