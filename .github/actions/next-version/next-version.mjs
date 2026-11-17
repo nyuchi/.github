@@ -179,6 +179,10 @@ export function check(
   // Strict, like everything else: a pre-release or build suffix is refused.
   // From 0.0.0 (a first release) the rule is the same: 0.0.1 on staging,
   // 0.1.0 on main, or 1.0.0 with allowMajor; anything else is refused.
+  // One exception: main also takes 0.0.1 from 0.0.0. A repo's first release
+  // PR from staging carries the 0.0.1 its first staging merge wrote; when
+  // that was never tagged (no staging tagger yet), main would otherwise ask
+  // for 0.1.0 while staging pins 0.0.1, and no version passes both.
   const p = parse(proposed);
   current = current || "0.0.0";
   if (compare(core(p), current) === 0) return "unchanged";
@@ -189,6 +193,14 @@ export function check(
   // The usual next version for this channel.
   const allowed = nextVersion(current, { channel, bump, manual: allowMajor });
   if (core(p) === allowed) return `next ${bump || defaultBump(channel)}`;
+  if (
+    channel === "main" &&
+    !bump &&
+    current === "0.0.0" &&
+    core(p) === "0.0.1"
+  ) {
+    return "the first staging version, 0.0.1";
+  }
 
   const hint =
     core(p) === major && !allowMajor

@@ -489,6 +489,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v6
+      - name: Detect a Rust-only repo
+        id: kind
+        # Owner, 2026-11-17: "The ci for the cell repos should be fully rust
+        # no node or JavaScript"; scope chosen as "Rust repos only". A repo
+        # with a Cargo.toml at its root and no package.json takes the
+        # Node-free path below; every other repo is unchanged.
+        shell: bash
+        run: |
+          if [ -f Cargo.toml ] && [ ! -f package.json ]; then
+            echo "rust_only=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Rust-only repo (Cargo.toml, no package.json): linting Markdown with markdownlint-cli2 under Deno, no Node."
+          else
+            echo "rust_only=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Fall back to the org markdownlint config
         env:
           # job.workflow_sha is the commit of THIS reusable workflow (not the
@@ -533,6 +547,7 @@ jobs:
             echo "::notice::$canonical is missing from the repo root; using the canonical copy from nyuchi/.github@$ref."
           done <<< "$ORG_CONFIGS"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v6
+        if: ${{ steps.kind.outputs.rust_only != 'true' }}
         with:
           node-version: '24'
           # Node is only a runtime for a globally installed tool here; the
@@ -542,6 +557,7 @@ jobs:
           # finds nothing to key it on.
           package-manager-cache: false
       - name: Install markdownlint-cli2
+        if: ${{ steps.kind.outputs.rust_only != 'true' }}
         # Deliberately NOT markdownlint-cli2-action. The action pins its
         # own bundled markdownlint-cli2, so bumping the action changed the
         # active ruleset underneath us and MD060 started failing in CI
@@ -560,6 +576,7 @@ jobs:
           npm install --global "markdownlint-cli2@$MARKDOWNLINT_VERSION"
           echo "markdownlint-cli2 $(markdownlint-cli2 --version 2>&1 | head -n 1)"
       - name: markdownlint-cli2
+        if: ${{ steps.kind.outputs.rust_only != 'true' }}
         env:
           MARKDOWNLINT_GLOBS: ${{ inputs.markdownlint-globs }}
         shell: bash
@@ -574,6 +591,38 @@ jobs:
             exit 1
           fi
           markdownlint-cli2 "${globs[@]}"
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed  # v2.0.5
+        if: ${{ steps.kind.outputs.rust_only == 'true' }}
+        with:
+          deno-version: v2.x
+      - name: markdownlint-cli2 under Deno (Rust-only repos, no Node)
+        if: ${{ steps.kind.outputs.rust_only == 'true' }}
+        # Owner, 2026-11-17: "we move from node to Deno where we can't use a
+        # pure rust equivalent". rumdl 0.3.4 was tried and is not faithful:
+        # it fires rules the org config turns off (MD040, MD041) and adds
+        # its own (MD057). So the same pinned markdownlint-cli2 runs here,
+        # under Deno instead of Node: the same rules, the same answers.
+        env:
+          MARKDOWNLINT_VERSION: ${{ inputs.markdownlint-version }}
+          MARKDOWNLINT_GLOBS: ${{ inputs.markdownlint-globs }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$MARKDOWNLINT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]]; then
+            echo "::error::Invalid markdownlint-version '$MARKDOWNLINT_VERSION' - expected semver."
+            exit 1
+          fi
+          globs=()
+          while IFS= read -r glob; do
+            [ -n "$glob" ] && globs+=("$glob")
+          done <<< "$MARKDOWNLINT_GLOBS"
+          if [ ${#globs[@]} -eq 0 ]; then
+            echo "::error::markdownlint-globs resolved to nothing."
+            exit 1
+          fi
+          deno --version | head -n 1
+          deno run --allow-read --allow-env --allow-sys \
+            "npm:markdownlint-cli2@$MARKDOWNLINT_VERSION" "${globs[@]}"
 
   yamllint:
     name: yamllint

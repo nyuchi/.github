@@ -469,6 +469,43 @@ concurrent merge calls, not from git itself. These rules remove it.
   (title lint, PR comments) skip themselves on `merge_group`; a skipped
   check counts as passed.
 
+### Releases and the main gate
+
+- **The default branch takes releases only.** Where a repo has a `staging`
+  branch, a pull request into the default branch must come from `staging`,
+  a `release/*` branch, or the registry pin bot (`bot/registry-pin`). The
+  enforced release check refuses everything else; repos without `staging`
+  are not affected. Dependabot opens its PRs against `staging`
+  (`target-branch: staging`). A repo named `.github` has no `staging` at
+  all: every org's `.github` repo works directly on its default branch.
+- **Promote `staging` to the default branch with a merge commit, never
+  squash.** A squash release is one commit `staging` lacks; the branches
+  diverge and the next release silently erases work that exists only on
+  the default branch (it did, on 2026-10-21). A merge commit keeps the
+  default branch at `staging` plus one merge, so the next release cannot
+  conflict and needs no sync-back. See `settings/README.md`.
+- **Nothing stays on the default branch alone.** If a commit reaches it
+  outside a release (hotfix, pin bot), forward-port it to `staging` before
+  the next release. The gate blocks the release until then; once the
+  commits are on `staging`, the `forward-ported` label lets it through.
+- **One pin for the shared workflows, estate-wide.** Every repo calls
+  `nyuchi/.github/.github/workflows/<workflow>.yml@<40-hex sha>  # vX.Y.Z`
+  at the same commit (two spaces before `#`); Dependabot raises the pin
+  after each release. Never `@main`, never a bare SHA without its tag
+  comment.
+- **Releases are automatic.** Agents do not cut minor or patch releases
+  by hand: `auto-release.yml` opens the staging → default-branch release
+  PR every 15 minutes and turns auto-merge on, as the enterprise-owned
+  `bundu-release` app (whose key lives only in the `org-release`
+  environment). A MAJOR is still the owner's call: the owner applies the
+  `semver:major` label. The hotfix lane is unchanged. A repo opts out with
+  the `AUTO_RELEASE=off` variable.
+- **Advisory waivers are org-level.** The dependency review blocks an
+  advisory only while a patched release exists. The only waivers are the
+  org allowlist (`AUDIT_ALLOW_GHSAS` in nyuchi/.github's
+  `dependency-review.yml`), each with a reason and a review date; a repo
+  cannot waive its own advisory.
+
 ---
 
 _Last reviewed by a human: every PR that changes this file._
