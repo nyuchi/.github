@@ -53,7 +53,8 @@
 # exactly <prefix><strict version>) and the version the files already write,
 # so files ahead of the tags never deadlock the repo; with neither, a first
 # release from 0.0.0 (0.0.1 on staging, 0.1.0 on main, or 1.0.0 with the
-# label). With the default prefix, a repo with tags but no version tag
+# label; main also takes 0.0.1, the version a first staging merge writes,
+# so an untagged first release PR from staging cannot deadlock). With the default prefix, a repo with tags but no version tag
 # (another scheme, pre-releases only) cannot be verified, so a PR that
 # writes or changes a version there is refused; with another prefix (a
 # monorepo component), other tags are ignored. A version equal to the
