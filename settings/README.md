@@ -55,3 +55,18 @@ matters; each step is safe on its own:
 
 Until step 5 nothing changes for anyone; after step 2 and 3 a merge commit is
 allowed on `main`, and after step 4 the queue merges it as one.
+
+## All checks green, required everywhere
+
+Owner decision (2026-11-17): nothing merges while any check is red or orange,
+in every repository. `.github/workflows/all-checks-green.yml` is the one gate:
+it waits on every other check run and commit status on the commit under test
+and fails on anything red, or anything still pending after 40 minutes. It is
+required through the same "Require workflows to pass" rule as Org lint, so the
+`All checks green` context exists in every repository with no per-repo file.
+
+1. Merge `all-checks-green.yml` to `main` here (the rule points at `main`).
+2. Each organisation: `settings/require-all-green.sh <org> ...` to see the
+   change, then again with `--apply`. It needs an org admin.
+3. Remove any per-repository `all-green.yml` copies, so the context does not
+   run twice.

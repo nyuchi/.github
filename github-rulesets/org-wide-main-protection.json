@@ -60,6 +60,11 @@
             "repository_id": 1116531720,
             "path": ".github/workflows/org-lint.yml",
             "ref": "refs/heads/main"
+          },
+          {
+            "repository_id": 1116531720,
+            "path": ".github/workflows/all-checks-green.yml",
+            "ref": "refs/heads/main"
           }
         ]
       }
