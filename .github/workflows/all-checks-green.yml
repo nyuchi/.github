@@ -64,9 +64,14 @@ jobs:
             # Every run on the commit, then the newest per name: a re-run
             # (such as a title check re-run by an edit) lands in a new check
             # suite, and filter=latest keeps the old result in the old suite.
+            # "Workers Builds:*" is Cloudflare's dashboard git integration
+            # reporting as a check run (see the note in the statuses loop
+            # below); it is skipped for the same reason.
             runs=$(gh api --paginate \
               "repos/$REPO/commits/$SHA/check-runs?filter=all&per_page=100" \
-              --jq '.check_runs[] | select(.name != env.SELF)
+              --jq '.check_runs[]
+                    | select(.name != env.SELF)
+                    | select(.name | startswith("Workers Builds:") | not)
                     | {id, name, status, conclusion}' |
               jq -rs 'group_by(.name) | map(max_by(.id))[]
                       | [(if .conclusion then "completed" else .status end),
