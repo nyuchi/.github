@@ -87,6 +87,14 @@ jobs:
                 orange+=("$name ($status)")
                 continue
               fi
+              # CodeQL reports "neutral" (not failure) when default setup
+              # has nothing to analyse for a diff, such as this repo's
+              # workflow-only pull requests. A real CodeQL finding reports
+              # failure and still fails this gate; only the no-op is let
+              # through, and only by name and conclusion together.
+              if [ "$name" = "CodeQL" ] && [ "$conclusion" = "neutral" ]; then
+                continue
+              fi
               case "$conclusion" in
                 success | skipped) ;;
                 *) red+=("$name ($conclusion)") ;;
