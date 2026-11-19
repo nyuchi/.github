@@ -89,6 +89,18 @@ jobs:
             done <<< "$runs"
             while IFS=$'\t' read -r state context; do
               [ -n "$context" ] || continue
+              # "Workers Builds:" commit statuses come from the Cloudflare
+              # dashboard's git integration, not from this repository's CI.
+              # In nyuchi/nyuchi-platform that integration is a redundant
+              # second build path for nyuchi-console-backend (the repo's own
+              # console.yml deploys the Worker from main), and it fails in
+              # zero seconds on every pull request head, which wedged every
+              # merge behind this gate. It is ignored here until the
+              # integration is deleted or repaired; GitHub Actions check
+              # runs are unaffected.
+              case "$context" in
+                "Workers Builds:"*) continue ;;
+              esac
               case "$state" in
                 success) ;;
                 pending) orange+=("$context (status pending)") ;;
