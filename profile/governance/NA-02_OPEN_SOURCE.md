@@ -4,8 +4,8 @@
 
 | Field          | Value                                    |
 | -------------- | ---------------------------------------- |
-| Version        | 1.1                                      |
-| Effective date | 22 June 2026                             |
+| Version        | 1.2                                      |
+| Effective date | 20 November 2026                         |
 | Status         | Approved and in force                    |
 | Approved by    | Bryan Fawcett, Founder & CEO             |
 
@@ -44,15 +44,15 @@ We build **frontier infrastructure** — data layers, networking
 protocols, graph engines, identity primitives, and cryptographic
 foundations — designed for three converging frontiers:
 
-- **Web2 → Web3 → quantum** — infrastructure that works today,
-  works on decentralised networks, and is ready for the
-  post-quantum era.
+- **Today's web → the Nyuchi Honeycomb → quantum** — infrastructure
+  that works today, works on the Nyuchi Honeycomb's personal pods,
+  and is ready for the post-quantum era.
 - **On-device, local-first, edge** — compute and storage that
   live where the people are.
 - **Community-governed** — platforms shaped by Ubuntu philosophy.
 
-The apps and platforms in the organisation — Mukoko, the Nyuchi
-Enterprise products, the sister brands — are production
+The apps and platforms in the organisation — Mukoko and its apps,
+and the Nyuchi Enterprise products — are production
 expressions of that infrastructure. They solve real problems and
 they prove the infrastructure in the field. The community's
 sovereign assets — the four platform tokens (MIT, MXT, NST, NHC)
@@ -78,8 +78,7 @@ not invent new licences.
 - **Apache 2.0** — the default for frontier infrastructure
   primitives. Used where explicit patent grants and permissive
   reuse matter most. Examples: [`ntl`](https://github.com/nyuchi/ntl),
-  [`siafudb`](https://github.com/nyuchi/siafudb),
-  [`siafudb-kuzu`](https://github.com/nyuchi/siafudb-kuzu).
+  [`siafudb`](https://github.com/nyuchi/siafudb).
 - **MIT** — a simpler permissive option for application code and
   libraries where patent considerations are less central. Used
   across many of our platform and product repositories.
@@ -158,7 +157,7 @@ a live system:
 | Edge cache              | Cloudflare KV + Durable Objects          | Caches only; sources of truth are sovereign                                  |
 | Container orchestration | Fly.io (managed)                         | K3s on MAAS-provisioned bare metal at Teraco (Johannesburg) — long-term path |
 | Stream processing       | Redpanda (BSL)                           | Apache Kafka (Apache 2.0) — wire-compatible                                  |
-| Embedded graph DB       | —                                        | SiafuDB / SiafuDB-Kuzu (Apache 2.0, ours)                                    |
+| Embedded graph DB       | —                                        | SiafuDB (Apache 2.0, ours)                                                   |
 | Data transfer layer     | —                                        | NTL (Apache 2.0, ours)                                                       |
 
 _Speed is rented. Truth is owned._
@@ -403,8 +402,8 @@ community forum before taking effect.
 
 | Layer                      | Examples                                                                  | Default licence                                  |
 | -------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------ |
-| Frontier infrastructure    | NTL, SiafuDB, SiafuDB-Kuzu, Honeycomb protocol, service bus schemas, SDKs | Apache 2.0                                       |
-| Platforms and applications | Mukoko, Nyuchi Enterprise products, sister brands                         | MIT or Apache 2.0 (GPL where copyleft warranted) |
+| Frontier infrastructure    | NTL, SiafuDB, Honeycomb protocol, service bus schemas, SDKs               | Apache 2.0                                       |
+| Platforms and applications | Mukoko and its apps, Nyuchi Enterprise products                           | MIT or Apache 2.0 (GPL where copyleft warranted) |
 | Documentation and specs    | Canonical documents, architecture docs                                    | CC BY 4.0                                        |
 | Client engagement code     | Per-engagement                                                            | Private, client-owned                            |
 
@@ -415,6 +414,13 @@ repository.**
 
 ## Changelog
 
+- **v1.2** (20 November 2026) — Amendment: wording brought in line
+  with the ecosystem's current terms. §1's frontier list names
+  today's web, the Nyuchi Honeycomb's personal pods, and the
+  quantum era; product lists refer to Mukoko and its apps.
+  SiafuDB-Kuzu, retired, leaves the examples, the dependency table
+  and the licence table. No change to any policy. Amended by the
+  Founder under NA-01 Article 17.
 - **v1.1** (22 June 2026) — Amendment: removed MongoDB from §2
   "What we will not use" and added a note clarifying that MongoDB
   and Cloudflare D1 are sanctioned operational layers governed by

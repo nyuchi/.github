@@ -55,12 +55,10 @@ points:
 | Cloudflare D1 is a sanctioned operational layer (NA-02 §2, NA-03 §3.1, §3.5)                                       | D1 is **not part of the architecture** and is on the prohibited list.                                                               |
 | Smart contracts target Polygon (NA-03 §6.1)                                                                        | The chain is **deferred, with no timeline**. Polygon is no longer the target.                                                       |
 | Capacitor web shell where native is not yet available (NA-03 §6.1)                                                 | Capacitor is **prohibited**. Native UI per surface (Swift, Kotlin, ArkTS) over a shared Rust core; Astro over Rust/WASM on the web. |
-| Sister brands (Zimbabwe Information Platform, Barstool by Nyuchi) (NA-01, NA-02 §1)                                | No sister brands. Barstool is folded into Mukoko Kweli; the Zimbabwe Information Platform is a Bundu Foundation project.            |
 | The public pillars are Mukoko, Nyuchi Africa and Shamwari AI (NA-01 9.3); the "Mukoko Order" (NA-01, NA-02, NA-03) | The three pillars are **Bundu, Nyuchi, Mukoko**. The Mukoko Order is now **the Bundu Order**.                                       |
 | The Bundu Foundation is a company limited by guarantee incorporated in Zimbabwe (NA-01)                            | Incorporation is **pending**.                                                                                                       |
 | Prohibited: Flutter, Couchbase (NA-02 §2, NA-03 §3.5)                                                              | Prohibited: Flutter, Couchbase / Couchbase Capella, Databricks, Cloudflare D1, Capacitor.                                           |
 
-The links to `nyuchi/ntl`, `nyuchi/siafudb` and `nyuchi/siafudb-kuzu`
-in NA-02 still resolve, because GitHub redirects transferred
-repositories; the repositories now live at `openNTL/ntl`,
-`siafuDB/siafudb` and `siafuDB/siafudb-kuzu`.
+The links to `nyuchi/ntl` and `nyuchi/siafudb` in NA-02 still
+resolve, because GitHub redirects transferred repositories; the
+repositories now live at `openNTL/ntl` and `siafuDB/siafudb`.
