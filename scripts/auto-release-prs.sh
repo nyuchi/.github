@@ -6,11 +6,14 @@
 # opted out with the AUTO_RELEASE=off repository variable):
 #
 #   1. When `staging` is ahead of the default branch, the release PR
-#      (head `staging`, base the default branch, titled "Release: ...")
+#      (head `staging`, base the default branch, titled
+#      "chore(release): <repo> staging into <default branch>", which the
+#      Conventional Commits title lint accepts)
 #      exists and auto-merge (squash) is on. The app never merges: the
 #      required checks green-light it, GitHub merges, queue included.
-#   2. When the default branch tip is an untagged "Release: ..." squash
-#      merge, it is tagged with the next MINOR and published as the
+#   2. When the default branch tip is an untagged release merge (the merge
+#      commit "Merge pull request #n from <org>/staging", or a
+#      "chore(release): ..." / "Release: ..." squash merge), it is tagged with the next MINOR and published as the
 #      latest GitHub release - as the app, so `on: push: tags` publish
 #      workflows fire on production releases.
 #
@@ -122,8 +125,10 @@ release_pr() { # repo, default branch
   fi
   act "open the release PR ($staging -> $db) with auto-merge"
   wr gh pr create -R "$ORG/$repo" --base "$db" --head staging \
-    --title "Release: $repo $staging into $db" \
+    --title "chore(release): $repo $staging into $db" \
     --body "Refs nyuchi/.github#80
+
+llms.txt unchanged: release PR; each change it carries passed the llms.txt check on its way into staging.
 
 Automatic release PR. Auto-merge (merge commit) is on: it merges itself once the required checks pass, then \`auto-release.yml\` tags the release. A MAJOR needs the \`semver:major\` label before it merges." \
     >/dev/null 2>&1 || { fail "$repo: could not open the release PR"; return; }
@@ -141,7 +146,7 @@ tag_release() { # repo, default branch
   sha=$(gh api "/repos/$ORG/$repo/commits/$db" --jq '.sha' 2>/dev/null) || return 0
   title=$(gh api "/repos/$ORG/$repo/commits/$db" --jq '.commit.message | split("\n")[0]' 2>/dev/null) || return 0
   case "$title" in
-    [Rr]elease:* | "Merge pull request #"*"/staging") ;;
+    [Rr]elease:* | "chore(release):"* | "Merge pull request #"*"/staging") ;;
     *) return 0 ;; # not a release merge; release-version-check's territory
   esac
   if [ -n "$(tags_at "$repo" "$sha")" ]; then
