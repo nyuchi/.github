@@ -474,7 +474,7 @@ Nyuchi products are standalone products, acquisition doors into Mukoko, and prof
 
 | Project | Home | Licence | Status |
 |---|---|---|---|
-| **Mzizi** — a programming language (in research), a design system, a component registry, a CLI toolchain, and skills for web and server architecture. A Bundu Foundation project, built by Nyuchi; Nyuchi runs its cyber section. | `mzizi.dev`, `docs.mzizi.dev`, Mzizi MCP | Open (per repo) | Live |
+| **Mzizi** — a programming language (research, Phase 0), a design system, a component registry, a CLI toolchain, and skills for web and server architecture. A Bundu Foundation project, built by Nyuchi; Nyuchi runs its cyber section. | `mzizi.dev`, `docs.mzizi.dev`, Mzizi MCP | Open (per repo) | Live |
 | **SiafuDB** — embedded graph database for device and edge | `siafuDB/siafudb`, `siafudb.org` | Apache 2.0 | Building (0.1.0, unpublished) |
 | **NTL** — Neural Transfer Layer: signal-based transfer replacing request-response | `openNTL/ntl`, `openntl.org`, `@bundu/ntl-cli` | Apache 2.0 | Building (0.2.0-beta.1) |
 | **ZIP / ZTI** — Zimbabwe Information Platform | `bundu-labs/zimbabwe-information`, `travel-info.co.zw` | CC BY 4.0 | Live (129 pages) |
