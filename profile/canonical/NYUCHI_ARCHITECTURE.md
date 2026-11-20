@@ -20,6 +20,7 @@ Wording only; no architectural change. It brings this document in line with the 
 - The accessibility row (§8.1) states the Bundu floor 1.1.0 instead of the old 48px target.
 - Mzizi (§13) is described as the owner defines it, with its ownership wording.
 - Terms the ecosystem no longer uses are reworded (§2, §11, §13, §19, §20, §21). The token design itself (§19) is unchanged.
+- SiafuDB-Kuzu is retired (§2, §13, §20): a `.cell`, one entity's data store, is stored in SiafuDB.
 
 ## v5.0.0 Changelog
 
@@ -80,7 +81,7 @@ If this document and the running system disagree, the system is right and this d
 Bundu Foundation (Zimbabwe CLG — incorporation pending)
 │   Owns the IP: standards, doctrine, the Seven Minerals, documentation system
 │   Sole issuing authority for all four tokens
-│   Projects: Mzizi · SiafuDB · SiafuDB-Kuzu · NTL · ZIP (travel-info.co.zw)
+│   Projects: Mzizi · SiafuDB · NTL · ZIP (travel-info.co.zw)
 │             Harare Metro · Bundu Education
 │   Foundation-governed, Nyuchi-operated: Nyuchi Gov Tech
 │
@@ -345,7 +346,7 @@ D1 is not part of the architecture.
 | Hosting | Vercel (preview per branch, production on `main`) |
 | Agent surface | A stateless MCP server on Cloudflare Workers that owns no data and calls the app's HTTP API |
 | Machine surface | Schema.org JSON-LD, dynamic OpenGraph images, `llms.txt`, MCP server cards, generated `robots.txt` and sitemap (Mzizi N11) |
-| Accessibility | The [Bundu floor](https://standards.bundu.org/bundu-floor/) (1.1.0): hit areas of 45px on touch and 24px with a fine pointer; body text 17px on touch and 15px on a fine pointer; contrast 7:1 for body text; a spacing floor for each layer |
+| Accessibility | The [Bundu floor](https://standards.bundu.org/bundu-floor/) 1.1.0, published only there: hit areas of 45px on touch and 24px with a fine pointer, and the text, contrast and spacing minimums on that page |
 | Languages | English and Shona live; Ndebele live in Kweli |
 
 The three-repo product shape (public app · staff admin · MCP) used by Mukoko Events and Mukoko News is the reference pattern for new products.
@@ -475,7 +476,7 @@ Nyuchi products are standalone products, acquisition doors into Mukoko, and prof
 |---|---|---|---|
 | **Mzizi** — a programming language (in research), a design system, a component registry, a CLI toolchain, and skills for web and server architecture. A Bundu Foundation project, built by Nyuchi; Nyuchi runs its cyber section. | `mzizi.dev`, `docs.mzizi.dev`, Mzizi MCP | Open (per repo) | Live |
 | **SiafuDB** — embedded graph database for device and edge | `siafuDB/siafudb`, `siafudb.org` | Apache 2.0 | Building (0.1.0, unpublished) |
-| **SiafuDB-Kuzu** — C++ fork of KuzuDB v0.11.3 | `siafuDB/siafudb-kuzu` | Apache 2.0 | Building |
+| **SiafuDB-Kuzu** — C++ fork of KuzuDB v0.11.3 | `siafuDB/siafudb-kuzu` | Apache 2.0 | **Retired.** A `.cell` (one entity's data store) is stored in SiafuDB. |
 | **NTL** — Neural Transfer Layer: signal-based transfer replacing request-response | `openNTL/ntl`, `openntl.org`, `@bundu/ntl-cli` | Apache 2.0 | Building (0.2.0-beta.1) |
 | **ZIP / ZTI** — Zimbabwe Information Platform | `bundu-labs/zimbabwe-information`, `travel-info.co.zw` | CC BY 4.0 | Live (129 pages) |
 | Harare Metro — open public-transit routing | — | — | Designed |
@@ -488,7 +489,7 @@ Nyuchi products are standalone products, acquisition doors into Mukoko, and prof
 |---|---|
 | `bundu-labs` | **The enterprise.** Bundu Foundation open source and org-wide defaults; home of `zimbabwe-information` and `bundu-docs`. |
 | `openNTL` | NTL, as its own organisation within the enterprise |
-| `siafuDB` | SiafuDB, SiafuDB-Kuzu and docs, as their own organisation within the enterprise |
+| `siafuDB` | SiafuDB and its docs, as their own organisation within the enterprise |
 | `nyuchi` | Nyuchi Web Services — the platform, products and tools. Page 2 is client work. |
 | `nyuchiGOV` | Nyuchi Gov Tech |
 
@@ -616,7 +617,7 @@ All four are issued and governed by the **Bundu Foundation**.
 | `api.nyuchi.com` gateway | Wallet / Nyuchi Pay | Pulse, Bytes, Novels | Mukoko Home |
 | Nyuchi Console | Logistics | Transport, Planner | Honeycomb Pod (Layer 1) |
 | Supabase (4 projects) | StationKit hardware | Jobs, Health | On-device AI |
-| MongoDB Atlas | SiafuDB, SiafuDB-Kuzu, NTL | Layer 4 (NATS, Redpanda, Maestro, SiafuDB sync) | |
+| MongoDB Atlas | SiafuDB, NTL | Layer 4 (NATS, Redpanda, Maestro, SiafuDB sync) | |
 | Mukoko Events | Weather mobile (Expo, interim) | Layer 6 (SiafuDB on device) | |
 | Mukoko News | Edge Durable Objects | Layer 7 (Flink, Doris, analytical system) | |
 | Mukoko Kweli | `api.mukoko.com` | Native shells, Bridge SDK | |
