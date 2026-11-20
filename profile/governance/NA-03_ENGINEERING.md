@@ -4,7 +4,7 @@
 
 | Field          | Value                        |
 | -------------- | ---------------------------- |
-| Version        | 1.7                          |
+| Version        | 1.8                          |
 | Effective date | 20 November 2026             |
 | Status         | Approved and in force        |
 | Approved by    | Bryan Fawcett, Founder & CEO |
@@ -93,10 +93,11 @@ Our default:
   proofs, signed content for archival, sovereign Pod contents)
   are the highest priority for post-quantum design. Session
   encryption for short-lived transport can migrate later.
-- **Long-term keys** — MIT issuance signing keys, MXT
-  EmissionController admin keys, NST/NHC Honeycomb network keys,
-  Foundation treasury keys — are planned for post-quantum migration
-  as soon as tooling supports it.
+- **Long-term keys** — Foundation treasury keys and, if the
+  proposed Mukoko token project goes ahead, MIT issuance signing
+  keys, MXT EmissionController admin keys and NST/NHC Honeycomb
+  network keys — are planned for post-quantum migration as soon
+  as tooling supports it.
 
 "Harvest now, decrypt later" is a real adversarial model for an
 infrastructure company whose data outlives any single vendor's
@@ -246,7 +247,8 @@ Founder, never through a routine pull request.
 
 ### 3.4 MXT has no hard cap
 
-The MUKOKO Exchange Token has **elastic supply** governed by the
+MXT is part of a proposed Mukoko project, not on the roadmap (§3.6). In that
+design, the MUKOKO Exchange Token has **elastic supply** governed by the
 EmissionController smart contract. Any documentation, code
 comment, or UI text that cites a fixed supply cap for MXT is wrong
 and must be corrected.
@@ -273,8 +275,8 @@ Repeated from NA-02 for engineer visibility:
 
 ### 3.6 The four platform tokens
 
-The platform has **four tokens**, all governed by the Bundu
-Foundation and operated on-platform by Nyuchi Africa:
+The four tokens below are a proposed Mukoko project, not on the roadmap. None is
+issued, and no issuer is set:
 
 - **MIT** — the **soulbound, non-transferable identity token**.
   Issued per verified identity; not tradable.
@@ -283,10 +285,9 @@ Foundation and operated on-platform by Nyuchi Africa:
 - **NST** and **NHC** — the **Honeycomb network tokens** that power
   the Honeycomb decentralised storage network.
 
-Token policy is set by the Bundu Foundation's Token Governance
-Policy (NA-01 Article 15). Engineers do not add, rename, or change
-the economic rules of a token through a pull request — these are
-Foundation-governed decisions.
+Engineers do not add, rename, or change the economic rules of a
+token through a pull request: the token design changes only by
+the Founder's decision.
 
 ## 4. Repository Structure
 
@@ -736,6 +737,14 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.8** (20 November 2026) — Amendment: the four platform tokens
+  are a proposed Mukoko project, not on the roadmap (§3.6). §3.6 no longer says the
+  Bundu Foundation governs them, and its pointer to a Foundation
+  token policy is replaced: the token design changes only by the
+  Founder's decision. §3.4 is marked as part of that proposal, and
+  the §2 key inventory lists token keys only for if the project
+  goes ahead. The supply design itself is unchanged. Amended by the
+  Founder under NA-03 §13.
 - **v1.7** (20 November 2026) — Amendment: wording brought in line
   with the ecosystem's current terms. §3.1's personal data store is
   the personal pod on the Nyuchi Honeycomb. SiafuDB-Kuzu, retired,

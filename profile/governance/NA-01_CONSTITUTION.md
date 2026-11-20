@@ -6,7 +6,7 @@
 
 | Field                      | Value                                |
 | -------------------------- | ------------------------------------ |
-| Version                    | 1.4                                  |
+| Version                    | 1.5                                  |
 | Effective date             | 20 November 2026                     |
 | Status                     | Approved and in force                |
 | Prepared and approved by   | Bryan Fawcett, Founder & CEO         |
@@ -505,8 +505,7 @@ outside Zimbabwe, on terms compliant with the applicable local law.
   annually.
 - **(c)** Equity or token allocation for team members, if and
   when established, is governed by a separate instrument approved
-  by the Board and consistent with the Foundation's Token
-  Governance Policy.
+  by the Board. The tokens are a proposed Mukoko project, not on the roadmap.
 - **(d)** The company invests in capability development —
   training, mentorship, conference attendance — as a core
   obligation, not a perk. Frontier engineering requires continued
@@ -583,14 +582,19 @@ dissolution:
   accordance with the articles of association.
 
   18.2 The Foundation's authority over the community's sovereign
-  assets — the four platform tokens (MIT, MXT, NST, NHC) and the
-  sovereign Pod — is unaffected by the dissolution of Nyuchi
-  Africa.
+  assets, including the personal Pod, is unaffected by the
+  dissolution of Nyuchi Africa.
 
 ---
 
 ## Changelog
 
+- **v1.5** (20 November 2026) — Amendment: the four platform tokens
+  (MIT, MXT, NST, NHC) are a proposed Mukoko project, not on the roadmap. Article 15(c)
+  no longer refers to a Foundation token policy, and Article 18.2
+  no longer lists the tokens among the assets under the
+  Foundation's authority; the personal Pod stays. Amended by the
+  Founder under Article 17.
 - **v1.4** (20 November 2026) — Amendment: wording brought in line
   with the ecosystem's current terms. The Preamble's frontier list
   names today's web, personal pods on the Nyuchi Honeycomb, and the

@@ -4,7 +4,7 @@
 
 | Field          | Value                                    |
 | -------------- | ---------------------------------------- |
-| Version        | 1.2                                      |
+| Version        | 1.3                                      |
 | Effective date | 20 November 2026                         |
 | Status         | Approved and in force                    |
 | Approved by    | Bryan Fawcett, Founder & CEO             |
@@ -55,10 +55,9 @@ The apps and platforms in the organisation — Mukoko and its apps,
 and the Nyuchi Enterprise products — are production
 expressions of that infrastructure. They solve real problems and
 they prove the infrastructure in the field. The community's
-sovereign assets — the four platform tokens (MIT, MXT, NST, NHC)
-and the sovereign Pod — are governed separately by the **Bundu
-Foundation** under the Symbiotic
-Charter. The Foundation ensures that the community always has
+sovereign asset, the personal Pod, is governed separately by the
+**Bundu Foundation** under the Symbiotic Charter. The four
+platform tokens (MIT, MXT, NST, NHC) are a proposed Mukoko project, not on the roadmap. The Foundation ensures that the community always has
 structural authority over the infrastructure that serves it.
 
 ## 2. Our Licensing Posture
@@ -414,6 +413,11 @@ repository.**
 
 ## Changelog
 
+- **v1.3** (20 November 2026) — Amendment: §1 states that the four
+  platform tokens are a proposed Mukoko project, not on the roadmap, and no longer
+  lists them among the sovereign assets the Bundu Foundation
+  governs; the personal Pod stays. Amended by the Founder under
+  NA-01 Article 17.
 - **v1.2** (20 November 2026) — Amendment: wording brought in line
   with the ecosystem's current terms. §1's frontier list names
   today's web, the Nyuchi Honeycomb's personal pods, and the

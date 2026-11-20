@@ -2,7 +2,7 @@
 
 ### The infrastructure under Mukoko, the Nyuchi products, and the Bundu commons
 
-**Version:** 5.0.1
+**Version:** 5.0.2
 **Date:** November 2026
 **Type:** Technical Architecture Reference (canonical)
 **Supersedes:** Mukoko Platform Architecture v4.0.1, v4.0.2, and the v4.1.0 data-layer consolidation
@@ -12,6 +12,10 @@
 **Evidence date:** 2 October 2026 (public repositories, live domains, docs.nyuchi.com, docs.bundu.org, mzizi_db doctrine, Supabase project list)
 
 ---
+
+## v5.0.2 (20 November 2026)
+
+Owner decision, 20 November 2026: the tokens are a proposed Mukoko project, not on the roadmap. The four-token design (§19) is kept as that proposal. The Bundu Foundation is no longer named as its issuer or governor (§2, §3, §11, §19, §20, §21).
 
 ## v5.0.1 (20 November 2026)
 
@@ -80,7 +84,6 @@ If this document and the running system disagree, the system is right and this d
 ```
 Bundu Foundation (Zimbabwe CLG — incorporation pending)
 │   Owns the IP: standards, doctrine, the Seven Minerals, documentation system
-│   Sole issuing authority for all four tokens
 │   Projects: Mzizi · SiafuDB · NTL · ZIP (travel-info.co.zw)
 │             Harare Metro · Bundu Education
 │   Foundation-governed, Nyuchi-operated: Nyuchi Gov Tech
@@ -94,6 +97,7 @@ Nyuchi Africa (Private) Limited — operates everything that runs
 Mukoko — the consumer surface (first tenant of Nyuchi infrastructure)
     17 mini-apps (locked) · 4 substrate components · one Mukoko Account
     Barstool folded into Mukoko Kweli (no brands outside Mukoko)
+    Proposed, not on the roadmap: the MUKOKO tokens (§19)
 ```
 
 ### 2.2 The ownership convention
@@ -115,7 +119,7 @@ Recorded in the Bundu ecosystem ownership convention (v1.0.0, active):
 | Three-way voting lock (Founder · family holding company · Bundu Foundation) | **Designed.** M&A rebuild drafted; requires lawyer certification and the family holding company name. |
 | Bundu Foundation (CLG) | **Designed.** Separate registration after ZIMRA registration. PBO exemption later; dissolution clause must be revised first. |
 | Investor shares | **Designed.** Non-voting economic shares only. |
-| Token issuance | **Designed.** Bundu Foundation as sole issuer. Token characterisation and VASP path deferred. |
+| Tokens | **Proposed.** A Mukoko project, not on the roadmap; no issuer is set. The design is kept in §19. |
 
 ---
 
@@ -447,7 +451,7 @@ The count is locked at four.
 |---|---|---|
 | **Digital Twin** | Your own AI: personal data, AI companion, and identity unified in the pod | **Goal.** Not started. Depends on Layer 1, Layer 6, verified identity, and on-device inference. |
 | **Mukoko Home** | Ambient agentic surface (Pulse v2) | **Goal.** Depends on the Twin. |
-| **MUKOKO Token** | Four tokens: MIT, MXT, NST, NHC | **Designed** (token economics). On-chain work **deferred, no timeline** (§19). |
+| **MUKOKO Token** | Four tokens: MIT, MXT, NST, NHC | **Proposed:** a proposed Mukoko project, not on the roadmap. The design is kept in §19. |
 | **Ubuntu Layer** | Contribution scoring, badges, missions, governance | **Designed.** Ubuntu Pillars and Principles are live as canonical data in `mzizi_db`; `/v1/ubuntu` namespace exists. |
 
 ---
@@ -588,7 +592,7 @@ Columns marked TRANSITIONAL (with document reference) and DORIS DOMAIN remain ma
 
 ## 19. The Token Layer
 
-**Status: Designed — economics only.** Nothing is deployed on-chain, and the blockchain stage has **not been reached and has no timeline**. The token design below is held as the reference for when it is.
+**Status: Proposed — a Mukoko project, not on the roadmap.** Nothing is issued or deployed, and no issuer is set. The design below is the proposal, kept as the reference if the project goes ahead.
 
 | Token | Role | Notes |
 |---|---|---|
@@ -597,7 +601,7 @@ Columns marked TRANSITIONAL (with document reference) and DORIS DOMAIN remain ma
 | **NST** — Nyuchi Storage Token | Storage allocation and node incentives on the Honeycomb | — |
 | **NHC** — Nyuchi Honeycomb Coin | Honeycomb operations; static gas for MIT holders | — |
 
-All four are issued and governed by the **Bundu Foundation**.
+The design names no issuer: who would issue and govern the tokens is decided only if the project goes ahead.
 
 | Open item | State |
 |---|---|
@@ -620,7 +624,7 @@ All four are issued and governed by the **Bundu Foundation**.
 | Mukoko Events | Weather mobile (Expo, interim) | Layer 6 (SiafuDB on device) | |
 | Mukoko News | Edge Durable Objects | Layer 7 (Flink, Doris, analytical system) | |
 | Mukoko Kweli | `api.mukoko.com` | Native shells, Bridge SDK | |
-| Mukoko Weather + Station Console | | | Token contracts and chain (deferred, no timeline) |
+| Mukoko Weather + Station Console | | | Token contracts and chain (a Mukoko proposal, not on the roadmap) |
 | Mzizi + Fundi | | Ubuntu Layer contributions | |
 | docs.nyuchi.com, docs.bundu.org | | Medical, Masasa, Harare Metro, Bundu Education | |
 | Learning, Tools, ZIP | | Localised Shamwari model | |
@@ -645,7 +649,7 @@ Not open decisions. These wait until the ecosystem reaches the stage that needs 
 | Item | Waits on |
 |---|---|
 | A chain for the token layer | Reaching the token stage |
-| Token characterisation (utility / governance vs. digital payment token) | The chain, and Bundu Foundation incorporation |
+| Token characterisation (utility / governance vs. digital payment token) | The chain, if the Mukoko token project goes ahead |
 | VASP licensing path | Token characterisation |
 | Token smart contracts (MIT, MXT EmissionController, NST, NHC) | The chain |
 
