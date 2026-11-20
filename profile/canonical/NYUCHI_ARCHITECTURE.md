@@ -2,8 +2,8 @@
 
 ### The infrastructure under Mukoko, the Nyuchi products, and the Bundu commons
 
-**Version:** 5.0.0
-**Date:** October 2026
+**Version:** 5.0.1
+**Date:** November 2026
 **Type:** Technical Architecture Reference (canonical)
 **Supersedes:** Mukoko Platform Architecture v4.0.1, v4.0.2, and the v4.1.0 data-layer consolidation
 **Owner:** Nyuchi Africa (Private) Limited — operator of all infrastructure
@@ -12,6 +12,15 @@
 **Evidence date:** 2 October 2026 (public repositories, live domains, docs.nyuchi.com, docs.bundu.org, mzizi_db doctrine, Supabase project list)
 
 ---
+
+## v5.0.1 (20 November 2026)
+
+Wording only; no architectural change. It brings this document in line with the owner's decisions of 19 November 2026:
+
+- The accessibility row (§8.1) states the Bundu floor 1.1.0 instead of the old 48px target.
+- Mzizi (§13) is described as the owner defines it, with its ownership wording.
+- Terms the ecosystem no longer uses are reworded (§2, §11, §13, §19, §20, §21). The token design itself (§19) is unchanged.
+- SiafuDB-Kuzu is retired and leaves the projects (§2, §13, §20): it was a reference fork used while building SiafuDB, not a Foundation project. A `.cell`, one entity's data store, is stored in SiafuDB.
 
 ## v5.0.0 Changelog
 
@@ -35,7 +44,7 @@ This is a major version because v4 described a platform that had been designed, 
 | 14 | Design system | Five African Minerals | **Seven Minerals** (doctrine 4.1.7, 29 Jun 2026) via **Mzizi**, a Bundu Foundation project. |
 | 15 | Mobile | Fully native shells, designed | Native UI per surface (Swift, Kotlin, ArkTS) over a **shared Rust core**. A single Rust UI for every surface is adopted only if one proves itself, including on HarmonyOS. The Expo / React Native Weather client is **interim only**. |
 | 16 | Web | Next.js on Vercel | **Astro** for web, with **Rust compiled to WASM** underneath. Live Next.js apps are the current state, not the target. |
-| 17 | Naming | NTL, NST, Barstool unresolved | **NTL = Neural Transfer Layer** (openNTL). **NST = Nyuchi Storage Token.** **Barstool is folded into Mukoko Kweli**; it is no longer a sister brand, and `barstool.co.zw` redirects to `kweli.mukoko.com`. |
+| 17 | Naming | NTL, NST, Barstool unresolved | **NTL = Neural Transfer Layer** (openNTL). **NST = Nyuchi Storage Token.** **Barstool is folded into Mukoko Kweli**; it is no longer a separate brand, and `barstool.co.zw` redirects to `kweli.mukoko.com`. |
 | 18 | GitHub | Five independent orgs | **`bundu-labs` is the enterprise.** `openNTL` and `siafuDB` are their own organisations within it. Astro migration of the live Next.js apps proceeds **incrementally**, one app at a time. |
 | 19 | Events brand | "Nhimbe", a standalone brand at `nhimbe.com` | **Mukoko Events** at `events.mukoko.com` (owner decision, 4 Oct 2026). The *nhimbe* brand is retired; the mineral stays malachite, and `nhimbe` is kept in Mzizi only as a deprecated alias of the `events` canon row. `nhimbe.com` redirects to `events.mukoko.com` once the cutover tracked in mukoko-dev/nhimbe#155 completes. |
 
@@ -72,7 +81,7 @@ If this document and the running system disagree, the system is right and this d
 Bundu Foundation (Zimbabwe CLG — incorporation pending)
 │   Owns the IP: standards, doctrine, the Seven Minerals, documentation system
 │   Sole issuing authority for all four tokens
-│   Projects: Mzizi · SiafuDB · SiafuDB-Kuzu · NTL · ZIP (travel-info.co.zw)
+│   Projects: Mzizi · SiafuDB · NTL · ZIP (travel-info.co.zw)
 │             Harare Metro · Bundu Education
 │   Foundation-governed, Nyuchi-operated: Nyuchi Gov Tech
 │
@@ -84,7 +93,7 @@ Nyuchi Africa (Private) Limited — operates everything that runs
 │
 Mukoko — the consumer surface (first tenant of Nyuchi infrastructure)
     17 mini-apps (locked) · 4 substrate components · one Mukoko Account
-    Barstool folded into Mukoko Kweli (no current sister brands)
+    Barstool folded into Mukoko Kweli (no brands outside Mukoko)
 ```
 
 ### 2.2 The ownership convention
@@ -337,7 +346,7 @@ D1 is not part of the architecture.
 | Hosting | Vercel (preview per branch, production on `main`) |
 | Agent surface | A stateless MCP server on Cloudflare Workers that owns no data and calls the app's HTTP API |
 | Machine surface | Schema.org JSON-LD, dynamic OpenGraph images, `llms.txt`, MCP server cards, generated `robots.txt` and sitemap (Mzizi N11) |
-| Accessibility | WCAG AAA / APCA targets; 48px minimum touch targets |
+| Accessibility | The [Bundu floor](https://standards.bundu.org/bundu-floor/) 1.1.0, published only there: hit areas of 45px on touch and 24px with a fine pointer, and the text, contrast and spacing minimums on that page |
 | Languages | English and Shona live; Ndebele live in Kweli |
 
 The three-repo product shape (public app · staff admin · MCP) used by Mukoko Events and Mukoko News is the reference pattern for new products.
@@ -436,7 +445,7 @@ The count is locked at four.
 
 | Component | Role | Status |
 |---|---|---|
-| **Digital Twin** | Sovereign AI: personal data, AI companion, and identity unified in the pod | **Goal.** Not started. Depends on Layer 1, Layer 6, verified identity, and on-device inference. |
+| **Digital Twin** | Your own AI: personal data, AI companion, and identity unified in the pod | **Goal.** Not started. Depends on Layer 1, Layer 6, verified identity, and on-device inference. |
 | **Mukoko Home** | Ambient agentic surface (Pulse v2) | **Goal.** Depends on the Twin. |
 | **MUKOKO Token** | Four tokens: MIT, MXT, NST, NHC | **Designed** (token economics). On-chain work **deferred, no timeline** (§19). |
 | **Ubuntu Layer** | Contribution scoring, badges, missions, governance | **Designed.** Ubuntu Pillars and Principles are live as canonical data in `mzizi_db`; `/v1/ubuntu` namespace exists. |
@@ -465,9 +474,8 @@ Nyuchi products are standalone products, acquisition doors into Mukoko, and prof
 
 | Project | Home | Licence | Status |
 |---|---|---|---|
-| **Mzizi** — open frontend architecture and design system | `mzizi.dev`, `docs.mzizi.dev`, Mzizi MCP | Open (per repo) | Live |
-| **SiafuDB** — embedded graph database for device, edge, Web3 | `siafuDB/siafudb`, `siafudb.org` | Apache 2.0 | Building (0.1.0, unpublished) |
-| **SiafuDB-Kuzu** — C++ fork of KuzuDB v0.11.3 | `siafuDB/siafudb-kuzu` | Apache 2.0 | Building |
+| **Mzizi** — a programming language (research, Phase 0), a design system, a component registry, a CLI toolchain, and skills for web and server architecture. A Bundu Foundation project, built by Nyuchi; Nyuchi runs its cyber section. | `mzizi.dev`, `docs.mzizi.dev`, Mzizi MCP | Open (per repo) | Live |
+| **SiafuDB** — embedded graph database for device and edge | `siafuDB/siafudb`, `siafudb.org` | Apache 2.0 | Building (0.1.0, unpublished) |
 | **NTL** — Neural Transfer Layer: signal-based transfer replacing request-response | `openNTL/ntl`, `openntl.org`, `@bundu/ntl-cli` | Apache 2.0 | Building (0.2.0-beta.1) |
 | **ZIP / ZTI** — Zimbabwe Information Platform | `bundu-labs/zimbabwe-information`, `travel-info.co.zw` | CC BY 4.0 | Live (129 pages) |
 | Harare Metro — open public-transit routing | — | — | Designed |
@@ -480,7 +488,7 @@ Nyuchi products are standalone products, acquisition doors into Mukoko, and prof
 |---|---|
 | `bundu-labs` | **The enterprise.** Bundu Foundation open source and org-wide defaults; home of `zimbabwe-information` and `bundu-docs`. |
 | `openNTL` | NTL, as its own organisation within the enterprise |
-| `siafuDB` | SiafuDB, SiafuDB-Kuzu and docs, as their own organisation within the enterprise |
+| `siafuDB` | SiafuDB and its docs, as their own organisation within the enterprise |
 | `nyuchi` | Nyuchi Web Services — the platform, products and tools. Page 2 is client work. |
 | `nyuchiGOV` | Nyuchi Gov Tech |
 
@@ -578,7 +586,7 @@ Columns marked TRANSITIONAL (with document reference) and DORIS DOMAIN remain ma
 
 ---
 
-## 19. Web3 and the Token Layer
+## 19. The Token Layer
 
 **Status: Designed — economics only.** Nothing is deployed on-chain, and the blockchain stage has **not been reached and has no timeline**. The token design below is held as the reference for when it is.
 
@@ -607,8 +615,8 @@ All four are issued and governed by the **Bundu Foundation**.
 | Mukoko Account (WorkOS) | Circles (inside Mukoko Events) | Campfire | Digital Twin |
 | `api.nyuchi.com` gateway | Wallet / Nyuchi Pay | Pulse, Bytes, Novels | Mukoko Home |
 | Nyuchi Console | Logistics | Transport, Planner | Honeycomb Pod (Layer 1) |
-| Supabase (4 projects) | StationKit hardware | Jobs, Health | On-device sovereign AI |
-| MongoDB Atlas | SiafuDB, SiafuDB-Kuzu, NTL | Layer 4 (NATS, Redpanda, Maestro, SiafuDB sync) | |
+| Supabase (4 projects) | StationKit hardware | Jobs, Health | On-device AI |
+| MongoDB Atlas | SiafuDB, NTL | Layer 4 (NATS, Redpanda, Maestro, SiafuDB sync) | |
 | Mukoko Events | Weather mobile (Expo, interim) | Layer 6 (SiafuDB on device) | |
 | Mukoko News | Edge Durable Objects | Layer 7 (Flink, Doris, analytical system) | |
 | Mukoko Kweli | `api.mukoko.com` | Native shells, Bridge SDK | |
@@ -636,7 +644,7 @@ Not open decisions. These wait until the ecosystem reaches the stage that needs 
 
 | Item | Waits on |
 |---|---|
-| Blockchain for the token layer | Reaching the token stage |
+| A chain for the token layer | Reaching the token stage |
 | Token characterisation (utility / governance vs. digital payment token) | The chain, and Bundu Foundation incorporation |
 | VASP licensing path | Token characterisation |
 | Token smart contracts (MIT, MXT EmissionController, NST, NHC) | The chain |
