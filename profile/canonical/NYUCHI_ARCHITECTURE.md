@@ -20,7 +20,7 @@ Wording only; no architectural change. It brings this document in line with the 
 - The accessibility row (§8.1) states the Bundu floor 1.1.0 instead of the old 48px target.
 - Mzizi (§13) is described as the owner defines it, with its ownership wording.
 - Terms the ecosystem no longer uses are reworded (§2, §11, §13, §19, §20, §21). The token design itself (§19) is unchanged.
-- SiafuDB-Kuzu is retired (§2, §13, §20): a `.cell`, one entity's data store, is stored in SiafuDB.
+- SiafuDB-Kuzu is retired and leaves the projects (§2, §13, §20): it was a reference fork used while building SiafuDB, not a Foundation project. A `.cell`, one entity's data store, is stored in SiafuDB.
 
 ## v5.0.0 Changelog
 
@@ -476,7 +476,6 @@ Nyuchi products are standalone products, acquisition doors into Mukoko, and prof
 |---|---|---|---|
 | **Mzizi** — a programming language (in research), a design system, a component registry, a CLI toolchain, and skills for web and server architecture. A Bundu Foundation project, built by Nyuchi; Nyuchi runs its cyber section. | `mzizi.dev`, `docs.mzizi.dev`, Mzizi MCP | Open (per repo) | Live |
 | **SiafuDB** — embedded graph database for device and edge | `siafuDB/siafudb`, `siafudb.org` | Apache 2.0 | Building (0.1.0, unpublished) |
-| **SiafuDB-Kuzu** — C++ fork of KuzuDB v0.11.3 | `siafuDB/siafudb-kuzu` | Apache 2.0 | **Retired.** A `.cell` (one entity's data store) is stored in SiafuDB. |
 | **NTL** — Neural Transfer Layer: signal-based transfer replacing request-response | `openNTL/ntl`, `openntl.org`, `@bundu/ntl-cli` | Apache 2.0 | Building (0.2.0-beta.1) |
 | **ZIP / ZTI** — Zimbabwe Information Platform | `bundu-labs/zimbabwe-information`, `travel-info.co.zw` | CC BY 4.0 | Live (129 pages) |
 | Harare Metro — open public-transit routing | — | — | Designed |
