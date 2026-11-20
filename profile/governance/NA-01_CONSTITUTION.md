@@ -6,8 +6,8 @@
 
 | Field                      | Value                                |
 | -------------------------- | ------------------------------------ |
-| Version                    | 1.3                                  |
-| Effective date             | 18 April 2026                        |
+| Version                    | 1.4                                  |
+| Effective date             | 20 November 2026                     |
 | Status                     | Approved and in force                |
 | Prepared and approved by   | Bryan Fawcett, Founder & CEO         |
 
@@ -53,8 +53,8 @@ protocols, graph engines, identity primitives, and cryptographic
 foundations that apps and platforms are built on.
 
 The apps and platforms operated by the company — the Mukoko
-consumer super app, the Nyuchi Enterprise products, and the
-sister brands — are proof-of-concept and production expressions of
+consumer super app and its apps, and the Nyuchi Enterprise
+products — are proof-of-concept and production expressions of
 this infrastructure. They solve real problems for real communities
 today. They also demonstrate, validate, and harden the
 infrastructure for the decades ahead.
@@ -105,8 +105,9 @@ founding purpose is to build and operate open-source and
 community-based digital infrastructure that spans the frontier
 domains of contemporary and emerging computing:
 
-- **Web2 → Web3 → quantum.** The transition across today's web,
-  the decentralised web, and the quantum era.
+- **Today's web → the Nyuchi Honeycomb → quantum.** The transition
+  across today's web, personal pods on the Nyuchi Honeycomb, and
+  the quantum era.
 - **On-device, local-first, edge.** Compute and storage that work
   where the people are — resilient under low connectivity, private
   by default, ready for the AGI era.
@@ -321,8 +322,7 @@ division.
 
 **(c) Mukoko — the super app division.** Product, growth, content
 operations, community management, and business verification for
-the Mukoko consumer super app and its sister brands (Zimbabwe
-Information Platform, Barstool by Nyuchi). The customer-facing
+the Mukoko consumer super app and its apps. The customer-facing
 division.
 
 9.2 The three divisions are operational groupings, not separate
@@ -456,12 +456,12 @@ intellectual property in the company, consistent with Zimbabwe law.
 13.1 The company's default posture is set by NA-02 (Open Source &
 Contribution Governance). In summary:
 
-- **(a) Frontier infrastructure** — NTL, SiafuDB, SiafuDB-Kuzu,
-  the Honeycomb protocol, service bus event schemas, data layer
+- **(a) Frontier infrastructure** — NTL, SiafuDB, the Honeycomb
+  protocol, service bus event schemas, data layer
   schemas, developer SDKs, and similar primitives — are
   permissively licensed under **Apache 2.0**.
 - **(b) Platforms and applications** — the Mukoko consumer super
-  app, the Nyuchi Enterprise products, the sister brands, and
+  app and its apps, the Nyuchi Enterprise products, and
   similar product code — are published under an appropriate
   open-source licence (typically **MIT** or **Apache 2.0**, with
   **GPL** used where copyleft is warranted). Some components may
@@ -591,6 +591,15 @@ dissolution:
 
 ## Changelog
 
+- **v1.4** (20 November 2026) — Amendment: wording brought in line
+  with the ecosystem's current terms. The Preamble's frontier list
+  names today's web, personal pods on the Nyuchi Honeycomb, and the
+  quantum era. The Mukoko division and Article 13 refer to the
+  Mukoko super app and its apps: Barstool is folded into Mukoko
+  Kweli, and the Zimbabwe Information Platform is a Bundu
+  Foundation project. SiafuDB-Kuzu, retired, leaves the frontier
+  infrastructure list. No change to any governance provision.
+  Amended by the Founder under Article 17.
 - **v1.3** (22 June 2026) — Amendment: removed the word "seven"
   from the Preamble's reference to the Nyuchi Enterprise products.
   The enterprise product line is not a fixed count (see NA-03 §3.3,

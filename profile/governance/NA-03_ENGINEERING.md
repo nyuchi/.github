@@ -4,8 +4,8 @@
 
 | Field          | Value                        |
 | -------------- | ---------------------------- |
-| Version        | 1.6                          |
-| Effective date | 22 June 2026                 |
+| Version        | 1.7                          |
+| Effective date | 20 November 2026             |
 | Status         | Approved and in force        |
 | Approved by    | Bryan Fawcett, Founder & CEO |
 
@@ -168,7 +168,7 @@ The three sources of truth are:
 - **ScyllaDB + Apache Cassandra** — all platform non-relational
   data (content, streams, messages), with ScyllaDB as hot tier
   and Cassandra as sovereign cold tier.
-- **Web3 Pod** — personal sovereign data.
+- **Personal pod** (Nyuchi Honeycomb) — personal sovereign data.
 
 Everything else — CouchDB, Durable Objects, KV, RxDB, SiafuDB
 instances, Apache Doris, edge caches — **derives from, caches
@@ -359,9 +359,8 @@ Beyond correctness, tests, and readability, reviewers check:
 
 Set at the portfolio level. Default stacks:
 
-- **Frontier infrastructure** — Rust (NTL, SiafuDB) and C++
-  (SiafuDB-Kuzu) for performance and sovereignty of the
-  toolchain. **Rust tracks latest stable** — the shared
+- **Frontier infrastructure** — Rust (NTL, SiafuDB) for
+  performance and sovereignty of the toolchain. **Rust tracks latest stable** — the shared
   `reusable-ci-rust-monorepo.yml` defaults to `toolchain: stable`
   and every repository is expected to build on the current
   stable channel unless a specific pin is justified in-repo
@@ -737,6 +736,12 @@ All amendments are logged in the changelog below.
 
 ## Changelog
 
+- **v1.7** (20 November 2026) — Amendment: wording brought in line
+  with the ecosystem's current terms. §3.1's personal data store is
+  the personal pod on the Nyuchi Honeycomb. SiafuDB-Kuzu, retired,
+  leaves the frontier infrastructure stack, which is Rust. No
+  change to any engineering rule. Amended by the Founder under
+  NA-03 §13.
 - **v1.6** (22 June 2026) — Amendment: **removed "7 Nyuchi
   Enterprise products" from the §3.3 locked counts.** The
   enterprise product line is not capped — the organisation operates

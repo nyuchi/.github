@@ -77,15 +77,15 @@ status is in [the Architecture, §12](./canonical/NYUCHI_ARCHITECTURE.md#12-nyuc
 
 ## Where the rest of the ecosystem lives
 
-| Organisation                                    | What it holds                                                                                                                                           |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`bundu-labs`](https://github.com/bundu-labs)   | The Bundu Foundation enterprise: open-source defaults, `zimbabwe-information`, `bundu-docs`.                                                            |
-| [`openNTL`](https://github.com/openNTL)         | [`ntl`](https://github.com/openNTL/ntl), the Neural Transfer Layer. Apache 2.0.                                                                         |
-| [`siafuDB`](https://github.com/siafuDB)         | [`siafudb`](https://github.com/siafuDB/siafudb) and [`siafudb-kuzu`](https://github.com/siafuDB/siafudb-kuzu), the embedded graph database. Apache 2.0. |
-| [`mzizi-dev`](https://github.com/mzizi-dev)     | Mzizi, the Bundu Foundation's open frontend architecture and design system ([mzizi.dev](https://mzizi.dev)).                                            |
-| [`mukoko-dev`](https://github.com/mukoko-dev)   | Mukoko, the consumer super app, and `mukoko-api`.                                                                                                       |
-| [`shamwari-ai`](https://github.com/shamwari-ai) | Shamwari, the AI layer.                                                                                                                                 |
-| `nyuchi` (here)                                 | The platform, the Nyuchi products and tools. Client work sits further down the repository list.                                                         |
+| Organisation                                    | What it holds                                                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| [`bundu-labs`](https://github.com/bundu-labs)   | The Bundu Foundation enterprise: open-source defaults, `zimbabwe-information`, `bundu-docs`.                 |
+| [`openNTL`](https://github.com/openNTL)         | [`ntl`](https://github.com/openNTL/ntl), the Neural Transfer Layer. Apache 2.0.                              |
+| [`siafuDB`](https://github.com/siafuDB)         | [`siafudb`](https://github.com/siafuDB/siafudb), the embedded graph database. Apache 2.0.                    |
+| [`mzizi-dev`](https://github.com/mzizi-dev)     | Mzizi, the Bundu Foundation's open frontend architecture and design system ([mzizi.dev](https://mzizi.dev)). |
+| [`mukoko-dev`](https://github.com/mukoko-dev)   | Mukoko, the consumer super app, and `mukoko-api`.                                                            |
+| [`shamwari-ai`](https://github.com/shamwari-ai) | Shamwari, the AI layer.                                                                                      |
+| `nyuchi` (here)                                 | The platform, the Nyuchi products and tools. Client work sits further down the repository list.              |
 
 The Mukoko app repositories (`mukoko-news`, `mukoko-news-gateway`,
 `mukoko-ingestion-pipeline`, `mukoko-weather`, `mukoko-weather-mobile`,
