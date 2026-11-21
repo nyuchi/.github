@@ -49,6 +49,7 @@ jobs:
             bundu-labs,
             openNTL,
             siafuDB,
+            nyuchiGOV,
           ]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -60,7 +61,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # One installation per org (seven in total): owner picks the right one.
+      # One installation per org (eight in total): owner picks the right one.
       - name: Mint a token for this org
         if: ${{ inputs.org == '' || inputs.org == matrix.org }}
         id: app
