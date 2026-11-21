@@ -95,7 +95,7 @@ if [ -z "$head_ref" ]; then
 fi
 
 case "$head_ref" in
-  staging|release/*|release-pr/*|hotfix/*|bot/registry-pin) ;;
+  staging|release/*|release-pr/*|hotfix/*|bot/registry-pin|land-staging) ;;
   *)
     fail "'$DEFAULT_BRANCH' takes releases and hotfixes only, and this PR comes from '$head_ref'. Open it against 'staging' instead (gh pr edit <n> --base staging); it reaches '$DEFAULT_BRANCH' with the next release. A fix that cannot wait comes from a 'hotfix/*' branch. Dependabot: set target-branch: staging in .github/dependabot.yml." ;;
 esac
@@ -103,6 +103,18 @@ esac
 if [ "$head_ref" = "bot/registry-pin" ]; then
   ok "registry pin bot; allowed. The next release must forward-port it to staging (rule 2 enforces that)."
   exit 0
+fi
+
+if [ "$head_ref" = "land-staging" ]; then
+  # The retirement lane: staging is being folded into the default branch so the
+  # branch can be deleted. Allowed only when staging is an ancestor of the
+  # branch (compare says "ahead" or "identical"), so nothing on staging is lost.
+  cmp_status="$(gh api "repos/$REPO/compare/staging...land-staging" --jq .status 2>/dev/null)" \
+    || fail "Cannot compare 'land-staging' with staging, so the landing is refused."
+  case "$cmp_status" in
+    ahead|identical) ok "land-staging contains every commit on staging ($cmp_status); landing it erases nothing."; exit 0 ;;
+    *) fail "'land-staging' does not contain staging's tip (compare says '$cmp_status'). Merge staging into it first, so nothing on staging is lost." ;;
+  esac
 fi
 
 if [ "$head_ref" = "staging" ]; then

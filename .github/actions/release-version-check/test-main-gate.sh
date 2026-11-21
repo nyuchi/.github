@@ -13,6 +13,7 @@ cat > "$work/bin/gh" <<'GH'
 #!/usr/bin/env bash
 case "$*" in
   *"branches/staging"*) exit 0 ;;
+  *"compare/staging...land-staging"*) echo "${LAND_STATUS:-ahead}"; exit 0 ;;
   *"commits?sha="*)
     if [ -n "${COMMITS:-}" ]; then printf '%b\n' "$COMMITS"
     elif [ -n "${STRAY:-}" ]; then printf 'def5678 Merge pull request #9 from o/something\nabc1234 chore(release): staging to main 2026-11-01\n'
@@ -52,6 +53,10 @@ check "staging" 0 "merge commit"
 check "release/staging-to-main-2026-11-02" 0 "release from"
 check "hotfix/fix-token-mint" 0 "release from"
 check "bot/registry-pin" 0 "registry pin bot"
+check "land-staging" 0 "erases nothing"
+LAND_STATUS=identical check "land-staging" 0 "erases nothing"
+LAND_STATUS=diverged check "land-staging" 1 "does not contain staging"
+LAND_STATUS=behind check "land-staging" 1 "does not contain staging"
 # main holds a merge commit after the last release: staging may still promote (merge keeps it),
 # a tree-replacement release branch may not (it would erase it).
 STRAY=1 check "staging" 0 "merge commit"
