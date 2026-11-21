@@ -5,12 +5,14 @@
 # files, so a new repo starts bare. For every repo this makes sure of:
 #
 #   1. A default branch exists (an empty repo gets an initial README commit)
-#   2. A `staging` branch exists (the release flow is staging -> main)
+#   2. No `staging` branch is created: repos release from the default branch
+#      (a repo that still has one is reported, not changed)
 #   3. Merge settings match the org standard (same payload as apply-org-settings.sh)
 #   4. Immutable releases are on
 #   5. The standard files exist: AGENTS.md, CONTRIBUTING.md, SECURITY.md,
 #      CODE_OF_CONDUCT.md, PR template, CODEOWNERS, README. Missing ones are
-#      proposed in ONE pull request into `staging` from `bootstrap/org-standards`;
+#      proposed in ONE pull request from `bootstrap/org-standards`, into the
+#      default branch (or `staging` in a repo that still has one);
 #      nothing is pushed straight to a protected branch.
 #   6. The CODEOWNERS team can review the repo (warns; --grant-team adds it)
 #   7. The standard PR labels exist; bootstrap PRs are assigned to PR_ASSIGNEE
@@ -158,30 +160,13 @@ bootstrap_repo() {
     fi
   fi
 
-  # 2. staging (not for .github repos: they work directly on the default branch)
-  if [ "$repo" = ".github" ]; then
-    echo "  - .github repo: no staging by design (works on $db)"
-  elif [ "$ready" -eq 1 ] && ! gh api "/repos/$ORG/$repo/branches/staging" --silent 2>/dev/null; then
-    act "create 'staging' from '$db'"
-    sha=$(gh api "/repos/$ORG/$repo/git/ref/heads/$db" --jq .object.sha)
-    # A merge-queue-staging ruleset blocks creating the branch (a queue implies
-    # pull requests on the ref; nothing should block creation): disable it,
-    # create, restore it.
-    qid=$(gh api "/repos/$ORG/$repo/rulesets?includes_parents=false&per_page=100" \
-      --jq '.[] | select(.name=="merge-queue-staging") | .id' 2>/dev/null)
-    qbk=""
-    [ -n "$qid" ] && qbk=$(mktemp) &&
-      gh api "/repos/$ORG/$repo/rulesets/$qid" >"$qbk" &&
-      gh api -X PUT "/repos/$ORG/$repo/rulesets/$qid" --input - <<<'{"enforcement":"disabled"}' --silent
-    if ! api -X POST "/repos/$ORG/$repo/git/refs" -f ref=refs/heads/staging -f sha="$sha" >/dev/null; then
-      [ -s "$qbk" ] && gh api -X PUT "/repos/$ORG/$repo/rulesets/$qid" --input "$qbk" --silent
-      fail "$repo: could not create staging"
-    fi
-    if [ -s "$qbk" ]; then
-      gh api -X PUT "/repos/$ORG/$repo/rulesets/$qid" --input "$qbk" --silent ||
-        fail "$repo: staging created but merge-queue-staging left disabled - re-enable it"
-      rm -f "$qbk"
-    fi
+  # 2. No staging: every repo works on its default branch (trunk-based
+  # releases). The bootstrap used to create `staging`; it no longer does, and
+  # it leaves an existing one alone until the repo is migrated.
+  if gh api "/repos/$ORG/$repo/branches/staging" --silent 2>/dev/null; then
+    echo "  - $repo still has a staging branch (not created by the bootstrap; migrate it)"
+  else
+    echo "  - $repo: no staging by design (works on $db)"
   fi
 
   # 3. Merge settings
