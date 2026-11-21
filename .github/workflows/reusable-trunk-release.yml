@@ -26,9 +26,8 @@
 #     workflow_dispatch:
 #       inputs:
 #         bump:
-#           description: Override the bump (a major is only ever made by hand).
-#           type: choice
-#           options: ["", patch, minor, major]
+#           description: "Override the bump: patch, minor or major. Empty decides from the PR title."
+#           type: string
 #           default: ""
 #   permissions:
 #     contents: read
