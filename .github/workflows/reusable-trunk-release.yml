@@ -1,0 +1,185 @@
+# Reusable workflow: release a repo that works on its default branch (trunk).
+#
+# Every green merge to the default branch is a release (nyuchi/.github,
+# trunk-based releases): the bump comes from the semantic title of the PR that
+# was merged, and the version is tagged on the merged commit with a GitHub
+# release and generated notes.
+#
+#   feat: ...            MINOR  x.y.z -> x.(y+1).0
+#   fix:, chore:, ci:,
+#   docs:, build:, ...   PATCH  x.y.z -> x.y.(z+1)
+#   feat!: / fix!: ...   refused: a breaking change is a MAJOR, made by hand
+#                        (run the caller with workflow_dispatch, bump: major)
+#
+# The version lives in tags only; nothing is committed back. The tag and the
+# release are pushed with the run's GITHUB_TOKEN, so nothing downstream starts
+# from the tag push. Use it in a repo with NO `staging` branch; a repo that
+# still has staging keeps staging-version.yml and main-release.yml.
+#
+# Caller (.github/workflows/release.yml in the repo), pinned to a commit like
+# every org workflow:
+#
+#   name: Release
+#   on:
+#     push:
+#       branches: [main]
+#     workflow_dispatch:
+#       inputs:
+#         bump:
+#           description: Override the bump (a major is only ever made by hand).
+#           type: choice
+#           options: ["", patch, minor, major]
+#           default: ""
+#   permissions:
+#     contents: read
+#   jobs:
+#     release:
+#       permissions:
+#         contents: write
+#       uses: nyuchi/.github/.github/workflows/reusable-trunk-release.yml@<40-hex>  # main, <date>
+#       with:
+#         bump: ${{ inputs.bump || '' }}
+name: Reusable / Trunk release
+
+on:
+  workflow_call:
+    inputs:
+      bump:
+        description: "Override: patch, minor or major (a major needs a manual run). Empty = decide from the PR title."
+        type: string
+        default: ""
+      tag-prefix:
+        description: Prefix for the tag name.
+        type: string
+        default: v
+      create-release:
+        description: Also create a GitHub release with generated notes.
+        type: boolean
+        default: true
+    outputs:
+      version:
+        description: The version this run released.
+        value: ${{ jobs.release.outputs.version }}
+      tag:
+        description: The tag name.
+        value: ${{ jobs.release.outputs.tag }}
+      created:
+        description: "'true' when this run created the tag."
+        value: ${{ jobs.release.outputs.created }}
+
+# No `permissions:` block: the job runs with what the caller grants
+# (contents: write, to push the tag and create the release).
+
+jobs:
+  release:
+    name: Tag the next version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # One at a time, so two quick merges cannot compute the same version.
+    concurrency:
+      group: version-tag-${{ github.repository }}
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.push.outputs.version }}
+      tag: ${{ steps.push.outputs.tag }}
+      created: ${{ steps.push.outputs.created }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      # The titles of the PRs this commit came in through; a push with no PR
+      # (an owner bypass) falls back to the commit's own subject line.
+      - name: Read the PR title
+        id: titles
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          titles="$(gh api "repos/${GH_REPO}/commits/${SHA}/pulls" --jq '.[].title' 2>/dev/null || true)"
+          [ -n "$titles" ] || titles="$(git log -1 --format=%s "$SHA")"
+          {
+            echo "titles<<TITLES_EOF"
+            printf '%s\n' "$titles"
+            echo "TITLES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # Keep this step's script self-contained: test-actions.yml extracts it
+      # by id and runs it on sample titles.
+      - name: Decide the bump
+        id: bump
+        env:
+          TITLES: ${{ steps.titles.outputs.titles }}
+          OVERRIDE: ${{ inputs.bump }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$OVERRIDE" ]; then
+            echo "bump=$OVERRIDE" >> "$GITHUB_OUTPUT"
+            echo "Bump $OVERRIDE, set by hand."
+            exit 0
+          fi
+          bump="patch"
+          while IFS= read -r title; do
+            [ -n "$title" ] || continue
+            if [[ "$title" =~ ^[A-Za-z]+(\([^\)]*\))?\!: ]]; then
+              echo "::error::\"$title\" is a breaking change, and a major is made by hand. Run this workflow from the Actions tab with bump: major."
+              exit 1
+            elif [[ "$title" =~ ^feat(\([^\)]*\))?: ]]; then
+              bump="minor"
+            fi
+          done <<<"$TITLES"
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+          echo "Bump $bump, from the PR title."
+
+      - name: Compute the next version
+        id: v
+        uses: nyuchi/.github/.github/actions/next-version@9b67a99ba0e91999fee417a44b4764a833819221  # main, 2026-11-21
+        with:
+          channel: trunk
+          bump: ${{ steps.bump.outputs.bump }}
+          manual: ${{ github.event_name == 'workflow_dispatch' }}
+          tag-prefix: ${{ inputs.tag-prefix }}
+
+      - name: Push the tag and release
+        id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PREFIX: ${{ inputs.tag-prefix }}
+          TAG: ${{ steps.v.outputs.tag }}
+          VERSION: ${{ steps.v.outputs.version }}
+          CREATE_RELEASE: ${{ inputs.create-release }}
+        run: |
+          set -euo pipefail
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git"
+          head="$(git rev-parse HEAD)"
+          # A re-run, or a commit that already has a version: tag nothing.
+          # Annotated tags list their commit on the peeled `^{}` line.
+          existing="$(git ls-remote --tags "$remote" "refs/tags/${PREFIX}*" \
+            | awk -v h="$head" '$1 == h && $2 ~ /\^\{\}$/ { sub(/^refs\/tags\//, "", $2); sub(/\^\{\}$/, "", $2); print $2; exit }')"
+          if [ -n "$existing" ]; then
+            echo "$head already carries $existing; nothing to tag."
+            {
+              echo "created=false"
+              echo "tag=$existing"
+              echo "version=${existing#"$PREFIX"}"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push "$remote" "refs/tags/$TAG"
+          {
+            echo "created=true"
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+          } >> "$GITHUB_OUTPUT"
+          echo "Pushed $TAG at $head." | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$CREATE_RELEASE" = "true" ]; then
+            gh release create "$TAG" --verify-tag --latest --title "$TAG" --generate-notes
+          fi

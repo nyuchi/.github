@@ -24,6 +24,11 @@
 # script from reusable-staging-release.yml and runs it in a scratch repo, on a
 # staging ref and a main ref, with and without an explicit `ref:`, and as a
 # main release (bump: minor or major on main, with create-release: false).
+#
+# trunk-release-bump extracts the "Decide the bump" step's script from
+# reusable-trunk-release.yml and runs it on sample PR titles: feat is a minor,
+# everything else a patch, a breaking change is refused, and a manual override
+# wins.
 
 name: Test actions
 
@@ -34,6 +39,7 @@ on:
       - ".github/workflows/reusable-lint.yml"
       - ".github/actions/**"
       - ".github/workflows/reusable-staging-release.yml"
+      - ".github/workflows/reusable-trunk-release.yml"
       - ".github/workflows/release-version-check.yml"
       - ".github/workflows/test-actions.yml"
   push:
@@ -43,6 +49,7 @@ on:
       - ".github/workflows/reusable-lint.yml"
       - ".github/actions/**"
       - ".github/workflows/reusable-staging-release.yml"
+      - ".github/workflows/reusable-trunk-release.yml"
       - ".github/workflows/release-version-check.yml"
       - ".github/workflows/test-actions.yml"
   workflow_dispatch:
@@ -246,3 +253,54 @@ jobs:
             echo "--- Deno"; cat "$t/d.txt"
             exit 1
           fi
+
+  trunk-release-bump:
+    name: trunk-release bump
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The bump follows the PR title
+        run: |
+          set -euo pipefail
+          script="$RUNNER_TEMP/bump.sh"
+          yq -e '.jobs.release.steps[] | select(.id == "bump") | .run' \
+            .github/workflows/reusable-trunk-release.yml > "$script"
+          test -s "$script"
+
+          fails=0
+          # expect <patch|minor|major|fail> <titles> <override> <label>
+          expect() {
+            local want="$1" titles="$2" override="$3" label="$4" got out
+            : > "$RUNNER_TEMP/out"
+            if out="$(TITLES="$titles" OVERRIDE="$override" MANUAL=false \
+              GITHUB_OUTPUT="$RUNNER_TEMP/out" bash "$script" 2>&1)"; then
+              got="$(sed -n 's/^bump=//p' "$RUNNER_TEMP/out")"
+            else
+              got=fail
+              grep -q '^::error::' <<<"$out" || got="fail without ::error::"
+            fi
+            if [ "$got" = "$want" ]; then
+              echo "ok   $label ($got)"
+            else
+              echo "FAIL $label: wanted $want, got $got"
+              fails=$((fails + 1))
+            fi
+          }
+
+          expect patch "fix: handle empty input" "" "fix is a patch"
+          expect patch "chore(deps): bump the all group" "" "a scoped chore is a patch"
+          expect patch "docs: explain the flow" "" "docs is a patch"
+          expect patch "Update README" "" "a title that is not conventional is a patch"
+          expect patch "" "" "no title is a patch"
+          expect minor "feat: add the export button" "" "feat is a minor"
+          expect minor "feat(api): add the export endpoint" "" "a scoped feat is a minor"
+          expect minor $'fix: a\nfeat: b' "" "one feat among fixes makes a minor"
+          expect fail "feat!: drop the old API" "" "a breaking feat is refused"
+          expect fail "fix(api)!: change the response shape" "" "a scoped breaking fix is refused"
+          expect minor "fix: a patch" minor "an override of minor wins"
+          expect major "fix: a patch" major "an override of major wins"
+          expect patch "feat: a feature" patch "an override of patch wins"
+          exit "$fails"
