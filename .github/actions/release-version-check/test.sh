@@ -105,6 +105,10 @@ case "$url" in
   repos/o/r/issues/*/labels)
     [ -e "$FIX/fail-labels" ] && fail "Bad Gateway (HTTP 502)"
     answer < "$FIX/labels.json" ;;
+  repos/o/r/branches/staging)
+    [ -e "$FIX/fail-staging" ] && fail "Server Error (HTTP 500)"
+    [ -e "$FIX/no-staging" ] && fail "Not Found (HTTP 404)"
+    echo '{"name":"staging"}' | answer ;;
   *) fail "fake gh: unexpected call: $url" ;;
 esac
 FAKE
@@ -174,7 +178,9 @@ report() {
 #       Bdir:<file> / Hdir:<file>    a directory at that path
 #       Hlink:<file>                 a symlink at that path (head)
 #       fail-labels | fail-commit | bad-merge-base | fail-contents |
-#       fail-tags | lib=<link|empty|stub> | env:NAME=value
+#       fail-tags | no-staging (the repo has no staging branch: trunk) |
+#       fail-staging (the staging lookup fails: stays main) |
+#       lib=<link|empty|stub> | env:NAME=value
 fixture() {
   local fix="$1" tags="$2" labels="$3" spec side rest moved=false base_dir
   shift 3
@@ -185,7 +191,7 @@ fixture() {
   : > "$fix/env"
   for spec in "$@"; do
     case "$spec" in
-      fail-* | bad-merge-base) touch "$fix/$spec"; continue ;;
+      fail-* | bad-merge-base | no-staging) touch "$fix/$spec"; continue ;;
       lib=*) echo "${spec#lib=}" > "$fix/lib"; continue ;;
       env:*) echo "${spec#env:}" >> "$fix/env"; continue ;;
       T:-) continue ;;
@@ -309,6 +315,25 @@ case_ "no tags: 1.0.0 without the label is refused" 1 - "the policy allows 0.1.0
   main "" "" "H:package.json=$(pj 1.0.0)"
 case_ "only a v0.0.0 tag: a jump to 5.0.0 is refused" 1 - "the policy allows 0.1.0" \
   main "v0.0.0" "" "H:package.json=$(pj 5.0.0)"
+
+# Trunk: a repo with no staging branch releases from the default branch, and
+# the next patch or the next minor is allowed.
+case_ "trunk: next patch on main is allowed" 0 allowed "allowed (next patch" \
+  main "v0.27.3" "" no-staging "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.4)"
+case_ "trunk: next minor on main is allowed" 0 allowed "allowed (next minor" \
+  main "v0.27.3" "" no-staging "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.28.0)"
+case_ "trunk: skipping ahead is refused" 1 - "the policy allows 0.27.4" \
+  main "v0.27.3" "" no-staging "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.5)"
+case_ "trunk: a major without the label is refused" 1 - "released by hand" \
+  main "v0.27.3" "" no-staging "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 1.0.0)"
+case_ "trunk: a major with the label is allowed" 0 allowed "allowed (next major" \
+  main "v0.27.3" "semver:major" no-staging "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 1.0.0)"
+case_ "with a staging branch, main still takes only the minor" 1 - "the policy allows 0.28.0" \
+  main "v0.27.3" "" "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.4)"
+case_ "a failed staging lookup keeps the stricter main rule" 1 - "the policy allows 0.28.0" \
+  main "v0.27.3" "" fail-staging "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.4)"
+case_ "trunk applies to the default branch only; other bases stay staging" 0 allowed "allowed (next patch" \
+  staging "v0.27.3" "" no-staging "B:package.json=$(pj 0.27.3)" "H:package.json=$(pj 0.27.4)"
 
 # Fail closed: API failures are hard errors.
 case_ "a failed labels read is a hard error" 1 - "Could not read the PR's labels" \
