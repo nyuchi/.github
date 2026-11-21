@@ -1026,3 +1026,55 @@ test("the CLI prints the version and fails with a message", () => {
     /Command failed/,
   );
 });
+
+const trunk = { channel: "trunk" };
+
+test("trunk: a release takes the next patch or the next minor", () => {
+  // computing defaults to a patch; the release tooling passes the bump
+  assert.equal(nextVersion("0.27.3", trunk), "0.27.4");
+  assert.equal(nextVersion("0.27.3", { ...trunk, bump: "minor" }), "0.28.0");
+  assert.equal(nextVersion("", trunk), "0.0.1");
+  assert.equal(check("0.27.3", "0.27.4", trunk), "next patch");
+  assert.equal(check("0.27.3", "0.28.0", trunk), "next minor");
+  assert.equal(check("0.27.3", "0.27.3", trunk), "unchanged");
+  assert.equal(check("", "0.0.1", trunk), "next patch");
+  assert.equal(check("", "0.1.0", trunk), "next minor");
+  // no upper limit on either part
+  assert.equal(check("0.27.999", "0.27.1000", trunk), "next patch");
+  assert.equal(check("0.999.4", "0.1000.0", trunk), "next minor");
+});
+
+test("trunk: nothing further ahead, and a major only by hand", () => {
+  assert.throws(() => check("0.27.3", "0.27.5", trunk), PolicyError);
+  assert.throws(() => check("0.27.3", "0.29.0", trunk), PolicyError);
+  assert.throws(() => check("0.27.3", "1.0.0", trunk), /by hand/);
+  assert.equal(
+    check("0.27.3", "1.0.0", { ...trunk, allowMajor: true }),
+    "next major",
+  );
+  // a downgrade is refused
+  assert.throws(() => check("0.27.3", "0.27.2", trunk), PolicyError);
+});
+
+test("staging and main are unchanged by trunk", () => {
+  assert.throws(() => check("0.27.3", "0.28.0", staging), PolicyError);
+  assert.throws(() => check("0.27.3", "0.27.4", main), PolicyError);
+});
+
+test("decide accepts the trunk channel in check mode", () => {
+  const refs = ["refs/tags/v0.27.3"];
+  assert.match(
+    decide(refs, { mode: "check", channel: "trunk", proposed: "0.27.4" })
+      .reason,
+    /next patch/,
+  );
+  assert.match(
+    decide(refs, { mode: "check", channel: "trunk", proposed: "0.28.0" })
+      .reason,
+    /next minor/,
+  );
+  assert.throws(
+    () => decide(refs, { mode: "check", channel: "trunk", proposed: "0.30.0" }),
+    PolicyError,
+  );
+});

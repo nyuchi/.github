@@ -3,6 +3,8 @@
 #
 #   PR into `staging`            PATCH  x.y.z -> x.y.(z+1)
 #   PR into the default branch   MINOR  x.y.z -> x.(y+1).0
+#   ... in a repo with no
+#   `staging` branch (trunk)     PATCH or MINOR, whichever the release holds
 #   MAJOR                        only with the `semver:major` label on the PR
 #
 # The label is read through the API when the job runs, not from the event,

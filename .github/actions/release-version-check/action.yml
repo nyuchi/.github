@@ -69,7 +69,8 @@
 # missing or malformed answer is a hard error.
 #
 # The channel is `main` when the base is the repo's default branch and
-# `staging` for any other base.
+# `staging` for any other base. A default-branch base in a repo that has no
+# `staging` branch is `trunk`: the next patch or the next minor is allowed.
 #
 # The `semver:major` label is read from the PR through the API when the job
 # runs, not from the event payload, so adding the label and pressing
@@ -162,7 +163,18 @@ runs:
         }
 
         channel=staging
-        [ "$BASE_REF" = "$DEFAULT_BRANCH" ] && channel=main
+        if [ "$BASE_REF" = "$DEFAULT_BRANCH" ]; then
+          channel=main
+          # A repo with no staging branch releases from the default branch
+          # (trunk): the next patch or the next minor is allowed. Only a
+          # definite "not found" counts; any other failure keeps `main`, the
+          # stricter rule.
+          if st_out="$(gh api "repos/$REPO/branches/staging" 2>&1)"; then
+            :
+          elif grep -q 'HTTP 404' <<<"$st_out"; then
+            channel=trunk
+          fi
+        fi
 
         # The label is read now, not from the event, so a re-run sees it. A
         # failed read stops the check: it never quietly means "no label".

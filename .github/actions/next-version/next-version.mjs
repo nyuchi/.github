@@ -3,7 +3,13 @@
 //
 //   Merge into `staging`      PATCH  x.y.z -> x.y.(z+1)
 //   Release `staging` -> main MINOR  x.y.z -> x.(y+1).0
+//   Release on `trunk`        PATCH or MINOR, whichever the release holds
 //   MAJOR                     manual only (workflow_dispatch, bump: major)
+//
+// `trunk` is the channel of a repo with no `staging` branch: every release is
+// cut from the default branch, and the release tooling (release-please or
+// similar) picks patch or minor from the PR titles it releases. The policy
+// accepts either next version and nothing further ahead.
 //
 // There is NO upper limit on MINOR or PATCH: patch 999 is followed by patch
 // 1000, minor 999 by minor 1000 (v0.1000.0 is newer than v0.999.0). Only a MAJOR
@@ -38,7 +44,7 @@
 // No dependencies, so it runs on any runner with Node and in the tests.
 //
 // Usage
-//   next-version.mjs decide  --mode check|compute --channel staging|main
+//   next-version.mjs decide  --mode check|compute --channel staging|main|trunk
 //                            [--bump patch|minor|major] [--manual]
 //                            [--proposed <x.y.z>] [--from-files <x.y.z>]
 //                            [--allow-major] [--prefix v]
@@ -51,11 +57,11 @@
 //   Exit codes: 0 an answer; 2 the policy says no (stderr "policy: <reason>");
 //   1 a bad call or a crash. Callers treat anything but 0 and 2 as a hard
 //   error.
-//   next-version.mjs next    --current 0.27.3 --channel staging|main
+//   next-version.mjs next    --current 0.27.3 --channel staging|main|trunk
 //                            [--bump patch|minor|major] [--manual]
 //     Prints the next version after a known current one.
 //   next-version.mjs check   --current 0.27.3 --proposed 0.28.0
-//                            --channel staging|main [--allow-major]
+//                            --channel staging|main|trunk [--allow-major]
 //     Exits 0 with the reason when a version written into the repo is what
 //     the policy allows after a known current one; fails otherwise.
 //   next-version.mjs current [--from-files <x.y.z>] [-- <prefix>]
@@ -125,8 +131,9 @@ export function compare(a, b) {
 export function defaultBump(channel) {
   if (channel === "staging") return "patch";
   if (channel === "main") return "minor";
+  if (channel === "trunk") return "patch";
   throw new UsageError(
-    `Unknown channel '${channel}'; expected 'staging' or 'main'.`,
+    `Unknown channel '${channel}'; expected 'staging', 'main' or 'trunk'.`,
   );
 }
 
@@ -134,7 +141,7 @@ export function defaultBump(channel) {
  * The next version after `current`.
  * @param {string} current  highest version released so far ("" = none yet)
  * @param {object} opts
- * @param {"staging"|"main"} opts.channel
+ * @param {"staging"|"main"|"trunk"} opts.channel
  * @param {""|"patch"|"minor"|"major"} [opts.bump]  override (manual runs)
  * @param {boolean} [opts.manual]  a person started this run; required for major
  */
@@ -189,6 +196,16 @@ export function check(
 
   const major = `${parse(current).major + 1}.0.0`;
   if (allowMajor && core(p) === major) return "next major";
+
+  // On trunk the release holds fixes (patch) or a feature (minor); the
+  // release tooling decides which, so either next version is fine.
+  if (channel === "trunk" && !bump) {
+    for (const kind of ["patch", "minor"]) {
+      if (core(p) === nextVersion(current, { channel, bump: kind })) {
+        return `next ${kind}`;
+      }
+    }
+  }
 
   // The usual next version for this channel.
   const allowed = nextVersion(current, { channel, bump, manual: allowMajor });
@@ -345,9 +362,9 @@ export function decide(
     prefix = DEFAULT_PREFIX,
   },
 ) {
-  if (channel !== "staging" && channel !== "main") {
+  if (channel !== "staging" && channel !== "main" && channel !== "trunk") {
     throw new UsageError(
-      `Unknown channel '${channel}'; expected staging or main.`,
+      `Unknown channel '${channel}'; expected staging, main or trunk.`,
     );
   }
   if (!["", "patch", "minor", "major"].includes(bump)) {
