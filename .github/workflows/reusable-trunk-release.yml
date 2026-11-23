@@ -136,7 +136,7 @@ jobs:
 
       - name: Compute the next version
         id: v
-        uses: nyuchi/.github/.github/actions/next-version@9b67a99ba0e91999fee417a44b4764a833819221  # main, 2026-11-21
+        uses: nyuchi/.github/.github/actions/next-version@0e026639ad69fef58704e114e1db4401a1c5f0ba  # main, 2026-11-21
         with:
           channel: trunk
           bump: ${{ steps.bump.outputs.bump }}
