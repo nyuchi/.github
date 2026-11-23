@@ -129,7 +129,7 @@ jobs:
   sbom:
     name: Generate SBOM
     needs: validate-tag
-    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@925d067322defd676dacd90f2c2b0540cb10f644  # v0.11.1
+    uses: nyuchi/.github/.github/workflows/reusable-sbom.yml@0e026639ad69fef58704e114e1db4401a1c5f0ba  # v0.18.0
     permissions:
       contents: read
       packages: read
