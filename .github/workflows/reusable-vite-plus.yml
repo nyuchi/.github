@@ -352,10 +352,15 @@ jobs:
           printf '%s\n' "$out"
           if [ "$rc" -eq 2 ] && grep -q 'Expected at least one target file' <<< "$out"; then
             if [ -n "$(git ls-files -- .prettierignore .jsonlintignore)" ]; then
-              echo "::error::The repo's own ignore files (.prettierignore, .jsonlintignore) exclude every tracked file matching '$PATHSPECS'. A gate that inspects nothing cannot pass: narrow the ignore files."
+              msg="The repo's own ignore files (.prettierignore, .jsonlintignore) exclude"
+              msg+=" every tracked file matching '$PATHSPECS'. A gate that inspects"
+              msg+=" nothing cannot pass: narrow the ignore files."
+              echo "::error::$msg"
               exit 1
             fi
-            echo "::notice::Every tracked file matching '$PATHSPECS' is excluded by the org's canonical .prettierignore; nothing to format-check."
+            msg="Every tracked file matching '$PATHSPECS' is excluded by the org's"
+            msg+=" canonical .prettierignore; nothing to format-check."
+            echo "::notice::$msg"
             exit 0
           fi
           exit "$rc"
