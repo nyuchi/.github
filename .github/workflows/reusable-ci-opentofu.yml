@@ -2,7 +2,7 @@
 #
 # Runs format check, validation, and a plan on every PR.
 # Optionally runs a Trivy IaC security scan (enabled by default).
-# Satisfies the "planned — Terraform IaC" item in ORG_SETTINGS.md §Enforcement.
+# Satisfies the "planned — Terraform IaC" item in the org settings page (https://docs.nyuchi.com/engineering/org-settings/), Enforcement.
 #
 # Call from a caller workflow in a consuming repo:
 #

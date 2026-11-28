@@ -1,11 +1,11 @@
 ## Quarterly ORG_SETTINGS.md Audit — {{QID}}
 
-Per [ORG_SETTINGS.md](./ORG_SETTINGS.md), the intended GitHub org and repo
+Per [Org settings and rulesets](https://docs.nyuchi.com/engineering/org-settings/), the intended GitHub org and repo
 configuration must be compared against live settings **once per quarter**.
 
 ### Checklist
 
-- [ ] **Org security features** — compare the table in `ORG_SETTINGS.md`
+- [ ] **Org security features** — compare the table in the org settings page
       §Organization-level settings against **Settings → Code security and analysis**.
       In particular: confirm secret scanning non-provider patterns are enabled
       org-wide, not only for public repos.
@@ -38,7 +38,7 @@ configuration must be compared against live settings **once per quarter**.
 
 ### After the audit
 
-- Approved changes to `ORG_SETTINGS.md` → PR reviewed by `@nyuchi/maintainers`.
+- Approved changes to the org settings page (nyuchi-docs) → PR reviewed by `@nyuchi/maintainers`.
 - Unapproved drift → fix live GitHub settings immediately.
 - Close this issue with a comment summarising what was checked and any drift
   found or corrected.

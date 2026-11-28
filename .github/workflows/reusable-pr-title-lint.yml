@@ -15,7 +15,7 @@
 #   pull-requests: read
 #   statuses: write
 #
-# The allowed types below track CONTRIBUTING.md § Allowed types. When that
+# The allowed types below track the Allowed types in https://docs.nyuchi.com/engineering/contributing/#allowed-types. When that
 # list changes, change it here too (and the starter template).
 
 name: Reusable / PR title lint

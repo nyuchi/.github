@@ -3,7 +3,7 @@
 # bundu-release app, so `on: push: tags` workflows fire (a repo's own
 # GITHUB_TOKEN cannot start them). A repo opts out with the AUTO_RELEASE=off
 # variable, or by tagging its own releases (release.yml); a MAJOR is only ever
-# made by hand. Policy in ORG_SETTINGS.md; scripts/auto-release-prs.sh.
+# made by hand. Policy in https://docs.nyuchi.com/engineering/org-settings/; scripts/auto-release-prs.sh.
 #
 # Skipped (not failed) until the app exists: RELEASE_APP_CLIENT_ID unset.
 name: Auto release

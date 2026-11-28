@@ -34,7 +34,7 @@ bits the Copilot product most often gets wrong.
 - **Do not** add error handling for cases that can't happen, or
   backwards-compat shims for deletions, or speculative
   abstractions for one-time operations. See
-  [`AGENTS.md` § Robustness theatre](../AGENTS.md#robustness-theatre).
+  [Engineering guide § Robustness theatre](https://docs.nyuchi.com/engineering/guide/#robustness-theatre).
 - **Do not** disable lints, type checks, or tests silently. If
   you must silence something, leave a same-line comment with the
   reason.
