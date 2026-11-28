@@ -13,8 +13,8 @@
 #
 # The version lives in tags only; nothing is committed back. The tag and the
 # release are pushed with the run's GITHUB_TOKEN, so nothing downstream starts
-# from the tag push. Use it in a repo with NO `staging` branch; a repo that
-# still has staging keeps staging-version.yml and main-release.yml.
+# from the tag push (the org's auto-release app tags repos that have no
+# release.yml of their own, and its tags do start tag workflows).
 #
 # Caller (.github/workflows/release.yml in the repo), pinned to a commit like
 # every org workflow:

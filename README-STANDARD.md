@@ -105,7 +105,7 @@ needs before deciding to read on:
 **Version:** 1.0.0 | **Live:** [mzizi.dev](https://mzizi.dev) | **Docs:** [docs.bundu.org](https://docs.bundu.org)
 ```
 
-For an application, a small Live Deployments table (production / staging) is
+For an application, a small Live Deployments table is
 the better form. Follow `mukoko-auth`.
 
 ### 5. What it is

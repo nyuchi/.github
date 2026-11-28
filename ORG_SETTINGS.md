@@ -164,8 +164,8 @@ One standard covers every org in the enterprise: `nyuchi`,
    `bundu-labs` enterprise and **active** on the default branch of every
    repo in every org (except `sandbox-*` and `archive-*`). It holds the
    floor: pull request required with **0** approvals, no force pushes, no
-   deletion. Linear history is required on `staging`, not on the default
-   branch (see _Promotion_ below). It carries no status checks.
+   deletion. Linear history is not required on the default branch (see
+   _Merges_ below). It carries no status checks.
 2. **One org ruleset per org**, `org-wide-main-protection`, the same in
    every org. It repeats the floor and adds what the enterprise does
    not: the five required lint status checks and a "Require workflows to
@@ -189,7 +189,7 @@ The org ruleset (**Settings → Rules → Rulesets**):
 | Bypass                                                           | Organisation admins, always                                         |
 | Restrict deletions                                               | **Enabled**                                                         |
 | Block force pushes                                               | **Enabled**                                                         |
-| Require linear history                                           | **Disabled** on the default branch (kept on `staging`)              |
+| Require linear history                                           | **Disabled** on the default branch                                  |
 | Require a pull request before merging                            | **Enabled**                                                         |
 | Required approving reviews                                       | **0** (pre-scale solo-developer phase)                              |
 | Dismiss stale pull request approvals when new commits are pushed | **Disabled**                                                        |
@@ -215,16 +215,10 @@ The org ruleset (**Settings → Rules → Rulesets**):
 > design. The trigger is documented in NA-01 Article 10.1 (the
 > transition to formal divisional structure).
 
-**Promotion is a merge commit.** (Changed 2026-11-02.) Feature PRs into
-`staging` are squash-merged and `staging` stays linear. A release
-(`staging` into the default branch) and a `hotfix/*` PR are merged with a
-**merge commit**, so the default branch contains `staging`'s history and the
-two branches never diverge. Squashing a release put a commit on the default
-branch that `staging` did not have, and every release then needed a
-sync-back PR, the `forward-ported` label and a conflict fix. The merge queue
-is one ruleset per branch because a queue has one merge method: SQUASH for
-`staging`, MERGE for the default branch. The desired rulesets are the files in
-`settings/`.
+**Merges.** The estate is trunk-based: every PR targets the default branch
+and every merge there is a release (see _Automatic releases_). There is no
+`staging` branch. The `staging` rulesets and the promotion design in
+`settings/` are historical and apply to no repo.
 
 #### Required status checks
 
@@ -521,25 +515,23 @@ Every 15 minutes, `Auto release` (`.github/workflows/auto-release.yml`)
 runs `scripts/auto-release-prs.sh` for each of the seven orgs. For every
 repo (not archived, not `sandbox-*`/`archive-*`):
 
-- Where `staging` is ahead of the default branch, the release PR exists
-  with auto-merge on, as the enterprise-owned **bundu-release** GitHub
-  App — the app's private key lives only in the `org-release`
-  environment, which only `main` can deploy from. The app never merges
-  anything: the required checks decide, the merge queue included.
-- Where the default-branch tip is an untagged release merge, it is
-  tagged the next MINOR and published as the latest GitHub release.
-  Repos that tag their own releases (`main-release.yml`) are skipped.
+- Where the default-branch tip is untagged, it is tagged (a `feat` is a
+  MINOR, anything else a PATCH) and published as the latest GitHub
+  release, as the enterprise-owned **bundu-release** GitHub App — the
+  app's private key lives only in the `org-release` environment, which
+  only `main` can deploy from. Repos that tag their own releases
+  (`main-release.yml`, or `release.yml` calling `reusable-trunk-release.yml`)
+  are skipped.
 
-A MAJOR needs the owner's `semver:major` label on the release PR. A repo
-opts out with the `AUTO_RELEASE=off` repository variable. Repos named
-`.github` have no `staging` and are skipped by design.
+A MAJOR is only ever made by hand. A repo opts out with the
+`AUTO_RELEASE=off` repository variable.
 
 ### Hourly repo bootstrap
 
 Every hour at :23, `Bootstrap repos`
 (`.github/workflows/bootstrap-repos.yml`) runs
 `scripts/bootstrap-repos.sh` for each org: every repo has a default
-branch, a `staging` branch (except `.github` repos), the standard merge
+branch, the standard merge
 settings, immutable releases, the standard labels, and the standard
 files — missing files are proposed in one pull request, never pushed
 directly. Run it by hand from the Actions tab for an instant fix.

@@ -7,7 +7,7 @@
 #
 # 1. Enterprise-required. An ENTERPRISE ruleset names this file in a
 #    "Require workflows to pass" rule (repository nyuchi/.github, ref
-#    refs/heads/main, targets ~DEFAULT_BRANCH and staging). GitHub runs it
+#    refs/heads/main, targets ~DEFAULT_BRANCH). GitHub runs it
 #    on every pull request into those branches, in every repo the ruleset
 #    covers. A ruleset-run workflow ignores `on:` filters, so the job reads
 #    the event itself. NEVER put it on a ruleset that targets all branches

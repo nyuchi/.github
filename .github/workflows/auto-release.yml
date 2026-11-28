@@ -1,9 +1,9 @@
 # Automatic releases across the bundu-labs enterprise: for every repo in every
-# org, the staging -> default-branch release PR (auto-merge on, merge commit),
-# as the enterprise-owned bundu-release app - the only identity whose pull
-# requests trigger the required checks (a repo's own GITHUB_TOKEN cannot).
-# A repo opts out with the AUTO_RELEASE=off variable; a MAJOR needs the
-# semver:major label. Policy in ORG_SETTINGS.md; scripts/auto-release-prs.sh.
+# org, the default branch tip is tagged and released as the enterprise-owned
+# bundu-release app, so `on: push: tags` workflows fire (a repo's own
+# GITHUB_TOKEN cannot start them). A repo opts out with the AUTO_RELEASE=off
+# variable, or by tagging its own releases (release.yml); a MAJOR is only ever
+# made by hand. Policy in ORG_SETTINGS.md; scripts/auto-release-prs.sh.
 #
 # Skipped (not failed) until the app exists: RELEASE_APP_CLIENT_ID unset.
 name: Auto release
@@ -71,7 +71,7 @@ jobs:
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ matrix.org }}
 
-      - name: Open release PRs
+      - name: Release the default branch
         if: ${{ inputs.org == '' || inputs.org == matrix.org }}
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}

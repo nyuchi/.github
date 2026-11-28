@@ -1,5 +1,9 @@
 # Branch rules and the release flow
 
+> **Historical.** The estate is trunk-based and no `staging` branch exists, so
+> the staging rulesets and the promotion flow below apply to no repo. Releases
+> are described in `ORG_SETTINGS.md` (_Automatic releases_).
+
 The desired rulesets and repository settings for every repository in the
 enterprise, as files. `nyuchi/.github` is the source of truth: a change is
 made here first, then applied.

@@ -66,7 +66,7 @@ jobs:
               docs*) label="type: docs" ;;
               chore*|ci*|build*|refactor*|test*|style*|perf*) label="type: chore" ;;
             esac
-            if [ "$BASE" = "main" ] && [ "$HEAD" = "staging" ] || case "$HEAD" in release/*) true ;; *) false ;; esac; then
+            if case "$HEAD" in release/*) true ;; *) false ;; esac; then
               label="type: release"
             fi
             # Bot PRs (Dependabot) already carry their own labels.

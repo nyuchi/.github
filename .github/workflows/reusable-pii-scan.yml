@@ -58,8 +58,7 @@ jobs:
   scan:
     name: pii scan
     runs-on: ubuntu-latest
-    # Releases to production only: a PR whose base is the default branch.
-    # Feature PRs into staging are not scanned.
+    # A PR whose base is the default branch (every PR, in a trunk repo).
     if: github.event.pull_request.base.ref == github.event.repository.default_branch
     steps:
       - name: Check out this repo's full history (needed to diff base...head)
