@@ -67,7 +67,11 @@
 # - A .jsonlintignore, if present, is honoured as a second ignore file (the
 #   siafudb-kuzu NDJSON fixtures), printed verbatim. If the ignore files
 #   exclude EVERY tracked file, oxfmt exits 2 ("Expected at least one target
-#   file") and the job fails: a gate that inspects nothing cannot pass.
+#   file") and the job fails: a gate that inspects nothing cannot pass. That
+#   holds for a repo's OWN (tracked) ignore files only. When the ignore file is
+#   the canonical fallback, the org's ignore list decided there is nothing to
+#   format, and the job passes with a ::notice:: (a Rust-only repo with no
+#   .prettierignore whose only *.json is a lockfile, for example).
 #
 # WHAT VITE+ DOES NOT COVER, AND CANNOT
 #
@@ -336,7 +340,25 @@ jobs:
             ignores+=(--ignore-path .jsonlintignore)
           fi
           echo "Checking ${#files[@]} tracked files with $config."
-          "$OXFMT" --check --config "$config" "${ignores[@]}" "${files[@]}"
+          # oxfmt exits 2 with "Expected at least one target file" when the ignore
+          # files exclude every file it was given. Whose ignore file it was decides:
+          # a tracked .prettierignore or .jsonlintignore is the repo's own call, and
+          # a gate that inspects nothing cannot pass. A canonical .prettierignore
+          # fetched above is the org's, so a repo whose only matching files are
+          # ones it ignores (a Rust repo with nothing but a lockfile or a generated
+          # file under *.json) has nothing to format, and passes with a notice.
+          rc=0
+          out=$("$OXFMT" --check --config "$config" "${ignores[@]}" "${files[@]}" 2>&1) || rc=$?
+          printf '%s\n' "$out"
+          if [ "$rc" -eq 2 ] && grep -q 'Expected at least one target file' <<< "$out"; then
+            if [ -n "$(git ls-files -- .prettierignore .jsonlintignore)" ]; then
+              echo "::error::The repo's own ignore files (.prettierignore, .jsonlintignore) exclude every tracked file matching '$PATHSPECS'. A gate that inspects nothing cannot pass: narrow the ignore files."
+              exit 1
+            fi
+            echo "::notice::Every tracked file matching '$PATHSPECS' is excluded by the org's canonical .prettierignore; nothing to format-check."
+            exit 0
+          fi
+          exit "$rc"
       - name: Advisory result
         if: ${{ !inputs.enforce && steps.run.outcome == 'failure' }}
         shell: bash
