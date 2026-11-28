@@ -1,7 +1,6 @@
 # Hourly repo bootstrap across the bundu-labs enterprise: every repo has a
-# default branch, a staging branch (except .github repos, which work directly
-# on the default branch), the org merge settings, immutable releases, standard
-# labels, and the standard files - proposed in one PR - as the enterprise-owned
+# default branch (no staging branch: every repo is trunk-based), the org merge
+# settings, immutable releases, standard labels, and the standard files - proposed in one PR - as the enterprise-owned
 # bundu-release app. GitHub has no org-level default for these, so a new repo
 # is bare until the next run. Trigger it by hand for an instant fix.
 #
