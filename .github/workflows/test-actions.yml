@@ -254,6 +254,80 @@ jobs:
             exit 1
           fi
 
+  fmt-nothing-to-format:
+    name: fmt passes when there is nothing to format
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The fmt check step, on a Rust-only repo, in five shapes
+        shell: bash
+        run: |
+          set -euo pipefail
+          t="$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o "$t/oxfmt.tgz" \
+            https://github.com/oxc-project/oxc/releases/download/oxfmt_v0.70.0/oxfmt-x86_64-unknown-linux-gnu.tar.gz
+          echo "7c1051238203be82eb7ed6038a9a72ac258ee15d79510e71ea32665df6b7af9f  $t/oxfmt.tgz" | sha256sum --check --strict
+          tar -xzf "$t/oxfmt.tgz" -C "$t"
+          oxfmt="$t/oxfmt-x86_64-unknown-linux-gnu"
+          org="$GITHUB_WORKSPACE"
+          script="$t/fmt-check.sh"
+          yq -e '.jobs.fmt.steps[] | select(.id == "run") | .run' \
+            .github/workflows/reusable-vite-plus.yml > "$script"
+          test -s "$script"
+
+          fails=0
+          # expect <pass|fail> <description>: runs the step in the current repo, as
+          # the Node-free path does (RUST_ONLY=true), which has the canonical config
+          # and ignore file copied in untracked (what the fallback step does), unless
+          # the case tracked its own.
+          expect() {
+            local want=$1 desc=$2 got=pass
+            RUST_ONLY=true OXFMT="$oxfmt" PATHSPECS="*.md *.mdx *.json *.jsonc" bash "$script" > "$t/out.txt" 2>&1 || got=fail
+            if [ "$got" = "$want" ]; then
+              echo "ok   - $desc ($got)"
+            else
+              echo "::error::$desc: wanted $want, got $got"
+              cat "$t/out.txt"
+              fails=$((fails + 1))
+            fi
+          }
+          repo() {
+            rm -rf "$t/case" && mkdir "$t/case" && cd "$t/case"
+            git init -q . && printf '[package]\nname = "x"\nversion = "0.0.0"\n' > Cargo.toml
+            cp "$org/.oxfmtrc.json" "$org/.prettierignore" .
+            git add Cargo.toml
+          }
+
+          # 1. Only Markdown, as in nyuchi/aragorn: the standalone oxfmt formats none of
+          #    it and exits 2 ("Expected at least one target file"); nothing it can
+          #    check, so the step passes with a notice (this used to fail).
+          repo; printf '# Title\n\nText.\n' > README.md; printf '# Agents\n' > AGENTS.md; git add README.md AGENTS.md
+          expect pass "only Markdown matches the pathspecs"
+
+          # 2. Nothing but a lockfile under *.json, which the org's .prettierignore
+          #    excludes: nothing to format, so it passes (this used to exit 2 as well).
+          repo; printf '{}\n' > package-lock.json; git add package-lock.json
+          expect pass "only an ignored lockfile matches the pathspecs"
+
+          # 3. The repo's own tracked .prettierignore excludes every JSON file it
+          #    has: a gate that inspects nothing still fails.
+          repo; printf '{ "a": 1 }\n' > data.json; printf 'data.json\n' > .prettierignore
+          git add data.json .prettierignore -f
+          expect fail "the repo's own .prettierignore excludes every matching file"
+
+          # 4. Formatting is still enforced where the standalone oxfmt can do it:
+          #    a formatted JSON file passes, an unformatted one fails, with
+          #    Markdown alongside it left to markdownlint.
+          repo; printf '{ "a": 1 }\n' > data.json; printf '# Title\n\n\n\nText.   \n' > README.md; git add data.json README.md
+          expect pass "a formatted JSON file next to an unformatted README.md"
+          printf '{"a":1,\n"b":[1,2]}\n' > data.json
+          expect fail "an unformatted JSON file is still reported"
+
+          [ "$fails" -eq 0 ] || { echo "$fails fmt case(s) failed."; exit 1; }
+
   trunk-release-bump:
     name: trunk-release bump
     runs-on: ubuntu-latest
