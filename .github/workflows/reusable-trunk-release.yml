@@ -35,6 +35,7 @@
 #     release:
 #       permissions:
 #         contents: write
+#         pull-requests: read   # to read the merged PR's title; without it the commit subject is used
 #       uses: nyuchi/.github/.github/workflows/reusable-trunk-release.yml@<40-hex>  # main, <date>
 #       with:
 #         bump: ${{ inputs.bump || '' }}
@@ -67,7 +68,10 @@ on:
         value: ${{ jobs.release.outputs.created }}
 
 # No `permissions:` block: the job runs with what the caller grants
-# (contents: write, to push the tag and create the release).
+# (contents: write, to push the tag and create the release; pull-requests:
+# read, to read the merged PR's title. Without the latter the API answers 403
+# and the commit's own subject line, which a squash merge sets to the PR
+# title, is used instead).
 
 jobs:
   release:
@@ -136,7 +140,7 @@ jobs:
 
       - name: Compute the next version
         id: v
-        uses: nyuchi/.github/.github/actions/next-version@0e026639ad69fef58704e114e1db4401a1c5f0ba  # main, 2026-11-21
+        uses: nyuchi/.github/.github/actions/next-version@2c325ee3106eea96400cfd14c920249beb8097ea  # v0.44.0, knows the trunk channel
         with:
           channel: trunk
           bump: ${{ steps.bump.outputs.bump }}
