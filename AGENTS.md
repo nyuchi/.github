@@ -536,6 +536,15 @@ concurrent merge calls, not from git itself. These rules remove it.
   `dependency-review.yml`), each with a reason and a review date; a repo
   cannot waive its own advisory.
 
+## Operations playbook
+
+The orchestrator's procedures (roles and authority, sub agent briefs,
+releases, going public, security triage, incident response, dependency
+policy, known sharp edges) are in
+[`docs/operations-playbook.md`](./docs/operations-playbook.md). Follow it for
+any release, publish, dismissal or incident; the Mzizi build loops are in the
+[Mzizi playbook](https://github.com/mzizi-dev/mzizi-docs/blob/main/playbook.mdx).
+
 ---
 
 _Last reviewed by a human: every PR that changes this file._
