@@ -75,7 +75,7 @@ jobs:
 
           # WARN: no AGENTS.md at the root.
           if ! gh api "repos/$REPO/contents/AGENTS.md?ref=$HEAD_SHA" --silent 2>/dev/null; then
-            echo "::warning title=Repo standards::No AGENTS.md at the repo root. Every repo carries one (https://docs.nyuchi.com/engineering/guide/)."
+            echo "::warning title=Repo standards::No AGENTS.md at the repo root. See docs.nyuchi.com/engineering/guide/"
             summary "- ⚠️ no AGENTS.md at the root"
           fi
 
@@ -103,7 +103,7 @@ jobs:
               case "${e,,}" in
                 release|production|publish|pypi|github-pages|copilot) ;;
                 *)
-                  msg="Environment '$e' is not release, production or publish (https://docs.nyuchi.com/engineering/guide/#github-environments)."
+                  msg="Environment '$e' is not release, production or publish (docs.nyuchi.com/engineering/guide/#github-environments)."
                   echo "::warning file=$f,title=Repo standards::$msg"
                   summary "- ⚠️ \`$f\` uses environment \`$e\`"
                   ;;
