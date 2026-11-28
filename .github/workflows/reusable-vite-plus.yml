@@ -52,6 +52,13 @@
 # .md/.mdx/.json/.jsonc file in all 11 mzizi-dev repos and nyuchi/.github that
 # prettier 3.9.4 already passed - a like-for-like swap, not a reformat.
 #
+# Rust-only repos (a Cargo.toml and no package.json) use oxc's standalone oxfmt, which
+# formats no Markdown (that goes through the Node plugin vite-plus bundles). The job
+# says so with a ::notice::, checks the JSON it can, and passes when nothing else
+# matches; Markdown is left to markdownlint. (Before this, a Rust-only repo whose only
+# matching files were Markdown, such as nyuchi/aragorn, failed with "Expected at
+# least one target file".)
+#
 # Three behaviours carried over from reusable-lint.yml's prettier job,
 # because each one was a real gate that silently checked nothing:
 #
@@ -318,6 +325,7 @@ jobs:
         env:
           OXFMT: ${{ steps.install.outputs.oxfmt || steps.standalone.outputs.oxfmt }}
           PATHSPECS: ${{ inputs.fmt-pathspecs }}
+          RUST_ONLY: ${{ steps.kind.outputs.rust_only }}
         shell: bash
         run: |
           set -euo pipefail
@@ -329,6 +337,31 @@ jobs:
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::notice::No tracked files match '$PATHSPECS'; nothing to format-check."
             exit 0
+          fi
+          if [ "$RUST_ONLY" = true ]; then
+            # oxc's standalone oxfmt formats no Markdown at all (Markdown goes through the
+            # Node plugin vite-plus bundles): given only .md/.mdx files it exits 2 with
+            # "Expected at least one target file", and given a mix it skips the Markdown
+            # in silence. Say so, check what it does format, and leave Markdown to
+            # markdownlint (reusable-lint.yml), which the Node-free path also runs.
+            keep=()
+            skipped=0
+            for f in "${files[@]}"; do
+              case "$f" in
+                *.md | *.mdx) skipped=$((skipped + 1)) ;;
+                *) keep+=("$f") ;;
+              esac
+            done
+            if [ "$skipped" -gt 0 ]; then
+              msg="The standalone oxfmt of the Node-free path does not format Markdown:"
+              msg+=" $skipped .md/.mdx file(s) are not format-checked here (markdownlint covers them)."
+              echo "::notice::$msg"
+            fi
+            if [ "${#keep[@]}" -eq 0 ]; then
+              echo "::notice::No other tracked file matches '$PATHSPECS'; nothing to format-check."
+              exit 0
+            fi
+            files=("${keep[@]}")
           fi
           config=.oxfmtrc.json
           [ -e "$config" ] || config=.oxfmtrc.jsonc
