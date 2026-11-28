@@ -12,8 +12,7 @@
 #   5. The standard files exist: AGENTS.md, CONTRIBUTING.md, SECURITY.md,
 #      CODE_OF_CONDUCT.md, PR template, CODEOWNERS, README. Missing ones are
 #      proposed in ONE pull request from `bootstrap/org-standards`, into the
-#      default branch (or `staging` in a repo that still has one);
-#      nothing is pushed straight to a protected branch.
+#      default branch; nothing is pushed straight to a protected branch.
 #   6. The CODEOWNERS team can review the repo (warns; --grant-team adds it)
 #   7. The standard PR labels exist; bootstrap PRs are assigned to PR_ASSIGNEE
 #
@@ -64,8 +63,8 @@ command -v gh >/dev/null || { echo "gh is not installed" >&2; exit 1; }
 command -v jq >/dev/null || { echo "jq is not installed" >&2; exit 1; }
 
 # Keep in step with step_repos in apply-org-settings.sh.
-# delete_branch_on_merge is on. The org ruleset's `deletion` rule protects main and
-# staging, so the auto-delete never removes them after a release PR.
+# delete_branch_on_merge is on. The org ruleset's `deletion` rule protects main,
+# so the auto-delete never removes it after a release PR.
 DESIRED='{"allow_merge_commit":true,"allow_squash_merge":true,"allow_rebase_merge":true,"delete_branch_on_merge":true,"allow_auto_merge":true,"allow_update_branch":true,"squash_merge_commit_title":"PR_TITLE","squash_merge_commit_message":"PR_BODY"}'
 
 # target | source in this repo (or generated:NAME) | paths that also count as present
@@ -127,7 +126,7 @@ type: bug|d73a4a|Something is broken
 type: chore|c5def5|Maintenance, config, tooling
 type: docs|0075ca|Documentation only
 type: security|b60205|Security fix or hardening
-type: release|5319e7|Release PR, staging to main
+type: release|5319e7|Release PR
 standards|fbca04|Org standards adoption'
 
 ensure_labels() {
@@ -188,7 +187,7 @@ bootstrap_repo() {
     *) fail "$repo: could not read immutable-releases" ;;
   esac
 
-  # 5. Standard files, proposed in one PR into staging
+  # 5. Standard files, proposed in one PR into the default branch
   if [ "$DO_FILES" -eq 1 ] && [ "$repo" != ".github" ]; then
     adopt_files "$repo" "$db" "$ready"
   fi
@@ -232,8 +231,7 @@ adopt_files() {
     return
   fi
 
-  base=staging
-  gh api "/repos/$ORG/$repo/branches/staging" --silent 2>/dev/null || base="$db"
+  base="$db"
   act "open a PR into $base adding:$missing"
   [ "$DRY" -eq 1 ] && return
 
