@@ -59,7 +59,7 @@ jobs:
             revert
             style
           requireScope: ${{ inputs.require-scope }}
-          subjectPattern: ^(?![A-Z])[^.]+[^. ]$
+          subjectPattern: ^(?![A-Z]).*[^. ]$
           subjectPatternError: |
             The subject "{subject}" in the PR title "{title}" doesn't
             match our subject rule. Start the subject with a lowercase
