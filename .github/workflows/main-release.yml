@@ -1,11 +1,11 @@
 # Tags every release of nyuchi/.github to `main` as the next MINOR
-# (x.y.z -> x.(y+1).0, nyuchi/.github#80); merges into `staging` are patches
-# (staging-version.yml); a MAJOR only by hand, with workflow_dispatch.
+# (x.y.z -> x.(y+1).0, nyuchi/.github#80); a MAJOR only by hand, with
+# workflow_dispatch.
 #
 # Why it matters here: every repo in the enterprise calls this repo's
 # reusable workflows and actions. They pin one commit SHA with the release
 # tag as a comment (`@<sha>  # v0.2.0`), so Dependabot (github-actions
-# ecosystem, target-branch: staging) can see each new release and open the
+# ecosystem) can see each new release and open the
 # PR that moves the pin. Without a tag on `main`, there is nothing for it to
 # move to, and the pins drift (eight versions at once, 2026-10-21).
 #

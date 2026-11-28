@@ -20,7 +20,7 @@
 #
 # Name this file in the ENTERPRISE ruleset's "Require workflows to pass" rule,
 # next to release-version-check.yml (repository nyuchi/.github, ref
-# refs/heads/main, targets ~DEFAULT_BRANCH and staging). A ruleset-run
+# refs/heads/main, targets ~DEFAULT_BRANCH). A ruleset-run
 # workflow ignores the `on:` filters, so the job checks the event itself.
 # It never checks out or runs the PR's code: it reads files through the API.
 

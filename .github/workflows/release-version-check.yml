@@ -1,10 +1,7 @@
 # Release version check. Fails a pull request that writes a version the org
 # versioning policy does not allow next (nyuchi/.github#80, #90):
 #
-#   PR into `staging`            PATCH  x.y.z -> x.y.(z+1)
-#   PR into the default branch   MINOR  x.y.z -> x.(y+1).0
-#   ... in a repo with no
-#   `staging` branch (trunk)     PATCH or MINOR, whichever the release holds
+#   PR into the default branch   PATCH or MINOR, whichever the release holds
 #   MAJOR                        only with the `semver:major` label on the PR
 #
 # The label is read through the API when the job runs, not from the event,
@@ -29,7 +26,7 @@
 #   repository  nyuchi/.github (repo id 1116531720)
 #   path        .github/workflows/release-version-check.yml
 #   ref         refs/heads/main
-#   targets     ~DEFAULT_BRANCH and staging
+#   targets     ~DEFAULT_BRANCH
 #
 # GitHub then runs it on every pull request into those branches, in every
 # repo the ruleset covers, from this repo's main branch.

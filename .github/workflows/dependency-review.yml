@@ -26,7 +26,7 @@
 #
 # An ENTERPRISE ruleset names this file in a "Require workflows to pass"
 # rule (repository nyuchi/.github, ref refs/heads/main, targets
-# ~DEFAULT_BRANCH and staging). GitHub then runs it on every pull request
+# ~DEFAULT_BRANCH). GitHub then runs it on every pull request
 # into those branches in every repo the ruleset covers. A ruleset-run
 # workflow ignores `on:` filters, so each job checks the event itself:
 # pull_request and merge_group are checked, anything else passes with a

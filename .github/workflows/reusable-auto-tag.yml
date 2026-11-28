@@ -9,16 +9,15 @@
 # VERSIONING POLICY (nyuchi/.github#80). Before tagging, the version is
 # checked against the org policy by the next-version action (pinned below):
 #
-#   staging (a merge into staging)  PATCH  x.y.z -> x.y.(z+1)
-#   main    (a release to main)     MINOR  x.y.z -> x.(y+1).0
+#   channel staging (retired; no repo has a staging branch)  PATCH
+#   channel main                                             MINOR  x.y.z -> x.(y+1).0
 #   MAJOR                           by hand only: workflow_dispatch, bump: major
 #
 # Minor and patch have no upper limit (patch 999 -> 1000, minor 999 -> 1000);
 # only a major is manual. A version that is not the one the
 # policy allows next fails the run with the version it should have been.
 # Released versions are never renumbered; the check compares against the
-# highest existing tag. A repo whose staging merges are tagged by
-# reusable-staging-release.yml releases main at the next minor above them.
+# highest existing tag.
 #
 # Leave `version-command` empty to have the version COMPUTED from the tags
 # instead of read from a file (for repos with no version file).
