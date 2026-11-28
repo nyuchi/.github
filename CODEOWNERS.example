@@ -4,7 +4,7 @@
 # repo root) in your repo and adjust paths, team handles, and
 # individual owners to match the project. Then enable
 # "Require review from Code Owners" in the repo's branch
-# protection rules — see ORG_SETTINGS.md.
+# protection rules — see https://docs.nyuchi.com/engineering/org-settings/.
 #
 # Why this matters: when agents (Claude, Cursor, Copilot) open
 # PRs, CODEOWNERS is how GitHub guarantees a human reviewer is

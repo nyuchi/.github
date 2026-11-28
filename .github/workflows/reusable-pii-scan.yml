@@ -22,7 +22,7 @@
 # Runs on RELEASE PRs only (base = default branch). It never blocks the release:
 # a finding adds the `needs: dpia-review` label and a summary telling the
 # reviewer whether docs/security has a DPIA pre-assessment for what the PII
-# does. Template: docs/security/DPIA-PREASSESSMENT-TEMPLATE.md.
+# does. Template: https://docs.nyuchi.com/engineering/dpia-preassessment/.
 #
 # Usage, in a repo's workflow (needs a pull_request trigger so the base
 # and head SHAs are available):
@@ -38,7 +38,7 @@
 # Caveats: regex-based, not an NLP model -- it catches well-formed
 # patterns, not a name typed in prose or a photo of a document. It is one
 # layer, not a replacement for not putting real users/members data in a
-# repo in the first place (see AGENTS.md).
+# repo in the first place (see the engineering guide, https://docs.nyuchi.com/engineering/guide/).
 
 name: Reusable - PII scan
 

@@ -1,9 +1,9 @@
 # Quarterly ORG_SETTINGS.md drift-detection reminder.
 #
 # Creates a GitHub Issue on the first day of every quarter so that
-# maintainers remember to compare ORG_SETTINGS.md against the live
-# GitHub org and repo settings (per ORG_SETTINGS.md §Enforcement and
-# audit).
+# maintainers remember to compare the org settings page
+# (https://docs.nyuchi.com/engineering/org-settings/) against the live GitHub
+# org and repo settings (see its Enforcement and audit section).
 #
 # The job is idempotent: if an open issue already exists for the
 # current quarter it exits without creating a duplicate.

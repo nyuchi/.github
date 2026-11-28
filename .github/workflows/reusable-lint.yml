@@ -476,7 +476,7 @@ jobs:
           set -euo pipefail
           if [ ! -f .prettierrc ]; then
             echo "::error::.prettierrc is missing from the repo root."
-            echo "Copy it from nyuchi/.github - see ADOPTING-LINT.md step 2."
+            echo "Copy it from nyuchi/.github - see https://docs.nyuchi.com/playbooks/adopting-lint/ (step 2)."
             exit 1
           fi
           prettier --check \

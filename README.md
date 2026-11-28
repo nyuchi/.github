@@ -9,6 +9,12 @@ Bundu commons — and the canonical
 Anything here is inherited by every repository in the org that does
 not define its own equivalent file.
 
+This repository holds GitHub's own files and the code that implements the
+org's standards. How Nyuchi is run, developed and built is documented in
+[Nyuchi Docs](https://docs.nyuchi.com): the [Engineering guide](https://docs.nyuchi.com/engineering/guide/),
+[Contributing](https://docs.nyuchi.com/engineering/contributing/) and the
+[Playbooks](https://docs.nyuchi.com/playbooks/).
+
 ## What's in this repo
 
 ### Repo basics
@@ -38,9 +44,9 @@ not define its own equivalent file.
 | `CODE_OF_CONDUCT.md`              | Contributor Covenant 2.1 adopted by reference.                                                                                                             |   ✅   |
 | `SECURITY.md`                     | How to privately report vulnerabilities; response commitments; safe-harbor terms.                                                                          |   ✅   |
 | `SUPPORT.md`                      | Where users should go for help (Discussions, Issues, Security).                                                                                            |   ✅   |
-| `CONTRIBUTING.md`                 | Contribution workflow — Conventional Commits, signed commits, branch naming, PR requirements.                                                              |   ✅   |
+| `CONTRIBUTING.md`                 | Short contribution health file; links to the full guide in Nyuchi Docs.                                                                                    |   ✅   |
 | `CLA.md`                          | Contributor Licence Agreement for substantive contributions to Apache 2.0 infrastructure repos (per NA-02 §4(b)). Licence grant, not copyright assignment. |   ✅   |
-| `AGENTS.md`                       | Rules for AI-assisted contributions (Claude, Cursor, Copilot, Aider, Devin, Codex).                                                                        |   ✅   |
+| `AGENTS.md`                       | Short pointer to the engineering guide in Nyuchi Docs; also what a repo's own `AGENTS.md` holds.                                                           |   ✅   |
 | `.github/copilot-instructions.md` | GitHub Copilot–specific pointer to `AGENTS.md` with the rules Copilot most often gets wrong.                                                               |   ✅   |
 
 ### Issue and PR forms
@@ -63,17 +69,15 @@ not define its own equivalent file.
 
 ### Operational docs
 
-| Path                                       | Purpose                                                                                                                                                                              | Status |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :----: |
-| `ORG_SETTINGS.md`                          | Source of truth for intended org and repo settings, including the branch-protection standard shared by every org in the enterprise. Rulesets in `github-rulesets/`. Audit quarterly. |   ✅   |
-| `docs/operations-playbook.md`              | The orchestrator's playbook: roles and authority, trunk rules, releases, going public, security triage, incidents, dependencies, sharp edges.                                        |   ✅   |
-| `GOVERNANCE.md`                            | Index of the canonical documents and NA governance, the order of authority, and where the NA documents predate v5.                                                                   |   ✅   |
-| `README-STANDARD.md`                       | The estate-wide README standard — the shape every repo's README takes, the branding facts to state, and the lint gates markdown must pass. Applies to all seven orgs.                |   ✅   |
-| `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                                 |   ✅   |
-| `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                                           |   ✅   |
-| `profile/governance/NA-03_ENGINEERING.md`  | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.                               |   ✅   |
-| `.editorconfig`                            | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                                    |   ✅   |
-| `.github/FUNDING.yml`                      | GitHub Sponsors / funding button configuration.                                                                                                                                      |   ✅   |
+| Path                                       | Purpose                                                                                                                                                                                | Status |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
+| `ORG_SETTINGS.md`                          | One-line redirect to [Org settings and rulesets](https://docs.nyuchi.com/engineering/org-settings/) (many repos link to it). Rulesets stay here in `github-rulesets/` and `settings/`. |   ✅   |
+| `GOVERNANCE.md`                            | Index of the canonical documents and NA governance, the order of authority, and where the NA documents predate v5.                                                                     |   ✅   |
+| `profile/governance/NA-01_CONSTITUTION.md` | Nyuchi Africa corporate constitution — legal identity, purpose, decision rights, IP ownership, divisional structure.                                                                   |   ✅   |
+| `profile/governance/NA-02_OPEN_SOURCE.md`  | Open source & contribution governance — licensing posture, sovereignty fallbacks, contribution principles.                                                                             |   ✅   |
+| `profile/governance/NA-03_ENGINEERING.md`  | Engineering working agreement — frontier defaults (post-quantum, local-first, edge-native), locked architectural commitments, merge-blocker reference.                                 |   ✅   |
+| `.editorconfig`                            | Cross-editor whitespace baseline (LF, 2-space indent, UTF-8) so contributors are consistent before Prettier runs.                                                                      |   ✅   |
+| `.github/FUNDING.yml`                      | GitHub Sponsors / funding button configuration.                                                                                                                                        |   ✅   |
 
 ### Reusable workflows
 
@@ -101,8 +105,8 @@ Repos with stricter supply-chain requirements should reference the
 reusable by commit SHA rather than `@main`.
 
 Lint is the exception: it is already required org-wide through
-`org-lint.yml` (see [`ADOPTING-LINT.md`](./ADOPTING-LINT.md) and
-[`ORG_SETTINGS.md`](./ORG_SETTINGS.md)), so a repo does not add a
+`org-lint.yml` (see [Adopting lint](https://docs.nyuchi.com/playbooks/adopting-lint/) and
+[Org settings and rulesets](https://docs.nyuchi.com/engineering/org-settings/)), so a repo does not add a
 `lint.yml` caller of its own.
 
 | Path                                                | Purpose                                                                                                                                                                                      | Status |
@@ -122,7 +126,7 @@ Lint is the exception: it is already required org-wide through
 | `.github/workflows/reusable-release.yml`            | Standard release flow: semver tag validation, SBOM attachment, SHA-256 checksums, SLSA L2 provenance attestation, GitHub Release creation. Covers NA-03 §8.2.                                |   ✅   |
 | `.github/workflows/reusable-auto-tag.yml`           | Tags the version a merge carries when it has no tag yet; with `RELEASE_BUMP_TOKEN` the tag starts the repo's release workflows.                                                              |   ✅   |
 | `.github/workflows/reusable-slsa-provenance.yml`    | Standalone SLSA L2 provenance attestation for repos that need to attest artifacts outside the full release flow. Verifiable via `gh attestation verify`.                                     |   ✅   |
-| `.github/workflows/scheduled-settings-audit.yml`    | Quarterly drift-detection: opens a GitHub Issue on 1 Jan · 1 Apr · 1 Jul · 1 Oct with a checklist to compare ORG_SETTINGS.md against live GitHub state.                                      |   ✅   |
+| `.github/workflows/scheduled-settings-audit.yml`    | Quarterly drift-detection: opens a GitHub Issue on 1 Jan · 1 Apr · 1 Jul · 1 Oct with a checklist to compare the org settings page against live GitHub state.                                |   ✅   |
 | `.github/workflows/reusable-ci-solidity.yml`        | Foundry CI for smart contracts. Jobs: `forge fmt`, `forge build`, `forge test`, `forge coverage` (≥60% line coverage). NA-03 §6.1, §10.4.                                                    |   ✅   |
 | `.github/workflows/reusable-openssf-scorecard.yml`  | OpenSSF Scorecard analysis. Runs supply-chain security checks and uploads SARIF results to the GitHub Security tab. Inputs: `publish-results`.                                               |   ✅   |
 | `.github/workflows/reusable-ci-container.yml`       | Docker / OCI CI. Jobs: Trivy vulnerability scan, multi-platform build + push (linux/amd64 + arm64), cosign keyless signing. Inputs: `image-name`, `push`, `sign`.                            |   ✅   |
@@ -161,8 +165,9 @@ different files.
 
 - **`AGENTS.md`** and **`.github/copilot-instructions.md`** are
   read by agents operating inside _this_ repository. They do NOT
-  auto-propagate. Repos that want these rules applied to their own
-  agent sessions should copy the files into their own repo.
+  auto-propagate. Both are short pointers to the engineering guide in
+  Nyuchi Docs; a repo carries a short `AGENTS.md` of its own (the
+  bootstrap job proposes this one).
 
 ### Per-repo configuration (starter templates here, each repo copies)
 
@@ -174,10 +179,12 @@ different files.
 
 ### Operational (applied manually in GitHub's UI)
 
-- **`ORG_SETTINGS.md`** is a source-of-truth document for settings
-  that live in GitHub's web UI: org-wide security features, Actions
-  permissions, branch protection, required status checks. It is
-  audited quarterly; it is not enforced by any file.
+- **[Org settings and rulesets](https://docs.nyuchi.com/engineering/org-settings/)** (in
+  Nyuchi Docs) is the source-of-truth document for settings that live
+  in GitHub's web UI: org-wide security features, Actions permissions,
+  branch protection, required status checks. It is audited quarterly;
+  it is not enforced by any file. The ruleset files are in
+  `github-rulesets/` and `settings/`.
 
 ## Overriding the defaults
 

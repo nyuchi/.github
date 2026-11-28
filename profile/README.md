@@ -13,7 +13,7 @@ _Ndiri nekuti tiri._
 [bundu.org](https://www.bundu.org)
 
 [The Nyuchi Architecture](./canonical/NYUCHI_ARCHITECTURE.md) ·
-[Governance](./governance/) · [Contributing](../CONTRIBUTING.md) ·
+[Governance](./governance/) · [Contributing](https://github.com/nyuchi/.github/blob/main/CONTRIBUTING.md) ·
 [Security](../SECURITY.md) · [Support](../SUPPORT.md)
 
 ---
@@ -109,9 +109,9 @@ The Mukoko app repositories (`mukoko-news`, `mukoko-news-gateway`,
 - **Versions follow the branch.** Every merge to `main` is a release:
   a `feat` is a minor, anything else a patch, and a major is only ever
   made by hand. See
-  [Versioning](https://github.com/nyuchi/.github/blob/main/CONTRIBUTING.md#versioning).
+  [Versioning](https://docs.nyuchi.com/engineering/contributing/#versioning).
 - **Agents have rules too.**
-  [`AGENTS.md`](https://github.com/nyuchi/.github/blob/main/AGENTS.md)
+  The [engineering guide](https://docs.nyuchi.com/engineering/guide/)
   governs AI-assisted contributions.
 
 Read

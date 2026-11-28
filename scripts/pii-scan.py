@@ -189,7 +189,7 @@ def report(findings, fail_on_match):
         print(
             "::warning::No DPIA pre-assessment doc found in docs/security, security or docs. "
             "This release is flagged for review; add docs/security/DPIA-PREASSESSMENT.md "
-            "(template: nyuchi/.github docs/security/DPIA-PREASSESSMENT-TEMPLATE.md)."
+            "(template: https://docs.nyuchi.com/engineering/dpia-preassessment/)."
         )
 
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")

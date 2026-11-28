@@ -5,13 +5,13 @@
 #         under .claude/. Org .github repos keep agent rules in AGENTS.md
 #         only (owner decision, 2026-10-21).
 #   WARN  The repo has no AGENTS.md at its root (the agent guide every repo
-#         carries; see nyuchi/.github/AGENTS.md).
+#         carries; see https://docs.nyuchi.com/engineering/guide/).
 #   WARN  A workflow that runs on pull_request but not on merge_group. If it
 #         is (or becomes) a required check, a queued PR waits until the merge
 #         queue times it out. PR-only jobs can skip themselves with
 #         `if: github.event_name != 'merge_group'`; a skipped job passes.
 #   WARN  A workflow job that names a GitHub environment other than `release`,
-#         `production` or `publish` (AGENTS.md, "GitHub environments").
+#         `production` or `publish` (https://docs.nyuchi.com/engineering/guide/#github-environments).
 #
 # The warnings are warnings so that turning this on does not redden every
 # repo at once; promote them to failures once the backlog is cleared.
@@ -75,7 +75,7 @@ jobs:
 
           # WARN: no AGENTS.md at the root.
           if ! gh api "repos/$REPO/contents/AGENTS.md?ref=$HEAD_SHA" --silent 2>/dev/null; then
-            echo "::warning title=Repo standards::No AGENTS.md at the repo root. Every repo carries one (see nyuchi/.github/AGENTS.md)."
+            echo "::warning title=Repo standards::No AGENTS.md at the repo root. See docs.nyuchi.com/engineering/guide/"
             summary "- ⚠️ no AGENTS.md at the root"
           fi
 
@@ -103,7 +103,7 @@ jobs:
               case "${e,,}" in
                 release|production|publish|pypi|github-pages|copilot) ;;
                 *)
-                  msg="Environment '$e' is not one of release, production or publish (AGENTS.md, GitHub environments)."
+                  msg="Environment '$e' is not release, production or publish (docs.nyuchi.com/engineering/guide/#github-environments)."
                   echo "::warning file=$f,title=Repo standards::$msg"
                   summary "- ⚠️ \`$f\` uses environment \`$e\`"
                   ;;
